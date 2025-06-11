@@ -21,7 +21,7 @@ curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh
 Installiere anschließend **curl**, **golang**, **git** und **docker-compose** über den Paketmanager von Ubuntu.
 
 ```bash
-sudo apt-get install curl golang git gradle docker-compose -y
+sudo apt-get install curl golang git gradle docker-compose zip -y
 ```
 
 ---
@@ -90,17 +90,43 @@ Damit die Änderungen in der Konfiguration wirksam werden, musst du den Yggdrasi
 sudo systemctl restart yggdrasil
 ```
 
-### 4. Applikation als Docker-Container ausführen
+Verstanden. Hier ist eine kompakte Anleitung, die sowohl die Einrichtung der notwendigen SDKs als auch das Starten der Anwendung als Docker-Container umfasst.
 
-**1. Bauen und Starten**
+-----
 
-Führen Sie den folgenden Befehl im Stammverzeichnis des Projekts aus. Er kompiliert die Anwendung, baut das Docker-Image und startet den Container in einem Schritt:
+### 4- Applikation 
+
+#### 1\. Umgebung einrichten (Einmalig)
+
+**Docker:**
+Stellen Sie sicher, dass Docker installiert und gestartet ist.
+
+* [Offizielle Docker-Anleitung](https://docs.docker.com/get-docker/)
+
+**Java (GraalVM 21 via SDKMAN\!):**
+Der empfohlene Weg zur Installation von Java ist [SDKMAN\!](https://sdkman.io/).
+
+```bash
+# SDKMAN! installieren
+curl -s "https://get.sdkman.io" | bash
+
+# SDKMAN! für die aktuelle Terminalsitzung laden
+source "$HOME/.sdkman/bin/sdkman-init.sh"
+
+# GraalVM 21 installieren und als Standard festlegen
+sdk install java 21-graal
+```
+
+#### 2\. Anwendung bauen und starten
+
+Führen Sie den folgenden Befehl im Stammverzeichnis des Projekts aus. Er kompiliert die Anwendung, baut das Docker-Image und startet den Container in einem Schritt.
 
 ```bash
 ./gradlew build && docker build -f src/main/docker/Dockerfile.jvm -t quarkus/pharmalink-jvm . && docker run -i --rm -p 8080:8080 quarkus/pharmalink-jvm
 ```
 
-**2. Zugriff auf die Anwendung**
+#### 3\. Auf die Anwendung zugreifen
 
-Nachdem der Container gestartet ist, ist die Anwendung erreichbar unter:
-* `http://deine-ip-adresse:8080/`
+Nachdem der Container gestartet ist, ist der Service erreichbar unter:
+
+* `http://localhost:8080/fabric/time`
