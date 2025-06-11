@@ -1,49 +1,31 @@
-# Name des Workflows
-name: Build and Push Docker Image
+name: Create Release and Push Docker Image
 
-# Trigger
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    tags:
+      - 'v*'
 
-# Jobs
 jobs:
-  build-and-push-image:
-    # Name des Jobs
-    name: Build Quarkus App and Push to GHCR
-
-    # Betriebssystem
+  build-and-release:
+    name: Build, Push Docker Image and Create Release
     runs-on: ubuntu-latest
-
-    # Berechtigungen: Der Workflow benötigt Schreibzugriff auf "packages", um Images zu pushen.
     permissions:
-      contents: read
+      contents: write
       packages: write
 
-    # Steps
     steps:
-      # 1. Code auschecken
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. GraalVM 21 einrichten
       - name: Set up GraalVM for JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'graalvm'
 
-      # 3. Gradle Caching einrichten
-      - name: Set up Gradle Cache
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      # 4. Gradle-Wrapper ausführbar machen
-      - name: Make gradlew executable
-        run: chmod +x gradlew
-
-      # 5. Mit Gradle bauen
       - name: Build with Gradle
         run: ./gradlew build
 
@@ -68,3 +50,13 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ github.ref_name }}
+          body: |
+            Neues Release ${{ github.ref_name }}.
+            Das Docker-Image wurde erfolgreich in die GitHub Container Registry gepusht.
+            Image-Tag: `${{ steps.meta.outputs.tags }}`
+          files: build/quarkus-app/quarkus-run.jar
