@@ -61,7 +61,7 @@ sudo nano /etc/yggdrasil.conf
 Passe die Sektionen `Peers` und `Listen` in der Datei an deine spezifischen Anforderungen an. Hier ist ein Beispiel, das du als Vorlage verwenden kannst:
 
 ```hjson
-# ... andere Konfigurationen ...
+# Peer: Definiert die Adressen anderer Knoten, zu denen Ihr Knoten als Client aktiv eine Verbindung aufbauen soll.
 
 Peers: [
   tls://EXTERNAL1.EXAMPLE.COM:21603
@@ -69,7 +69,8 @@ Peers: [
   tls://EXTERNAL3.EXAMPLE.COM:21603
 ]
 
-# ... Rest der Konfiguration ...
+# Listen: Legt die Adressen fest, unter denen Ihr Knoten als Server passiv auf eingehende Verbindungen wartet.
+# (Optional) Per UFW oder IPTables den eingehenden Verkehr einschränken.
 
 Listen: [
   tls://MYHOST.EXAMPLE.COM:21603
