@@ -545,7 +545,7 @@ while [[ $# -ge 1 ]] ; do
     CHANNEL_NAME="$2"
     shift
     ;;
-#  -bft )
+  -bft )
     BFT=1
     ;;
   -ca )
