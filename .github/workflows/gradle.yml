@@ -1,43 +1,70 @@
-# Name des Workflows, wird in der "Actions"-Ansicht auf GitHub angezeigt.
-name: Java CI with Gradle
+# Name des Workflows
+name: Build and Push Docker Image
 
-# Trigger: Wann soll dieser Workflow ausgeführt werden?
+# Trigger
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
-# Jobs: Eine Liste von Aufgaben, die ausgeführt werden.
+# Jobs
 jobs:
-  build:
+  build-and-push-image:
     # Name des Jobs
-    name: Build Quarkus Application
+    name: Build Quarkus App and Push to GHCR
 
-    # Betriebssystem: Wir verwenden die neueste Ubuntu-Version von GitHub.
+    # Betriebssystem
     runs-on: ubuntu-latest
 
-    # Steps: Die einzelnen Schritte des Jobs.
+    # Berechtigungen: Der Workflow benötigt Schreibzugriff auf "packages", um Images zu pushen.
+    permissions:
+      contents: read
+      packages: write
+
+    # Steps
     steps:
-    # 1. Code aus dem Repository auschecken
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      # 1. Code auschecken
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    # 2. GraalVM 21 einrichten
-    - name: Set up GraalVM for JDK 21
-      uses: actions/setup-java@v4
-      with:
-        java-version: '21'
-        distribution: 'graalvm' 
+      # 2. GraalVM 21 einrichten
+      - name: Set up GraalVM for JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'graalvm'
 
-    # 3. Gradle Caching einrichten
-    - name: Set up Gradle Cache
-      uses: gradle/actions/setup-gradle@v3
+      # 3. Gradle Caching einrichten
+      - name: Set up Gradle Cache
+        uses: gradle/actions/setup-gradle@v3
 
-    # 4. Gradle-Wrapper ausführbar machen
-    - name: Make gradlew executable
-      run: chmod +x gradlew
+      # 4. Gradle-Wrapper ausführbar machen
+      - name: Make gradlew executable
+        run: chmod +x gradlew
 
-    # 5. Mit Gradle bauen
-    - name: Build with Gradle
-      run: ./gradlew build
+      # 5. Mit Gradle bauen
+      - name: Build with Gradle
+        run: ./gradlew build
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: src/main/docker/Dockerfile.jvm
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
