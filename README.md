@@ -94,7 +94,7 @@ Verstanden. Hier ist eine kompakte Anleitung, die sowohl die Einrichtung der not
 
 -----
 
-## 4. Applikation 
+## 4. Applikation (selber bauen)
 
 #### 1\. Umgebung einrichten (Einmalig)
 **Java (JDK installieren!):**
@@ -123,4 +123,4 @@ Führen Sie den folgenden Befehl im Stammverzeichnis des Projekts aus. Er kompil
 
 Nachdem der Container gestartet ist, ist der Service erreichbar unter:
 
-* `http://localhost:8080/fabric/time`
+* `http://deine-eigene-ip-adresse:8080/`
