@@ -1,3 +1,34 @@
+
+Die gesamte Logik Ihres Netzwerks wird hauptsächlich an drei Stellen definiert:
+
+#### 1. Die Netzwerk-Topologie (`configtx/configtx.yaml`)
+Dies ist der **Master-Bauplan** Ihres Netzwerks.
+
+* **Was es tut:** Definiert, welche Organisationen es gibt, wie der "Ordering Service" heißt und wer zum Konsortium gehört.
+* **Was Sie anpassen müssen:**
+    * **`Organizations:`** Ändern Sie die Namen `OrdererOrg`, `Org1` und `Org2` in die Namen Ihrer eigenen Organisationen (z.B. `PharmaLinkOrderer`, `PharmaLinkMSP`). Passen Sie die `MSPDir`-Pfade entsprechend an.
+    * **`Profiles:`** Im `TwoOrgsApplicationGenesis`-Profil müssen Sie unter `Consortiums` die Namen Ihrer neuen Organisationen eintragen.
+
+#### 2. Die Organisations-Struktur (`organizations/cryptogen/`)
+Diese Dateien definieren, wie jede einzelne Organisation aufgebaut ist (z.B. wie viele Peers, wie viele Benutzer).
+
+* **Was es tut:** Erstellt die Vorlagen für das `cryptogen`-Tool, das die gesamten Krypto-Materialien (Zertifikate und Schlüssel) generiert.
+* **Was Sie anpassen müssen:**
+    * Öffnen Sie z.B. `crypto-config-org1.yaml`.
+    * Ändern Sie den `Name:` von `Org1` auf den Namen Ihrer Organisation.
+    * Passen Sie unter `Specs:` die Hostnamen an (z.B. `peer0.org1.example.com` wird zu `peer0.pharmalink.de`).
+
+#### 3. Die laufenden Services (`compose/docker-compose-test-net.yaml`)
+Dies ist die **Blaupause für Ihre laufenden Docker-Container**.
+
+* **Was es tut:** Definiert jeden einzelnen Peer, Orderer und die Certificate Authority (CA) als Docker-Service, inklusive ihrer Ports, Volumes und Umgebungsvariablen.
+* **Was Sie anpassen müssen:**
+    * **Service-Namen:** Benennen Sie die Services um (z.B. `peer0.org1.example.com:` wird zu `peer0.pharmalink.de:`).
+    * **`environment:`** Passen Sie alle Umgebungsvariablen wie `CORE_PEER_LOCALMSPID` und `CORE_PEER_ADDRESS` an Ihre neuen Organisations- und Peer-Namen an.
+    * **`volumes:`** Stellen Sie sicher, dass die Pfade zu den Krypto-Materialien auf die Verzeichnisse zeigen, die in Schritt 2 generiert werden.
+
+
+
 # Running the test network
 
 You can use the `./network.sh` script to stand up a simple Fabric test network. The test network has two peer organizations with one peer each and a single node raft ordering service. You can also use the `./network.sh` script to create channels and deploy chaincode. For more information, see [Using the Fabric test network](https://hyperledger-fabric.readthedocs.io/en/latest/test_network.html). The test network is being introduced in Fabric v2.0 as the long term replacement for the `first-network` sample.
@@ -50,14 +81,6 @@ The `setOrgEnv` script outputs a series of `<name>=<value>` strings. These can t
 
 To learn more about how to use the improvements to the Chaincode-as-a-service please see this [tutorial](./test-network/../CHAINCODE_AS_A_SERVICE_TUTORIAL.md). It is expected that this will move to augment the tutorial in the [Hyperledger Fabric ReadTheDocs](https://hyperledger-fabric.readthedocs.io/en/release-2.4/cc_service.html)
 
-
-## Podman
-
-*Note - podman support should be considered experimental but the following has been reported to work with podman 4.1.1 on Mac. If you wish to use podman a LinuxVM is recommended.*
-
-Fabric's `install-fabric.sh` script has been enhanced to support using `podman` to pull down images and tag them rather than docker. The images are the same, just pulled differently. Simply specify the 'podman' argument when running the `install-fabric.sh` script. 
-
-Similarly, the `network.sh` script has been enhanced so that it can use `podman` and `podman-compose` instead of docker. Just set the environment variable `CONTAINER_CLI` to `podman` before running the `network.sh` script:
 
 ```bash
 CONTAINER_CLI=podman ./network.sh up
