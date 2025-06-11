@@ -55,7 +55,7 @@ sh ./scripts/setup_yggdrasil.sh
 Nach der Installation musst du die Yggdrasil-Konfigurationsdatei anpassen, um die richtigen Peer- und Listen-Adressen für dein Overlay-Netzwerk festzulegen. Öffne die Konfigurationsdatei mit einem Editor:
 
 ```bash
-sudo nano /etc/yggdrasil.conf
+sudo nano /etc/yggdrasil/yggdrasil.conf
 ```
 
 Passe die Sektionen `Peers` und `Listen` in der Datei an deine spezifischen Anforderungen an. Hier ist ein Beispiel, das du als Vorlage verwenden kannst:
