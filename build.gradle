@@ -29,7 +29,7 @@ dependencies {
 }
 
 group = 'de.jklein'
-version = '1.0.0-SNAPSHOT'
+version = project.hasProperty('newVersion') ? project.property('newVersion') : '1.0.0-SNAPSHOT'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21
