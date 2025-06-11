@@ -1,0 +1,43 @@
+# Name des Workflows, wird in der "Actions"-Ansicht auf GitHub angezeigt.
+name: Java CI with Gradle
+
+# Trigger: Wann soll dieser Workflow ausgeführt werden?
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+# Jobs: Eine Liste von Aufgaben, die ausgeführt werden.
+jobs:
+  build:
+    # Name des Jobs
+    name: Build Quarkus Application
+
+    # Betriebssystem: Wir verwenden die neueste Ubuntu-Version von GitHub.
+    runs-on: ubuntu-latest
+
+    # Steps: Die einzelnen Schritte des Jobs.
+    steps:
+    # 1. Code aus dem Repository auschecken
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    # 2. GraalVM 21 einrichten
+    - name: Set up GraalVM for JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'graalvm' 
+
+    # 3. Gradle Caching einrichten
+    - name: Set up Gradle Cache
+      uses: gradle/actions/setup-gradle@v3
+
+    # 4. Gradle-Wrapper ausführbar machen
+    - name: Make gradlew executable
+      run: chmod +x gradlew
+
+    # 5. Mit Gradle bauen
+    - name: Build with Gradle
+      run: ./gradlew build
