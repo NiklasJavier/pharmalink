@@ -21,13 +21,6 @@ dependencies {
     implementation('org.hyperledger.fabric:fabric-gateway:1.7.1') {
         exclude group: 'io.grpc'
     }
-    implementation 'io.grpc:grpc-api'
-    implementation 'io.grpc:grpc-netty-shaded'
-    implementation 'io.grpc:grpc-protobuf'
-    implementation 'io.grpc:grpc-stub'
-
-    compileOnly 'io.grpc:grpc-api'
-    runtimeOnly 'io.grpc:grpc-netty-shaded'
 
     implementation platform('com.google.protobuf:protobuf-bom:4.29.2')
 
