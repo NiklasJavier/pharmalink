@@ -21,7 +21,7 @@ curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh
 Installiere anschließend **curl**, **golang**, **git** und **docker-compose** über den Paketmanager von Ubuntu.
 
 ```bash
-sudo apt-get install curl golang git docker-compose -y
+sudo apt-get install curl golang git gradle docker-compose -y
 ```
 
 ---
@@ -89,3 +89,18 @@ Damit die Änderungen in der Konfiguration wirksam werden, musst du den Yggdrasi
 ```bash
 sudo systemctl restart yggdrasil
 ```
+
+### Applikation als Docker-Container ausführen
+
+**1. Bauen und Starten**
+
+Führen Sie den folgenden Befehl im Stammverzeichnis des Projekts aus. Er kompiliert die Anwendung, baut das Docker-Image und startet den Container in einem Schritt:
+
+```bash
+./gradlew build && docker build -f src/main/docker/Dockerfile.jvm -t quarkus/pharmalink-jvm . && docker run -i --rm -p 8080:8080 quarkus/pharmalink-jvm
+```
+
+**2. Zugriff auf die Anwendung**
+
+Nachdem der Container gestartet ist, ist die Anwendung erreichbar unter:
+* `http://deine-ip-adresse:8080/`
