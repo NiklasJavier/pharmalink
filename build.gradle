@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    // HIER IST DIE KORREKTUR: Die Version wird explizit angebunden.
     id 'io.quarkus'
 }
 
@@ -8,17 +9,35 @@ repositories {
     mavenLocal()
 }
 
+ext {
+    quarkusVersion = '3.11.0'
+    grpcVersion = '1.64.0'
+}
+
+configurations.all {
+    resolutionStrategy {
+        force "org.hyperledger.fabric:fabric-gateway:1.7.1"
+        force "io.grpc:grpc-api:${grpcVersion}"
+        force "io.grpc:grpc-netty-shaded:${grpcVersion}"
+        force "io.grpc:grpc-protobuf:${grpcVersion}"
+        force "io.grpc:grpc-stub:${grpcVersion}"
+    }
+}
+
 dependencies {
-    implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
-    implementation 'io.quarkus:quarkus-grpc'
-    implementation 'io.quarkus:quarkus-rest'
+    implementation enforcedPlatform("io.quarkus.platform:quarkus-bom:${quarkusVersion}")
+    implementation 'io.quarkus:quarkus-resteasy-reactive'
     implementation 'io.quarkus:quarkus-arc'
+    implementation 'io.quarkus:quarkus-grpc'
+
+    implementation 'org.hyperledger.fabric:fabric-gateway:1.7.1'
+
     testImplementation 'io.quarkus:quarkus-junit5'
     testImplementation 'io.rest-assured:rest-assured'
 }
 
-group 'de.jklein'
-version '1.0.0-SNAPSHOT'
+group = 'de.jklein'
+version = '1.0.0-SNAPSHOT'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21
@@ -28,6 +47,7 @@ java {
 test {
     systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
 }
+
 compileJava {
     options.encoding = 'UTF-8'
     options.compilerArgs << '-parameters'
