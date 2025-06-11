@@ -2,7 +2,6 @@
 
 echo "Starte Yggdrasil-Installation auf Ubuntu..."
 
-# 1. System aktualisieren
 echo "1. Systempaketliste aktualisieren..."
 sudo apt update
 if [ $? -ne 0 ]; then
@@ -67,12 +66,8 @@ echo "Ihre Yggdrasil IPv6-Adresse ist:"
 sudo yggdrasilctl getSelf | grep "IPv6 address"
 
 echo ""
-echo "WICHTIG: Um sich mit dem Yggdrasil-Netzwerk zu verbinden, müssen Sie Peers in der Datei /etc/yggdrasil.conf hinzufügen."
+echo "WICHTIG: Um sich mit dem Yggdrasil-Netzwerk zu verbinden, müssen Sie Peers in der Datei /etc/yggdrasil/yggdrasil.conf hinzufügen."
 echo "Öffnen Sie die Datei mit einem Editor (z.B. nano):"
-echo "  sudo nano /etc/yggdrasil.conf"
-echo "Suchen Sie den Abschnitt 'Peers' und fügen Sie öffentliche Peers hinzu (z.B. von https://yggdrasil.network/peers/)."
-echo "Nach Änderungen in der Konfigurationsdatei, starten Sie den Dienst neu:"
-echo "  sudo systemctl restart yggdrasil"
-echo ""
+echo "  sudo nano /etc/yggdrasil/yggdrasil.conf"
 echo "Installation und grundlegende Einrichtung abgeschlossen!"
 echo "---------------------------------------------------------"
