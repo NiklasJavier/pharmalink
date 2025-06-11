@@ -11,18 +11,6 @@ echo "Starte Einrichtung der Hyperledger Fabric Binaries..."
 echo "Download-URL: ${FABRIC_TAR_GZ_URL}"
 echo "Installationsverzeichnis: ${INSTALL_DIR}"
 
-if ! command -v curl &> /dev/null
-then
-    echo "Fehler: 'curl' ist nicht installiert. Bitte installieren Sie es mit 'sudo apt install curl -y' und versuchen Sie es erneut."
-    exit 1
-fi
-
-if ! command -v tar &> /dev/null
-then
-    echo "Fehler: 'tar' ist nicht installiert. Dies sollte standardmäßig auf Ubuntu der Fall sein."
-    exit 1
-fi
-
 echo "1. Lade Hyperledger Fabric Binaries herunter..."
 curl -L "${FABRIC_TAR_GZ_URL}" -o "${HOME}/${DOWNLOAD_FILENAME}"
 if [ $? -ne 0 ]; then
@@ -58,7 +46,6 @@ else
     echo "Der Fabric 'bin'-Pfad ist bereits in ~/.bashrc vorhanden. Keine Änderung vorgenommen."
 fi
 
-# 8. .bashrc neu laden für die aktuelle Sitzung
 echo "6. Lade ~/.bashrc für die aktuelle Sitzung neu..."
 source "${HOME}/.bashrc"
 
