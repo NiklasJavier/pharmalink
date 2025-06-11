@@ -90,7 +90,7 @@ Damit die Änderungen in der Konfiguration wirksam werden, musst du den Yggdrasi
 sudo systemctl restart yggdrasil
 ```
 
-### Applikation als Docker-Container ausführen
+### 4. Applikation als Docker-Container ausführen
 
 **1. Bauen und Starten**
 
