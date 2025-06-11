@@ -2,9 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-
-
-
 # default to using Org1
 ORG=${1:-Org1}
 
