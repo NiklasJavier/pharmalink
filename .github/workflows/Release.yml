@@ -1,7 +1,5 @@
-# Name des Workflows
 name: Create Release and Push Docker Image
 
-# Trigger
 on:
   push:
     tags:
@@ -53,6 +51,9 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+      - name: List files in build directory
+        run: ls -R build
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -61,5 +62,4 @@ jobs:
             Neues Release ${{ github.ref_name }}.
             Das Docker-Image wurde erfolgreich in die GitHub Container Registry gepusht.
             Image-Tag: `${{ steps.meta.outputs.tags }}`
-          # KORRIGIERT: Verwendet den benutzerdefinierten JAR-Namen aus Ihrer Konfiguration
           files: build/quarkus-app/fabric-medical-supply-chain-run.jar
