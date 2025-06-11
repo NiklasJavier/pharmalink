@@ -64,17 +64,20 @@ Passe die Sektionen `Peers` und `Listen` in der Datei an deine spezifischen Anfo
 # ... andere Konfigurationen ...
 
 Peers: [
-  tls://EXTERNAL1.DEU01.EXAMPLE.COM:21603
-  tls://EXTERNAL2.FIN01.EXAMPLE.COM:21603
-  tls://EXTERNAL3.DEU01.EXAMPLE.COM:21603
+  tls://EXTERNAL1.EXAMPLE.COM:21603
+  tls://EXTERNAL2.EXAMPLE.COM:21603
+  tls://EXTERNAL3.EXAMPLE.COM:21603
 ]
+
+# ... Rest der Konfiguration ...
+
 Listen: [
-  tls://MYHOST.USA01.EXAMPLE.COM:21603
+  tls://MYHOST.EXAMPLE.COM:21603
 ]
 
 # ... Rest der Konfiguration ...
 ```
-**Wichtiger Hinweis:** Ersetze die Beispiel-Adressen (`MYHOST.USA01.EXAMPLE.COM`) durch die tatsächlichen Adressen deiner Netzwerk-Peers.
+**Wichtiger Hinweis:** Ersetze die Beispiel-Adressen (`MYHOST.EXAMPLE.COM:21603, EXTERNAL.EXAMPLE.COM:21603`) durch die tatsächlichen Adressen deiner Netzwerk-Peers.
 
 Speichere die Änderungen in der Datei (in `nano`: **Strg+O**, dann **Enter**) und schließe den Editor (**Strg+X**).
 
