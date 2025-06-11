@@ -94,16 +94,10 @@ Verstanden. Hier ist eine kompakte Anleitung, die sowohl die Einrichtung der not
 
 -----
 
-### 4- Applikation 
+## 4. Applikation 
 
 #### 1\. Umgebung einrichten (Einmalig)
-
-**Docker:**
-Stellen Sie sicher, dass Docker installiert und gestartet ist.
-
-* [Offizielle Docker-Anleitung](https://docs.docker.com/get-docker/)
-
-**Java (GraalVM 21 via SDKMAN\!):**
+**Java (JDK installieren!):**
 Der empfohlene Weg zur Installation von Java ist [SDKMAN\!](https://sdkman.io/).
 
 ```bash
