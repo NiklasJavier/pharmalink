@@ -39,7 +39,7 @@ rm "${HOME}/${DOWNLOAD_FILENAME}"
 echo "5. Binde den Fabric 'bin'-Pfad in ~/.bashrc ein..."
 
 if ! grep -q "export PATH=\"\$PATH:${BIN_PATH}\"" "${HOME}/.bashrc"; then
-    echo -e "\n# Add Hyperledger Fabric binaries to PATH" >> "${HOME}/.bashrc"
+    echo "\n# Add Hyperledger Fabric binaries to PATH" >> "${HOME}/.bashrc"
     echo "export PATH=\"\$PATH:${BIN_PATH}\"" >> "${HOME}/.bashrc"
     echo ".bashrc wurde aktualisiert."
 else
