@@ -51,19 +51,21 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+      - name: Package application for release
+        run: |
+          cd build/quarkus-app
+          zip -r ../../pharmalink-${{ github.ref_name }}.zip .
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           name: Release ${{ github.ref_name }}
           body: |
-            
-            ## ✅ Release ${{ github.ref_name }}
-  
             Das Docker-Image wurde erfolgreich in die GitHub Container Registry (GHCR) gepusht.
             - **Image-Tags:** `${{ steps.meta.outputs.tags }}`
             - **Image-Details ansehen:** [GHCR-Pakete](https://github.com/${{ github.repository }}/packages)
   
             Zusätzlich ist die `pharmalink-${{ github.ref_name }}.jar` Datei als Asset direkt an dieses Release angehängt.
 
-          files: build/quarkus-app/app/pharmalink-${{ github.ref_name }}.jar
+          files: pharmalink-${{ github.ref_name }}.zip
