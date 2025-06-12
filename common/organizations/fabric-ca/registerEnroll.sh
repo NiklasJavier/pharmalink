@@ -228,12 +228,6 @@ if [ ! -d "organizations" ]; then
     echo "Bitte stelle sicher, dass du das Skript aus dem ROOT deines 'test-network' Ordners ausführst."
     exit 1
 fi
-# Überprüfen, ob das 'fabric-ca'-Verzeichnis vorhanden ist
-if [ ! -d "fabric-ca" ]; then
-    echo "Fehler: Das 'fabric-ca'-Verzeichnis existiert nicht im aktuellen Arbeitsverzeichnis."
-    echo "Bitte stelle sicher, dass du das Skript aus dem ROOT deines 'test-network' Ordners ausführst."
-    exit 1
-fi
 
 
 # Aufräumen bestehender Krypto-Materialien (optional, aber für einen frischen Start empfohlen)
