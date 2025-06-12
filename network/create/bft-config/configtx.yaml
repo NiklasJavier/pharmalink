@@ -3,30 +3,33 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
+################################################################################
+#
+#   NOTE
+#
+#   Since release V3.0 Solo, Kafka and the System Channel have been removed
+#   and are no longer supported.
+#
+################################################################################
+
 ---
 ################################################################################
 #
-#   Section: Organizations
+#   ORGANIZATIONS
 #
-#   - This section defines the different organizational identities which will
-#   be referenced later in the configuration.
+#   This section defines the organizational identities that can be referenced
+#   in the configuration profiles.
 #
 ################################################################################
 Organizations:
+  # OrdererOrg: Definiert die Orderer-Organisation
   - &OrdererOrg
-    # SampleOrg defines an MSP using the sampleconfig.  It should never be used
-    # in production but may be used as a template for other definitions
-    # DefaultOrg defines the organization which is used in the sampleconfig
-    # of the fabric.git development environment
-    Name: OrdererOrg
-    # ID to load the MSP definition as
-    ID: OrdererMSP
-    # MSPDir is the filesystem path which contains the MSP configuration
+    Name: OrdererOrg # Der Name, der im Channel-Config verwendet wird
+    ID: OrdererMSP # Die MSP ID der Orderer-Organisation
+    # MSPDir ist der Dateisystempfad, der die MSP-Konfiguration enthält.
+    # Dieser Pfad ist relativ zum Speicherort der configtx.yaml
     MSPDir: ../organizations/ordererOrganizations/example.com/msp
-    # Policies defines the set of policies at this level of the config tree
-    # For organization policies, their canonical path is usually
-    #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
-    Policies:
+    Policies: &OrdererOrgPolicies # Referenziert von unten für Konsistenz
       Readers:
         Type: Signature
         Rule: "OR('OrdererMSP.member')"
@@ -36,22 +39,21 @@ Organizations:
       Admins:
         Type: Signature
         Rule: "OR('OrdererMSP.admin')"
+    # OrdererEndpoints ist eine Liste aller Orderer dieser Organisation,
+    # mit denen Clients und Peers sich verbinden können.
+    # Dies sind die Hostnamen/Ports, unter denen die Orderer erreichbar sind.
     OrdererEndpoints:
-      - orderer.example.com:7050
-      - orderer2.example.com:7052
-      - orderer3.example.com:7056
-      - orderer4.example.com:7058
+      - orderer.a-mfg.usa01.navine.tech:7050
+      - orderer.b-whs.fin01.navine.tech:7050
+      - orderer.c-aut.deu01.navine.tech:7050
+      - orderer.d-phm.deu01.navine.tech:7050
+
+  # Org1: Definiert die erste Peer-Organisation (z.B. auf Maschine 2)
   - &Org1
-    # DefaultOrg defines the organization which is used in the sampleconfig
-    # of the fabric.git development environment
-    Name: Org1MSP
-    # ID to load the MSP definition as
-    ID: Org1MSP
+    Name: Org1MSP # Name im Channel
+    ID: Org1MSP # MSP ID
     MSPDir: ../organizations/peerOrganizations/org1.example.com/msp
-    # Policies defines the set of policies at this level of the config tree
-    # For organization policies, their canonical path is usually
-    #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
-    Policies:
+    Policies: &Org1Policies # Kann auch *SampleOrgPolicies verwenden, wenn keine spezifischen
       Readers:
         Type: Signature
         Rule: "OR('Org1MSP.admin', 'Org1MSP.peer', 'Org1MSP.client')"
@@ -63,18 +65,15 @@ Organizations:
         Rule: "OR('Org1MSP.admin')"
       Endorsement:
         Type: Signature
-        Rule: "OR('Org1MSP.peer')"
+        Rule: "OR('Org1MSP.peer')" # Standard für Peer-Organisationen
+
+
+  # Org2: Definiert die zweite Peer-Organisation (z.B. auf Maschine 3)
   - &Org2
-    # DefaultOrg defines the organization which is used in the sampleconfig
-    # of the fabric.git development environment
     Name: Org2MSP
-    # ID to load the MSP definition as
     ID: Org2MSP
     MSPDir: ../organizations/peerOrganizations/org2.example.com/msp
-    # Policies defines the set of policies at this level of the config tree
-    # For organization policies, their canonical path is usually
-    #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
-    Policies:
+    Policies: &Org2Policies # Kann auch *SampleOrgPolicies verwenden
       Readers:
         Type: Signature
         Rule: "OR('Org2MSP.admin', 'Org2MSP.peer', 'Org2MSP.client')"
@@ -87,118 +86,156 @@ Organizations:
       Endorsement:
         Type: Signature
         Rule: "OR('Org2MSP.peer')"
+
+
+  # Org3: Definiert die dritte Peer-Organisation (z.B. auf Maschine 4, falls in deinem Projekt vorhanden)
+  - &Org3
+    Name: Org3MSP
+    ID: Org3MSP
+    MSPDir: ../organizations/peerOrganizations/org3.example.com/msp
+    Policies: &Org3Policies # Kann auch *SampleOrgPolicies verwenden
+      Readers:
+        Type: Signature
+        Rule: "OR('Org3MSP.admin', 'Org3MSP.peer', 'Org3MSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('Org3MSP.admin', 'Org3MSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('Org3MSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('Org3MSP.peer')"
+
+
 ################################################################################
 #
-#   SECTION: Capabilities
+#   CAPABILITIES
 #
-#   - This section defines the capabilities of fabric network. This is a new
-#   concept as of v1.1.0 and should not be utilized in mixed networks with
-#   v1.0.x peers and orderers.  Capabilities define features which must be
-#   present in a fabric binary for that binary to safely participate in the
-#   fabric network.  For instance, if a new MSP type is added, newer binaries
-#   might recognize and validate the signatures from this type, while older
-#   binaries without this support would be unable to validate those
-#   transactions.  This could lead to different versions of the fabric binaries
-#   having different world states.  Instead, defining a capability for a channel
-#   informs those binaries without this capability that they must cease
-#   processing transactions until they have been upgraded.  For v1.0.x if any
-#   capabilities are defined (including a map with all capabilities turned off)
-#   then the v1.0.x peer will deliberately crash.
+#   This section defines the capabilities of fabric network.
 #
 ################################################################################
 Capabilities:
-  # Channel capabilities apply to both the orderers and the peers and must be
-  # supported by both.
-  # Set the value of the capability to true to require it.
   Channel: &ChannelCapabilities
-    # V3.0 for Channel is a catchall flag for behavior which has been
-    # determined to be desired for all orderers and peers running at the v3.0.0
-    # level, but which would be incompatible with orderers and peers from
-    # prior releases.
-    # Prior to enabling V3.0 channel capabilities, ensure that all
-    # orderers and peers on a channel are at v3.0.0 or later.
-    V3_0: true
-  # Orderer capabilities apply only to the orderers, and may be safely
-  # used with prior release peers.
-  # Set the value of the capability to true to require it.
+    # V3.0 for Channel ist erforderlich für Fabric 3.x Features
+    V3_0: false
+
   Orderer: &OrdererCapabilities
-    # V2_0 orderer capability ensures that orderers behave according
-    # to v2.0 orderer capabilities. Orderers from
-    # prior releases would behave in an incompatible way, and are therefore
-    # not able to participate in channels at v2.0 orderer capability.
-    # Prior to enabling V2.0 orderer capabilities, ensure that all
-    # orderers on channel are at v2.0.0 or later.
     V2_0: true
-  # Application capabilities apply only to the peer network, and may be safely
-  # used with prior release orderers.
-  # Set the value of the capability to true to require it.
+
   Application: &ApplicationCapabilities
-    # V2.5 for Application enables the new non-backwards compatible
-    # features of fabric v2.5, namely the ability to purge private data.
-    # Prior to enabling V2.5 application capabilities, ensure that all
-    # peers on a channel are at v2.5.0 or later.
     V2_5: true
+
 ################################################################################
 #
-#   SECTION: Application
+#   APPLICATION
 #
-#   - This section defines the values to encode into a config transaction or
-#   genesis block for application related parameters
+#   This section defines the values to encode into a config transaction or
+#   genesis block for application-related parameters.
 #
 ################################################################################
 Application: &ApplicationDefaults
-  # Organizations is the list of orgs which are defined as participants on
-  # the application side of the network
-  Organizations:
-  # Policies defines the set of policies at this level of the config tree
-  # For Application policies, their canonical path is
-  #   /Channel/Application/<PolicyName>
-  Policies:
-    Readers:
-      Type: ImplicitMeta
-      Rule: "ANY Readers"
-    Writers:
-      Type: ImplicitMeta
-      Rule: "ANY Writers"
-    Admins:
-      Type: ImplicitMeta
-      Rule: "MAJORITY Admins"
+  ACLs: &ACLsDefault
+    # Standard ACLs - können so bleiben, falls keine spezifischen Anpassungen benötigt werden
+    _lifecycle/CheckCommitReadiness: /Channel/Application/Writers
+    _lifecycle/CommitChaincodeDefinition: /Channel/Application/Writers
+    _lifecycle/QueryChaincodeDefinition: /Channel/Application/Writers
+    _lifecycle/QueryChaincodeDefinitions: /Channel/Application/Writers
+    lscc/ChaincodeExists: /Channel/Application/Readers
+    lscc/GetDeploymentSpec: /Channel/Application/Readers
+    lscc/GetChaincodeData: /Channel/Application/Readers
+    lscc/GetInstantiatedChaincodes: /Channel/Application/Readers
+    qscc/GetChainInfo: /Channel/Application/Readers
+    qscc/GetBlockByNumber: /Channel/Application/Readers
+    qscc/GetBlockByHash: /Channel/Application/Readers
+    qscc/GetTransactionByID: /Channel/Application/Readers
+    qscc/GetBlockByTxID: /Channel/Application/Readers
+    cscc/GetConfigBlock: /Channel/Application/Readers
+    cscc/GetChannelConfig: /Channel/Application/Readers
+    peer/Propose: /Channel/Application/Writers
+    peer/ChaincodeToChaincode: /Channel/Application/Writers
+    event/Block: /Channel/Application/Readers
+    event/FilteredBlock: /Channel/Application/Readers
+
+  Organizations: # Wird in den Profilen gefüllt
+  Policies: &ApplicationDefaultPolicies
     LifecycleEndorsement:
       Type: ImplicitMeta
       Rule: "MAJORITY Endorsement"
     Endorsement:
       Type: ImplicitMeta
       Rule: "MAJORITY Endorsement"
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+
   Capabilities:
     <<: *ApplicationCapabilities
+
 ################################################################################
 #
-#   SECTION: Orderer
+#   ORDERER
 #
-#   - This section defines the values to encode into a config transaction or
-#   genesis block for orderer related parameters
+#   This section defines the values to encode into a config transaction or
+#   genesis block for orderer related parameters.
 #
 ################################################################################
 Orderer: &OrdererDefaults
-  # Batch Timeout: The amount of time to wait before creating a batch
+  # Orderer Type: BFT für SmartBFT Konsensus
+  OrdererType: BFT # <-- Ändern von etcdraft zu BFT
+
+  # Adressen sind hier nicht mehr die primäre Konfiguration, da ConsenterMapping verwendet wird.
+  Addresses:
+  # - 127.0.0.1:7050 # Kann auskommentiert bleiben
+
   BatchTimeout: 2s
-  # Batch Size: Controls the number of messages batched into a block
   BatchSize:
-    # Max Message Count: The maximum number of messages to permit in a batch
-    MaxMessageCount: 10
-    # Absolute Max Bytes: The absolute maximum number of bytes allowed for
-    # the serialized messages in a batch.
-    AbsoluteMaxBytes: 99 MB
-    # Preferred Max Bytes: The preferred maximum number of bytes allowed for
-    # the serialized messages in a batch. A message larger than the preferred
-    # max bytes will result in a batch larger than preferred max bytes.
-    PreferredMaxBytes: 512 KB
-  # Organizations is the list of orgs which are defined as participants on
-  # the orderer side of the network
-  Organizations:
-  # Policies defines the set of policies at this level of the config tree
-  # For Orderer policies, their canonical path is
-  #   /Channel/Orderer/<PolicyName>
+    MaxMessageCount: 500
+    AbsoluteMaxBytes: 10 MB
+    PreferredMaxBytes: 2 MB
+  MaxChannels: 0
+
+  # ConsenterMapping enthält die Definition von Consenter-Identität, Endpunkten und Krypto-Material.
+  # Dies ist für das BFT-Konsensusprotokoll notwendig.
+  ConsenterMapping:
+    - ID: 1
+      Host: orderer.a-mfg.usa01.navine.tech
+      Port: 7050
+      MSPID: OrdererMSP
+      # Pfade zu den Zertifikaten des Orderers auf der Kontrollmaschine,
+      # relativ zum Ort, an dem configtxgen ausgeführt wird.
+      Identity: ../organizations/ordererOrganizations/example.com/orderers/orderer.a-mfg.usa01.navine.tech/msp/signcerts/cert.pem # Überprüfe den genauen Dateinamen nach der Generierung
+      ClientTLSCert: ../organizations/ordererOrganizations/example.com/orderers/orderer.a-mfg.usa01.navine.tech/tls/server.crt
+      ServerTLSCert: ../organizations/ordererOrganizations/example.com/orderers/orderer.a-mfg.usa01.navine.tech/tls/server.crt
+    - ID: 2
+      Host: orderer.b-whs.fin01.navine.tech
+      Port: 7050
+      MSPID: OrdererMSP
+      Identity: ../organizations/ordererOrganizations/example.com/orderers/orderer.b-whs.fin01.navine.tech/msp/signcerts/cert.pem
+      ClientTLSCert: ../organizations/ordererOrganizations/example.com/orderers/orderer.b-whs.fin01.navine.tech/tls/server.crt
+      ServerTLSCert: ../organizations/ordererOrganizations/example.com/orderers/orderer.b-whs.fin01.navine.tech/tls/server.crt
+    - ID: 3
+      Host: orderer.c-aut.deu01.navine.tech
+      Port: 7050
+      MSPID: OrdererMSP
+      Identity: ../organizations/ordererOrganizations/example.com/orderers/orderer.c-aut.deu01.navine.tech/msp/signcerts/cert.pem
+      ClientTLSCert: ../organizations/ordererOrganizations/example.com/orderers/orderer.c-aut.deu01.navine.tech/tls/server.crt
+      ServerTLSCert: ../organizations/ordererOrganizations/example.com/orderers/orderer.c-aut.deu01.navine.tech/tls/server.crt
+    - ID: 4
+      Host: orderer.d-phm.deu01.navine.tech
+      Port: 7050
+      MSPID: OrdererMSP
+      Identity: ../organizations/ordererOrganizations/example.com/orderers/orderer.d-phm.deu01.navine.tech/msp/signcerts/cert.pem
+      ClientTLSCert: ../organizations/ordererOrganizations/example.com/orderers/orderer.d-phm.deu01.navine.tech/tls/server.crt
+      ServerTLSCert: ../organizations/ordererOrganizations/example.com/orderers/orderer.d-phm.deu01.navine.tech/tls/server.crt
+
+  Organizations: # Wird in den Profilen gefüllt
   Policies:
     Readers:
       Type: ImplicitMeta
@@ -209,11 +246,13 @@ Orderer: &OrdererDefaults
     Admins:
       Type: ImplicitMeta
       Rule: "MAJORITY Admins"
-    # BlockValidation specifies what signatures must be included in the block
-    # from the orderer for the peer to validate it.
     BlockValidation:
       Type: ImplicitMeta
       Rule: "ANY Writers"
+
+  Capabilities:
+    <<: *OrdererCapabilities
+
 ################################################################################
 #
 #   CHANNEL
@@ -223,90 +262,64 @@ Orderer: &OrdererDefaults
 #
 ################################################################################
 Channel: &ChannelDefaults
-  # Policies defines the set of policies at this level of the config tree
-  # For Channel policies, their canonical path is
-  #   /Channel/<PolicyName>
   Policies:
-    # Who may invoke the 'Deliver' API
     Readers:
       Type: ImplicitMeta
       Rule: "ANY Readers"
-    # Who may invoke the 'Broadcast' API
     Writers:
       Type: ImplicitMeta
       Rule: "ANY Writers"
-    # By default, who may modify elements at this config level
     Admins:
       Type: ImplicitMeta
       Rule: "MAJORITY Admins"
-  # Capabilities describes the channel level capabilities, see the
-  # dedicated Capabilities section elsewhere in this file for a full
-  # description
+
   Capabilities:
     <<: *ChannelCapabilities
+
 ################################################################################
 #
-#   Profile
+#   PROFILES
 #
-#   - Different configuration profiles may be encoded here to be specified
-#   as parameters to the configtxgen tool
+#   Different configuration profiles may be encoded here to be specified as
+#   parameters to the configtxgen tool.
 #
 ################################################################################
 Profiles:
-  ChannelUsingBFT:
+  # SampleAppChannelSmartBft defines an application channel configuration
+  # that uses the Smart BFT orderer.
+  ChannelUsingBFT: # Habe den Namen an deinen alten Fehler angelehnt
     <<: *ChannelDefaults
+    Consortium: SampleConsortium # Wenn du ein Consortium hast
     Orderer:
       <<: *OrdererDefaults
-      Organizations:
-        - *OrdererOrg
-      Capabilities: *OrdererCapabilities
-      OrdererType: BFT
+      OrdererType: BFT # Explizit hier auf BFT setzen (überschreibt Standard von OrdererDefaults)
+      BatchSize:
+        MaxMessageCount: 5000
+        AbsoluteMaxBytes: 10 MB
       SmartBFT:
-        RequestBatchMaxCount: 100
-        RequestBatchMaxInterval: 50ms
-        RequestForwardTimeout: 2s
+        RequestBatchMaxInterval: 200ms
+        RequestForwardTimeout: 5s
         RequestComplainTimeout: 20s
         RequestAutoRemoveTimeout: 3m0s
         ViewChangeResendInterval: 5s
         ViewChangeTimeout: 20s
         LeaderHeartbeatTimeout: 1m0s
         CollectTimeout: 1s
-        RequestBatchMaxBytes: 10485760
         IncomingMessageBufferSize: 200
         RequestPoolSize: 100000
         LeaderHeartbeatCount: 10
-      ConsenterMapping:
-        - ID: 1
-          Host: orderer.example.com
-          Port: 7050
-          MSPID: OrdererMSP
-          Identity: ../organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/signcerts/orderer.example.com-cert.pem
-          ClientTLSCert: ../organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
-          ServerTLSCert: ../organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
-        - ID: 2
-          Host: orderer2.example.com
-          Port: 7052
-          MSPID: OrdererMSP
-          Identity: ../organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/msp/signcerts/orderer2.example.com-cert.pem
-          ClientTLSCert: ../organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/server.crt
-          ServerTLSCert: ../organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/server.crt
-        - ID: 3
-          Host: orderer3.example.com
-          Port: 7056
-          MSPID: OrdererMSP
-          Identity: ../organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/msp/signcerts/orderer3.example.com-cert.pem
-          ClientTLSCert: ../organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/server.crt
-          ServerTLSCert: ../organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/server.crt
-        - ID: 4
-          Host: orderer4.example.com
-          Port: 7058
-          MSPID: OrdererMSP
-          Identity: ../organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/msp/signcerts/orderer4.example.com-cert.pem
-          ClientTLSCert: ../organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/tls/server.crt
-          ServerTLSCert: ../organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/tls/server.crt
+      Organizations:
+        - *OrdererOrg # <-- Wichtig: Die Orderer-Org hier hinzufügen
+      # Die ConsenterMapping-Details werden von *OrdererDefaults geerbt,
+      # da sie dort bereits vollständig definiert sind.
+      # Wenn du sie hier neu definieren willst, weil dieses Profil spezifische Consenter hat,
+      # müsstest du den kompletten ConsenterMapping-Block hier einfügen.
+      # Da du alle Orderer im Cluster aufgeführt hast, ist die Vererbung von OrdererDefaults passend.
+
     Application:
       <<: *ApplicationDefaults
       Organizations:
-        - *Org1
-        - *Org2
+        - *Org1 # <-- Deine erste Peer-Org (auf Maschine 2)
+        - *Org2 # <-- Deine zweite Peer-Org (auf Maschine 3)
+        - *Org3 # <-- Deine dritte Peer-Org (auf Maschine 4)
       Capabilities: *ApplicationCapabilities
