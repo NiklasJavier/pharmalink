@@ -6,9 +6,11 @@
 version: '3.7'
 
 volumes:
-  orderer.example.com:
-  peer0.org1.example.com:
-  peer0.org2.example.com:
+  orderer.navine.tech:
+  peer0.de.navine.tech:
+  peer0.fr.navine.tech:
+  peer0.be.navine.tech:
+  peer0.es.navine.tech:
 
 networks:
   test:
@@ -16,8 +18,9 @@ networks:
 
 services:
 
-  orderer.example.com:
-    container_name: orderer.example.com
+  # Orderer Node (assuming a single Orderer for now)
+  orderer.navine.tech:
+    container_name: orderer.navine.tech
     image: hyperledger/fabric-orderer:latest
     labels:
       service: hyperledger-fabric
@@ -25,7 +28,7 @@ services:
       - FABRIC_LOGGING_SPEC=INFO
       - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
       - ORDERER_GENERAL_LISTENPORT=7050
-      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP # Beibehalten, falls es eine einzelne Orderer-Org ist
       - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
       # enabled TLS
       - ORDERER_GENERAL_TLS_ENABLED=true
@@ -43,14 +46,14 @@ services:
       - ORDERER_ADMIN_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
       - ORDERER_ADMIN_TLS_CLIENTROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
       - ORDERER_ADMIN_LISTENADDRESS=0.0.0.0:7053
-      - ORDERER_OPERATIONS_LISTENADDRESS=orderer.example.com:9443
+      - ORDERER_OPERATIONS_LISTENADDRESS=orderer.navine.tech:9443 # Angepasster Hostname
       - ORDERER_METRICS_PROVIDER=prometheus
     working_dir: /root
     command: orderer
     volumes:
-        - ../organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp:/var/hyperledger/orderer/msp
-        - ../organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/:/var/hyperledger/orderer/tls
-        - orderer.example.com:/var/hyperledger/production/orderer
+      - ../../../fabric-org/organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/msp:/var/hyperledger/orderer/msp
+      - ../../../fabric-org/organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/:/var/hyperledger/orderer/tls
+      - orderer.navine.tech:/var/hyperledger/production/orderer
     ports:
       - 7050:7050
       - 7053:7053
@@ -58,37 +61,37 @@ services:
     networks:
       - test
 
-  peer0.org1.example.com:
-    container_name: peer0.org1.example.com
+  # Peer for Regulatory Org Germany (de.navine.tech)
+  peer0.de.navine.tech:
+    container_name: peer0.de.navine.tech
     image: hyperledger/fabric-peer:latest
     labels:
       service: hyperledger-fabric
     environment:
       - FABRIC_CFG_PATH=/etc/hyperledger/peercfg
       - FABRIC_LOGGING_SPEC=INFO
-      #- FABRIC_LOGGING_SPEC=DEBUG
       - CORE_PEER_TLS_ENABLED=true
       - CORE_PEER_PROFILE_ENABLED=false
       - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
       - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
       - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
       # Peer specific variables
-      - CORE_PEER_ID=peer0.org1.example.com
-      - CORE_PEER_ADDRESS=peer0.org1.example.com:7051
+      - CORE_PEER_ID=peer0.de.navine.tech
+      - CORE_PEER_ADDRESS=peer0.de.navine.tech:7051 # Standard-Peer-Port, für DE
       - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
-      - CORE_PEER_CHAINCODEADDRESS=peer0.org1.example.com:7052
+      - CORE_PEER_CHAINCODEADDRESS=peer0.de.navine.tech:7052 # Standard-Chaincode-Port, für DE
       - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
-      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org1.example.com:7051
-      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org1.example.com:7051
-      - CORE_PEER_LOCALMSPID=Org1MSP
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.de.navine.tech:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.de.navine.tech:7051
+      - CORE_PEER_LOCALMSPID=RegDeMSP # Angepasst an Deutschland
       - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
-      - CORE_OPERATIONS_LISTENADDRESS=peer0.org1.example.com:9444
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.de.navine.tech:9444 # Standard Operations-Port, für DE
       - CORE_METRICS_PROVIDER=prometheus
-      - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0org1"}
+      - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0de"}
       - CORE_CHAINCODE_EXECUTETIMEOUT=300s
     volumes:
-      - ../organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com:/etc/hyperledger/fabric
-      - peer0.org1.example.com:/var/hyperledger/production
+      - ../../../fabric-org/organizations/peerOrganizations/de.navine.tech/peers/peer0.de.navine.tech:/etc/hyperledger/fabric
+      - peer0.de.navine.tech:/var/hyperledger/production
     working_dir: /root
     command: peer node start
     ports:
@@ -97,41 +100,119 @@ services:
     networks:
       - test
 
-  peer0.org2.example.com:
-    container_name: peer0.org2.example.com
+  # Peer for Regulatory Org France (fr.navine.tech)
+  peer0.fr.navine.tech:
+    container_name: peer0.fr.navine.tech
     image: hyperledger/fabric-peer:latest
     labels:
       service: hyperledger-fabric
     environment:
       - FABRIC_CFG_PATH=/etc/hyperledger/peercfg
       - FABRIC_LOGGING_SPEC=INFO
-      #- FABRIC_LOGGING_SPEC=DEBUG
       - CORE_PEER_TLS_ENABLED=true
       - CORE_PEER_PROFILE_ENABLED=false
       - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
       - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
       - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
       # Peer specific variables
-      - CORE_PEER_ID=peer0.org2.example.com
-      - CORE_PEER_ADDRESS=peer0.org2.example.com:9051
-      - CORE_PEER_LISTENADDRESS=0.0.0.0:9051
-      - CORE_PEER_CHAINCODEADDRESS=peer0.org2.example.com:9052
-      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:9052
-      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org2.example.com:9051
-      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org2.example.com:9051
-      - CORE_PEER_LOCALMSPID=Org2MSP
+      - CORE_PEER_ID=peer0.fr.navine.tech
+      - CORE_PEER_ADDRESS=peer0.fr.navine.tech:8051 # Eindeutiger Port
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:8051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.fr.navine.tech:8052 # Eindeutiger Port
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:8052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.fr.navine.tech:8051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.fr.navine.tech:8051
+      - CORE_PEER_LOCALMSPID=RegFrMSP # Angepasst an Frankreich
       - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
-      - CORE_OPERATIONS_LISTENADDRESS=peer0.org2.example.com:9445
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.fr.navine.tech:9445 # Eindeutiger Operations-Port
       - CORE_METRICS_PROVIDER=prometheus
-      - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0org2"}
+      - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0fr"}
       - CORE_CHAINCODE_EXECUTETIMEOUT=300s
     volumes:
-      - ../organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com:/etc/hyperledger/fabric
-      - peer0.org2.example.com:/var/hyperledger/production
+      - ../../../fabric-org/organizations/peerOrganizations/fr.navine.tech/peers/peer0.fr.navine.tech:/etc/hyperledger/fabric
+      - peer0.fr.navine.tech:/var/hyperledger/production
+    working_dir: /root
+    command: peer node start
+    ports:
+      - 8051:8051
+      - 9445:9445
+    networks:
+      - test
+
+  # Peer for Regulatory Org Belgium (be.navine.tech)
+  peer0.be.navine.tech:
+    container_name: peer0.be.navine.tech
+    image: hyperledger/fabric-peer:latest
+    labels:
+      service: hyperledger-fabric
+    environment:
+      - FABRIC_CFG_PATH=/etc/hyperledger/peercfg
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_PROFILE_ENABLED=false
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      # Peer specific variables
+      - CORE_PEER_ID=peer0.be.navine.tech
+      - CORE_PEER_ADDRESS=peer0.be.navine.tech:9051 # Eindeutiger Port
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:9051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.be.navine.tech:9052 # Eindeutiger Port
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:9052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.be.navine.tech:9051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.be.navine.tech:9051
+      - CORE_PEER_LOCALMSPID=RegBeMSP # Angepasst an Belgien
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.be.navine.tech:9446 # Eindeutiger Operations-Port
+      - CORE_METRICS_PROVIDER=prometheus
+      - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0be"}
+      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+    volumes:
+      - ../../../fabric-org/organizations/peerOrganizations/be.navine.tech/peers/peer0.be.navine.tech:/etc/hyperledger/fabric
+      - peer0.be.navine.tech:/var/hyperledger/production
     working_dir: /root
     command: peer node start
     ports:
       - 9051:9051
-      - 9445:9445
+      - 9446:9446
+    networks:
+      - test
+
+  # Peer for Regulatory Org Spain (es.navine.tech)
+  peer0.es.navine.tech:
+    container_name: peer0.es.navine.tech
+    image: hyperledger/fabric-peer:latest
+    labels:
+      service: hyperledger-fabric
+    environment:
+      - FABRIC_CFG_PATH=/etc/hyperledger/peercfg
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_PROFILE_ENABLED=false
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      # Peer specific variables
+      - CORE_PEER_ID=peer0.es.navine.tech
+      - CORE_PEER_ADDRESS=peer0.es.navine.tech:10051 # Eindeutiger Port
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:10051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.es.navine.tech:10052 # Eindeutiger Port
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:10052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.es.navine.tech:10051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.es.navine.tech:10051
+      - CORE_PEER_LOCALMSPID=RegEsMSP # Angepasst an Spanien
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.es.navine.tech:9447 # Eindeutiger Operations-Port
+      - CORE_METRICS_PROVIDER=prometheus
+      - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0es"}
+      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+    volumes:
+      - ../../../fabric-org/organizations/peerOrganizations/es.navine.tech/peers/peer0.es.navine.tech:/etc/hyperledger/fabric
+      - peer0.es.navine.tech:/var/hyperledger/production
+    working_dir: /root
+    command: peer node start
+    ports:
+      - 10051:10051
+      - 9447:9447
     networks:
       - test

@@ -10,60 +10,112 @@ networks:
     name: fabric_test
 
 services:
-  couchdb0:
-    container_name: couchdb0
+
+  # CouchDB  Org Germany (de.navine.tech)
+  couchdb_reg_de:
+    container_name: couchdb_reg_de
     image: couchdb:3.4.2
     labels:
       service: hyperledger-fabric
-    # Populate the COUCHDB_USER and COUCHDB_PASSWORD to set an admin user and password
-    # for CouchDB.  This will prevent CouchDB from operating in an "Admin Party" mode.
     environment:
       - COUCHDB_USER=admin
       - COUCHDB_PASSWORD=adminpw
-    # Comment/Uncomment the port mapping if you want to hide/expose the CouchDB service,
-    # for example map it to utilize Fauxton User Interface in dev environments.
     ports:
-      - "5984:5984"
+      - "5984:5984" # Standard-CouchDB-Port für Deutschland
     networks:
       - test
 
-  peer0.org1.example.com:
+  # Peer  Org Germany (de.navine.tech) - Fokus auf CouchDB-Verknüpfung
+  peer0.de.navine.tech:
     environment:
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
-      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0:5984
-      # The CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME and CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD
-      # provide the credentials for ledger to connect to CouchDB.  The username and password must
-      # match the username and password set for the associated CouchDB.
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb_reg_de:5984 # Verweis auf lokale CouchDB
       - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
       - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    # Die anderen Peer-Konfigurationen (wie TLS, MSPID, Ports etc.)
+    # werden hier nicht explizit genannt, da sie nicht Teil deiner
+    # ursprünglichen Eingabe für diesen Abschnitt waren.
+    # Denk daran, diese für einen funktionierenden Peer hinzuzufügen,
+    # basierend auf den vorherigen Iterationen oder einem anderen Compose-File.
     depends_on:
-      - couchdb0
+      - couchdb_reg_de
+    networks:
+      - test
 
-  couchdb1:
-    container_name: couchdb1
+  # CouchDB  Org France (fr.navine.tech)
+  couchdb_reg_fr:
+    container_name: couchdb_reg_fr
     image: couchdb:3.4.2
     labels:
       service: hyperledger-fabric
-    # Populate the COUCHDB_USER and COUCHDB_PASSWORD to set an admin user and password
-    # for CouchDB.  This will prevent CouchDB from operating in an "Admin Party" mode.
     environment:
       - COUCHDB_USER=admin
       - COUCHDB_PASSWORD=adminpw
-    # Comment/Uncomment the port mapping if you want to hide/expose the CouchDB service,
-    # for example map it to utilize Fauxton User Interface in dev environments.
     ports:
-      - "7984:5984"
+      - "7984:5984" # Eindeutiger Port für Frankreich
     networks:
       - test
 
-  peer0.org2.example.com:
+  # Peer  Org France (fr.navine.tech) - Fokus auf CouchDB-Verknüpfung
+  peer0.fr.navine.tech:
     environment:
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
-      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb1:5984
-      # The CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME and CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD
-      # provide the credentials for ledger to connect to CouchDB.  The username and password must
-      # match the username and password set for the associated CouchDB.
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb_reg_fr:5984 # Verweis auf lokale CouchDB
       - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
       - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
     depends_on:
-      - couchdb1
+      - couchdb_reg_fr
+    networks:
+      - test
+
+  # CouchDB  Org Belgium (be.navine.tech)
+  couchdb_reg_be:
+    container_name: couchdb_reg_be
+    image: couchdb:3.4.2
+    labels:
+      service: hyperledger-fabric
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - "9984:5984" # Eindeutiger Port für Belgien
+    networks:
+      - test
+
+  # Peer  Org Belgium (be.navine.tech) - Fokus auf CouchDB-Verknüpfung
+  peer0.be.navine.tech:
+    environment:
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb_reg_be:5984 # Verweis auf lokale CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    depends_on:
+      - couchdb_reg_be
+    networks:
+      - test
+
+  # CouchDB  Org Spain (es.navine.tech)
+  couchdb_reg_es:
+    container_name: couchdb_reg_es
+    image: couchdb:3.4.2
+    labels:
+      service: hyperledger-fabric
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - "11984:5984" # Eindeutiger Port für Spanien
+    networks:
+      - test
+
+  # Peer  Org Spain (es.navine.tech) - Fokus auf CouchDB-Verknüpfung
+  peer0.es.navine.tech:
+    environment:
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb_reg_es:5984 # Verweis auf lokale CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    depends_on:
+      - couchdb_reg_es
+    networks:
+      - test

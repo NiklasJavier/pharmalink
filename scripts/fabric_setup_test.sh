@@ -20,6 +20,10 @@ function networkUp() {
   cp -r ./common/compose ./fabric-samples/test-network/
   cp -r ./common/configtx ./fabric-samples/test-network/
 
+  mkdir fabric-org
+
+  cp -r ./common/organizations ./fabric-org/
+
 	cd fabric-samples
 
 	# default to fabric-samples main branch unless v2.2.x is downloaded
@@ -39,6 +43,9 @@ function networkDown() {
 		cd $SRC_DIR/../fabric-samples/test-network
 		./network.sh down
 		rm -fr $SRC_DIR/../fabric-samples
+	fi
+	if [[ -d $SRC_DIR/../fabric-org ]]; then
+		rm -fr $SRC_DIR/../fabric-org
 	fi
 }
 
