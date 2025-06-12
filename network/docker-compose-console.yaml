@@ -1,9 +1,8 @@
 version: '3.7'
 
 networks:
-    test:
-      name: fabric_test
-      external: true
+    fabric_test:
+        external: true
 
 services:
     fabric-console:
@@ -18,16 +17,16 @@ services:
             - DB_CONNECTION_STRING=http://admin:password@console-couchdb:5984
             - DB_SYSTEM=athena-system
         networks:
-            - test
+            - fabric_test
 
     configtxlator:
         container_name: configtxlator
-        image: hyperledger/fabric-tools:2.5
+        image: hyperledger/fabric-tools:2.2.3
         command: /bin/bash -c "/usr/local/bin/configtxlator start --CORS=*"
         ports:
             - "7059:7059"
         networks:
-            - test
+            - fabric_test
 
     console-couchdb:
         container_name: console-couchdb
@@ -40,6 +39,6 @@ services:
         ports:
             - "5985:5984"
         networks:
-        - test
+        - fabric_test
 volumes:
     couch-data:
