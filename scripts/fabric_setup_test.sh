@@ -4,6 +4,11 @@ SRC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )" # Wh
 FABRIC_VERSION="2.5.13"
 CA_VERSION="1.5.15"
 
+# Wichtige Verzeichnisse:
+# ./fabric-samples/test-network/organizations
+# ./fabric-samples/test-network/compose
+# ./fabric-samples/test-network/configtx
+
 function networkUp() {
 	networkDown
 	cd $SRC_DIR/..
@@ -28,14 +33,14 @@ function networkDown() {
 	if [[ -d $SRC_DIR/../fabric-samples/test-network ]]; then
 		cd $SRC_DIR/../fabric-samples/test-network
 		./network.sh down
-		#rm -fr $SRC_DIR/../fabric-samples
+		rm -fr $SRC_DIR/../fabric-samples
 	fi
 }
 
 function printHelp() {
- echo "./startNetwork up"
+ echo "./fabric_setup_test up"
 # echo "./startNetwork up -v 2.4.1"
- echo "./startNetwork down"
+ echo "./fabric_setup_test down"
 }
 ## Parse mode
 if [[ $# -lt 1 ]] ; then

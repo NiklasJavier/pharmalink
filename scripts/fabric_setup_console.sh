@@ -13,8 +13,8 @@ function networkDown() {
 }
 
 function printHelp() {
- echo "./startConsole up"
- echo "./startConsole down"
+ echo "./fabric_setup_console up"
+ echo "./fabric_setup_console down"
 }
 ## Parse mode
 if [[ $# -lt 1 ]] ; then
