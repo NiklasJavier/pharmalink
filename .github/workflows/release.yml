@@ -55,7 +55,7 @@ jobs:
         run: |
           mkdir -p release-package/app
           cp -r build/quarkus-app/* release-package/app/
-          cp -r scripts network release-package/
+          cp -r scripts docker common release-package/
           cd release-package
           zip -r ../pharmalink-${{ github.ref_name }}.zip .
 
