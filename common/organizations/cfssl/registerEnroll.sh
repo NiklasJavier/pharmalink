@@ -29,14 +29,6 @@
 # Anpassung der Basis-Pfade
 BASE_ORG_PATH="organizations"
 
-# Überprüfen, ob der BASE_ORG_PATH existiert
-# Dies ist entscheidend, da das Skript sonst möglicherweise versucht, Dateien in nicht existierende oder falsche Pfade zu schreiben.
-if [ ! -d "$BASE_ORG_PATH" ]; then
-    echo "Fehler: Der angegebene Basis-Pfad für Organisationen ($BASE_ORG_PATH) existiert nicht."
-    echo "Bitte stelle sicher, dass dieser Pfad korrekt ist und alle notwendigen übergeordneten Verzeichnisse vorhanden sind."
-    exit 1
-fi
-
 # Funktionen für die Generierung von Peer-Zertifikaten (CA und Identities)
 function peer_cert() {
 

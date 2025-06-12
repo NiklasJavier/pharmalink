@@ -51,8 +51,8 @@ services:
     working_dir: /root
     command: orderer
     volumes:
-      - ../../../fabric-org/organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/msp:/var/hyperledger/orderer/msp
-      - ../../../fabric-org/organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/:/var/hyperledger/orderer/tls
+      - ../organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/msp:/var/hyperledger/orderer/msp
+      - ../organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/:/var/hyperledger/orderer/tls
       - orderer.navine.tech:/var/hyperledger/production/orderer
     ports:
       - 7050:7050
@@ -90,7 +90,7 @@ services:
       - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0de"}
       - CORE_CHAINCODE_EXECUTETIMEOUT=300s
     volumes:
-      - ../../../fabric-org/organizations/peerOrganizations/de.navine.tech/peers/peer0.de.navine.tech:/etc/hyperledger/fabric
+      - ../organizations/peerOrganizations/de.navine.tech/peers/peer0.de.navine.tech:/etc/hyperledger/fabric
       - peer0.de.navine.tech:/var/hyperledger/production
     working_dir: /root
     command: peer node start
@@ -129,7 +129,7 @@ services:
       - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0fr"}
       - CORE_CHAINCODE_EXECUTETIMEOUT=300s
     volumes:
-      - ../../../fabric-org/organizations/peerOrganizations/fr.navine.tech/peers/peer0.fr.navine.tech:/etc/hyperledger/fabric
+      - ../organizations/peerOrganizations/fr.navine.tech/peers/peer0.fr.navine.tech:/etc/hyperledger/fabric
       - peer0.fr.navine.tech:/var/hyperledger/production
     working_dir: /root
     command: peer node start
@@ -168,7 +168,7 @@ services:
       - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0be"}
       - CORE_CHAINCODE_EXECUTETIMEOUT=300s
     volumes:
-      - ../../../fabric-org/organizations/peerOrganizations/be.navine.tech/peers/peer0.be.navine.tech:/etc/hyperledger/fabric
+      - ../organizations/peerOrganizations/be.navine.tech/peers/peer0.be.navine.tech:/etc/hyperledger/fabric
       - peer0.be.navine.tech:/var/hyperledger/production
     working_dir: /root
     command: peer node start
@@ -207,7 +207,7 @@ services:
       - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0es"}
       - CORE_CHAINCODE_EXECUTETIMEOUT=300s
     volumes:
-      - ../../../fabric-org/organizations/peerOrganizations/es.navine.tech/peers/peer0.es.navine.tech:/etc/hyperledger/fabric
+      - ../organizations/peerOrganizations/es.navine.tech/peers/peer0.es.navine.tech:/etc/hyperledger/fabric
       - peer0.es.navine.tech:/var/hyperledger/production
     working_dir: /root
     command: peer node start

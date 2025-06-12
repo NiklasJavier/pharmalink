@@ -37,7 +37,7 @@ function json_ccp {
         -e "s/\${CAPORT}/$CA_PORT/" \
         -e "s#\${PEERPEM}#$PP#" \
         -e "s#\${CAPEM}#$CP#" \
-        "ccp-template.json" # Pfad zum Template anpassen
+        "organizations/ccp-template.json" # Pfad zum Template anpassen
 }
 
 # Funktion zum Generieren eines YAML CCPs
@@ -60,7 +60,7 @@ function yaml_ccp {
         -e "s/\${CAPORT}/$CA_PORT/" \
         -e "s#\${PEERPEM}#$PP#" \
         -e "s#\${CAPEM}#$CP#" \
-        "ccp-template.yaml" | sed -e $'s/\\\\n/\\\n          /g' # Pfad zum Template anpassen
+        "organizations/ccp-template.yaml" | sed -e $'s/\\\\n/\\\n          /g' # Pfad zum Template anpassen
 }
 
 # --- Definitionen der Organisationen und deren Parameter ---
@@ -71,56 +71,56 @@ ORG_DE_NAME_SHORT="de"
 ORG_DE_DOMAIN="de.navine.tech"
 ORG_DE_PEER_PORT="7051" # Muss dem Port des Peer0.de.navine.tech entsprechen
 ORG_DE_CA_PORT="7054"   # Muss dem Port der CA_reg_de entsprechen
-ORG_DE_PEER_TLS_CERT_PATH="peerOrganizations/de.navine.tech/peers/peer0.de.navine.tech/tls/ca.crt"
-ORG_DE_CA_TLS_CERT_PATH="peerOrganizations/de.navine.tech/ca/ca.de.navine.tech-cert.pem" # Angepasster Dateiname
+ORG_DE_PEER_TLS_CERT_PATH="organizations/peerOrganizations/de.navine.tech/peers/peer0.de.navine.tech/tls/ca.crt"
+ORG_DE_CA_TLS_CERT_PATH="organizations/peerOrganizations/de.navine.tech/ca/ca.de.navine.tech-cert.pem" # Angepasster Dateiname
 
 # Regulatory Org Frankreich
 ORG_FR_NAME_SHORT="fr"
 ORG_FR_DOMAIN="fr.navine.tech"
 ORG_FR_PEER_PORT="8051" # Muss dem Port des Peer0.fr.navine.tech entsprechen
 ORG_FR_CA_PORT="8054"   # Muss dem Port der CA_reg_fr entsprechen
-ORG_FR_PEER_TLS_CERT_PATH="peerOrganizations/fr.navine.tech/peers/peer0.fr.navine.tech/tls/ca.crt"
-ORG_FR_CA_TLS_CERT_PATH="peerOrganizations/fr.navine.tech/ca/ca.fr.navine.tech-cert.pem"
+ORG_FR_PEER_TLS_CERT_PATH="organizations/peerOrganizations/fr.navine.tech/peers/peer0.fr.navine.tech/tls/ca.crt"
+ORG_FR_CA_TLS_CERT_PATH="organizations/peerOrganizations/fr.navine.tech/ca/ca.fr.navine.tech-cert.pem"
 
 # Regulatory Org Belgien
 ORG_BE_NAME_SHORT="be"
 ORG_BE_DOMAIN="be.navine.tech"
 ORG_BE_PEER_PORT="9051" # Muss dem Port des Peer0.be.navine.tech entsprechen
 ORG_BE_CA_PORT="9054"   # Muss dem Port der CA_reg_be entsprechen
-ORG_BE_PEER_TLS_CERT_PATH="peerOrganizations/be.navine.tech/peers/peer0.be.navine.tech/tls/ca.crt"
-ORG_BE_CA_TLS_CERT_PATH="peerOrganizations/be.navine.tech/ca/ca.be.navine.tech-cert.pem"
+ORG_BE_PEER_TLS_CERT_PATH="organizations/peerOrganizations/be.navine.tech/peers/peer0.be.navine.tech/tls/ca.crt"
+ORG_BE_CA_TLS_CERT_PATH="organizations/peerOrganizations/be.navine.tech/ca/ca.be.navine.tech-cert.pem"
 
 # Regulatory Org Spanien
 ORG_ES_NAME_SHORT="es"
 ORG_ES_DOMAIN="es.navine.tech"
 ORG_ES_PEER_PORT="10051" # Muss dem Port des Peer0.es.navine.tech entsprechen
 ORG_ES_CA_PORT="10054"   # Muss dem Port der CA_reg_es entsprechen
-ORG_ES_PEER_TLS_CERT_PATH="peerOrganizations/es.navine.tech/peers/peer0.es.navine.tech/tls/ca.crt"
-ORG_ES_CA_TLS_CERT_PATH="peerOrganizations/es.navine.tech/ca/ca.es.navine.tech-cert.pem"
+ORG_ES_PEER_TLS_CERT_PATH="organizations/peerOrganizations/es.navine.tech/peers/peer0.es.navine.tech/tls/ca.crt"
+ORG_ES_CA_TLS_CERT_PATH="organizations/peerOrganizations/es.navine.tech/ca/ca.es.navine.tech-cert.pem"
 
 # --- Generierung der CCPs für jede Organisation ---
 
 echo "Generiere CCP für Regulatory Org Deutschland (${ORG_DE_DOMAIN})..."
 # Pfad zur Ausgabedatei anpassen
-OUT_DIR="peerOrganizations/${ORG_DE_DOMAIN}"
+OUT_DIR="organizations/peerOrganizations/${ORG_DE_DOMAIN}"
 mkdir -p "$OUT_DIR" # Sicherstellen, dass das Verzeichnis existiert
 echo "$(json_ccp "$ORG_DE_NAME_SHORT" "$ORG_DE_PEER_PORT" "$ORG_DE_CA_PORT" "$ORG_DE_PEER_TLS_CERT_PATH" "$ORG_DE_CA_TLS_CERT_PATH" "$ORG_DE_DOMAIN")" > "${OUT_DIR}/connection-${ORG_DE_NAME_SHORT}.json"
 echo "$(yaml_ccp "$ORG_DE_NAME_SHORT" "$ORG_DE_PEER_PORT" "$ORG_DE_CA_PORT" "$ORG_DE_PEER_TLS_CERT_PATH" "$ORG_DE_CA_TLS_CERT_PATH" "$ORG_DE_DOMAIN")" > "${OUT_DIR}/connection-${ORG_DE_NAME_SHORT}.yaml"
 
 echo "Generiere CCP für Regulatory Org Frankreich (${ORG_FR_DOMAIN})..."
-OUT_DIR="peerOrganizations/${ORG_FR_DOMAIN}"
+OUT_DIR="organizations/peerOrganizations/${ORG_FR_DOMAIN}"
 mkdir -p "$OUT_DIR"
 echo "$(json_ccp "$ORG_FR_NAME_SHORT" "$ORG_FR_PEER_PORT" "$ORG_FR_CA_PORT" "$ORG_FR_PEER_TLS_CERT_PATH" "$ORG_FR_CA_TLS_CERT_PATH" "$ORG_FR_DOMAIN")" > "${OUT_DIR}/connection-${ORG_FR_NAME_SHORT}.json"
 echo "$(yaml_ccp "$ORG_FR_NAME_SHORT" "$ORG_FR_PEER_PORT" "$ORG_FR_CA_PORT" "$ORG_FR_PEER_TLS_CERT_PATH" "$ORG_FR_CA_TLS_CERT_PATH" "$ORG_FR_DOMAIN")" > "${OUT_DIR}/connection-${ORG_FR_NAME_SHORT}.yaml"
 
 echo "Generiere CCP für Regulatory Org Belgien (${ORG_BE_DOMAIN})..."
-OUT_DIR="peerOrganizations/${ORG_BE_DOMAIN}"
+OUT_DIR="organizations/peerOrganizations/${ORG_BE_DOMAIN}"
 mkdir -p "$OUT_DIR"
 echo "$(json_ccp "$ORG_BE_NAME_SHORT" "$ORG_BE_PEER_PORT" "$ORG_BE_CA_PORT" "$ORG_BE_PEER_TLS_CERT_PATH" "$ORG_BE_CA_TLS_CERT_PATH" "$ORG_BE_DOMAIN")" > "${OUT_DIR}/connection-${ORG_BE_NAME_SHORT}.json"
 echo "$(yaml_ccp "$ORG_BE_NAME_SHORT" "$ORG_BE_PEER_PORT" "$ORG_BE_CA_PORT" "$ORG_BE_PEER_TLS_CERT_PATH" "$ORG_BE_CA_TLS_CERT_PATH" "$ORG_BE_DOMAIN")" > "${OUT_DIR}/connection-${ORG_BE_NAME_SHORT}.yaml"
 
 echo "Generiere CCP für Regulatory Org Spanien (${ORG_ES_DOMAIN})..."
-OUT_DIR="peerOrganizations/${ORG_ES_DOMAIN}"
+OUT_DIR="organizations/peerOrganizations/${ORG_ES_DOMAIN}"
 mkdir -p "$OUT_DIR"
 echo "$(json_ccp "$ORG_ES_NAME_SHORT" "$ORG_ES_PEER_PORT" "$ORG_ES_CA_PORT" "$ORG_ES_PEER_TLS_CERT_PATH" "$ORG_ES_CA_TLS_CERT_PATH" "$ORG_ES_DOMAIN")" > "${OUT_DIR}/connection-${ORG_ES_NAME_SHORT}.json"
 echo "$(yaml_ccp "$ORG_ES_NAME_SHORT" "$ORG_ES_PEER_PORT" "$ORG_ES_CA_PORT" "$ORG_ES_PEER_TLS_CERT_PATH" "$ORG_ES_CA_TLS_CERT_PATH" "$ORG_ES_DOMAIN")" > "${OUT_DIR}/connection-${ORG_ES_NAME_SHORT}.yaml"

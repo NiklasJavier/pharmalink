@@ -20,7 +20,7 @@ services:
       # wie z.B. CORE_PEER_ID, CORE_PEER_ADDRESS, CORE_PEER_LOCALMSPID etc.
     volumes:
       # Anpassung des Pfades für Peer-Konfiguration
-      - ../../../fabric-samples/docker/peercfg:/etc/hyperledger/peercfg
+      - ./docker/peercfg:/etc/hyperledger/peercfg
       - ${DOCKER_SOCK}:/host/var/run/docker.sock
       # Füge hier weitere Volume-Mounts für TLS-Zertifikate, MSPs und Ledger-Daten ein
       # wie z.B. - ../../../fabric-samples/organizations/peerOrganizations/de.navine.tech/peers/peer0.de.navine.tech:/etc/hyperledger/fabric
@@ -41,7 +41,7 @@ services:
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=fabric_test
       # Füge hier weitere Peer-Umgebungsvariablen aus vorherigen Schritten ein
     volumes:
-      - ../../../fabric-samples/docker/peercfg:/etc/hyperledger/peercfg
+      - ./docker/peercfg:/etc/hyperledger/peercfg
       - ${DOCKER_SOCK}:/host/var/run/docker.sock
       # Füge hier weitere Volume-Mounts für TLS-Zertifikate, MSPs und Ledger-Daten ein
 
@@ -56,7 +56,7 @@ services:
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=fabric_test
       # Füge hier weitere Peer-Umgebungsvariablen aus vorherigen Schritten ein
     volumes:
-      - ../../../fabric-samples/docker/peercfg:/etc/hyperledger/peercfg
+      - ./docker/peercfg:/etc/hyperledger/peercfg
       - ${DOCKER_SOCK}:/host/var/run/docker.sock
       # Füge hier weitere Volume-Mounts für TLS-Zertifikate, MSPs und Ledger-Daten ein
 
@@ -71,6 +71,6 @@ services:
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=fabric_test
       # Füge hier weitere Peer-Umgebungsvariablen aus vorherigen Schritten ein
     volumes:
-      - ../../../fabric-samples/docker/peercfg:/etc/hyperledger/peercfg
+      - ./docker/peercfg:/etc/hyperledger/peercfg
       - ${DOCKER_SOCK}:/host/var/run/docker.sock
       # Füge hier weitere Volume-Mounts für TLS-Zertifikate, MSPs und Ledger-Daten ein
