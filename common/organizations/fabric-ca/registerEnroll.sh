@@ -244,15 +244,15 @@ createOrdererOrg "navine.tech" "11054" "ca-orderer" # Angepasste Domain, Port un
 # Regulatory Organisationen erstellen
 infoln "Creating Regulatory Organization Germany (de.navine.tech)..."
 # Parameter: Kurzname, Domain, MSPID, CA-Host-Port, CA-Name
-createOrg "de" "de.navine.tech" "RegDeMSP" "7054" "ca-reg-de"
+createOrg "reg-de" "de.navine.tech" "RegDeMSP" "7054" "ca-reg-de"
 
 infoln "Creating Regulatory Organization France (fr.navine.tech)..."
-createOrg "fr" "fr.navine.tech" "RegFrMSP" "8054" "ca-reg-fr"
+createOrg "reg-fr" "fr.navine.tech" "RegFrMSP" "8054" "ca-reg-fr"
 
 infoln "Creating Regulatory Organization Belgium (be.navine.tech)..."
-createOrg "be" "be.navine.tech" "RegBeMSP" "9054" "ca-reg-be"
+createOrg "reg-be" "be.navine.tech" "RegBeMSP" "9054" "ca-reg-be"
 
 infoln "Creating Regulatory Organization Spain (es.navine.tech)..."
-createOrg "es" "es.navine.tech" "RegEsMSP" "10054" "ca-reg-es"
+createOrg "reg-es" "es.navine.tech" "RegEsMSP" "10054" "ca-reg-es"
 
 infoln "All organizations and their identities generated successfully."
