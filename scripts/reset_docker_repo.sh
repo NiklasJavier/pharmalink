@@ -29,3 +29,6 @@ echo "Bereinige verwaiste Docker-Ressourcen (system prune)..."
 docker system prune -f
 
 echo "Alle Docker-Ressourcen wurden erfolgreich entfernt."
+
+echo "Repo zurücksetzen"
+git reset --hard HEAD && git clean -fd
