@@ -2,7 +2,8 @@ version: '3.7'
 
 networks:
     test:
-        name: fabric_test
+      name: fabric_test
+      external: true
 
 services:
     fabric-console:
@@ -21,7 +22,7 @@ services:
 
     configtxlator:
         container_name: configtxlator
-        image: hyperledger/fabric-tools:2.2.3
+        image: hyperledger/fabric-tools:2.5
         command: /bin/bash -c "/usr/local/bin/configtxlator start --CORS=*"
         ports:
             - "7059:7059"
