@@ -47,7 +47,7 @@ Navigiere in den geklonten Projektordner und führe das bereitgestellte Skript a
 
 ```bash
 cd fabric-medical-supply-chain # Stelle sicher, dass du im Projektordner bist
-sh ./scripts/setup_yggdrasil.sh
+sh ./scripts/yggdrasil_setup.sh
 ```
 
 ### Yggdrasil Konfiguration anpassen

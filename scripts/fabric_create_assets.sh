@@ -11,10 +11,10 @@ mkdir -p ${WORK_AREA}/assets/Organizations
 
 ASSETS_ROOT=${SRC_DIR}/../workarea/assets
 
-TEMPLATE_ROOT=${SRC_DIR}/../common/templates/docker
+TEMPLATE_ROOT=${SRC_DIR}/../common/assets/docker
 
 if [[ $# -eq 1 ]] ; then
-	TEMPLATE_ROOT=${SRC_DIR}/../common/templates/localhost
+	TEMPLATE_ROOT=${SRC_DIR}/../common/assets/localhost
 fi
 
 ORG1_CAINFO=${WORK_AREA}/org1_ca.json
