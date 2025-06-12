@@ -1,21 +1,23 @@
 {
-    "CN": "cfssl-orderer-ca",
+    "CN": "ca-orderer",
     "key": {
         "algo": "ecdsa",
         "size": 256
     },
     "names": [
         {
-            "C": "IN",
-            "ST": "Delhi",
-            "L": "Aero city",
-            "O": "cfssl",
-            "OU": "client"
+            "C": "DE",
+            "ST": "Rhineland-Palatinate",
+            "L": "Mainz",
+            "O": "navine.tech",
+            "OU": "OrdererOrg"
         }
     ],
     "hosts": [
         "localhost",
         "127.0.0.1",
-        "0.0.0.0"
+        "0.0.0.0",
+        "ca_orderer",
+        "orderer.navine.tech"
     ]
 }

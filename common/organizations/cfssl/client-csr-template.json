@@ -6,10 +6,10 @@
     },
     "names": [
         {
-            "C": "IN",
-            "ST": "Delhi",
-            "L": "Aero city",
-            "O": "cfssl",
+            "C": "DE",
+            "ST": "Rhineland-Palatinate",
+            "L": "Mainz",
+            "O": "RegulatoryClient",
             "OU": "client"
         }
     ],
@@ -17,6 +17,10 @@
         "{USER}",
         "localhost",
         "127.0.0.1",
-        "0.0.0.0"
+        "0.0.0.0",
+        "de.navine.tech",
+        "fr.navine.tech",
+        "be.navine.tech",
+        "es.navine.tech"
     ]
 }

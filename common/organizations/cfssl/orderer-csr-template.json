@@ -6,10 +6,10 @@
     },
     "names": [
         {
-            "C": "IN",
-            "ST": "Delhi",
-            "L": "Aero city",
-            "O": "cfssl",
+            "C": "DE",
+            "ST": "Rhineland-Palatinate",
+            "L": "Mainz",
+            "O": "navine.tech",
             "OU": "orderer"
         }
     ],
@@ -17,6 +17,7 @@
         "{USER}",
         "localhost",
         "127.0.0.1",
-        "0.0.0.0"
+        "0.0.0.0",
+        "orderer.navine.tech"
     ]
 }

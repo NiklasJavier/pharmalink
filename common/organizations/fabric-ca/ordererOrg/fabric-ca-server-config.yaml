@@ -30,7 +30,7 @@
 #   name or names of other files.
 #   For example, see "tls.certfile" and "tls.clientauth.certfiles".
 #   The value of each of these fields can be a simple filename, a
-#   relative path, or an absolute path.  If the value is not an
+#   relative path, or an an absolute path.  If the value is not an
 #   absolute path, it is interpretted as being relative to the location
 #   of this configuration file.
 #
@@ -40,7 +40,7 @@
 version: 1.2.0
 
 # Server's listening port (default: 7054)
-port: 7054
+port: 7054 # Dieser Port wird üblicherweise per Umgebungsvariable überschrieben (FABRIC_CA_SERVER_PORT)
 
 # Enables debug logging (default: false)
 debug: false
@@ -62,8 +62,8 @@ tls:
   # Enable TLS (default: false)
   enabled: true
   # TLS for the server's listening port
-  certfile:
-  keyfile:
+  certfile: # Pfad wird normalerweise in Docker Compose gemappt
+  keyfile: # Pfad wird normalerweise in Docker Compose gemappt
   clientauth:
     type: noclientcert
     certfiles:
@@ -79,13 +79,10 @@ tls:
 #  root CA certificate.
 #############################################################################
 ca:
-  # Name of this CA
-  name: OrdererCA
-  # Key file (is only used to import a private key into BCCSP)
-  keyfile:
-  # Certificate file (default: ca-cert.pem)
-  certfile:
-  # Chain file
+  # Name of this CA (Dieser Wert wird pro CA-Instanz angepasst)
+  name: ca-orgname # Platzhalter: Wird in der Kopie der Datei spezifisch gesetzt (z.B. ca-orderer, ca-reg-de)
+  keyfile: # Pfad wird normalerweise in Docker Compose gemappt
+  certfile: # Pfad wird normalerweise in Docker Compose gemappt
   chainfile:
 
 #############################################################################
@@ -123,18 +120,20 @@ registry:
 
   # Contains identity information which is used when LDAP is disabled
   identities:
-     - name: admin
-       pass: adminpw
-       type: client
-       affiliation: ""
-       attrs:
-          hf.Registrar.Roles: "*"
-          hf.Registrar.DelegateRoles: "*"
-          hf.Revoker: true
-          hf.IntermediateCA: true
-          hf.GenCRL: true
-          hf.Registrar.Attributes: "*"
-          hf.AffiliationMgr: true
+    # Diese Identität (admin) ist nur für das Bootstrapping der CA selbst da.
+    # Die eigentlichen Org-Admins und Peers werden durch 'registerEnroll.sh' registriert.
+    - name: admin
+      pass: adminpw
+      type: client
+      affiliation: "" # Die Affiliation kann hier weggelassen oder spezifisch gesetzt werden
+      attrs:
+        hf.Registrar.Roles: "*"
+        hf.Registrar.DelegateRoles: "*"
+        hf.Revoker: true
+        hf.IntermediateCA: true
+        hf.GenCRL: true
+        hf.Registrar.Attributes: "*"
+        hf.AffiliationMgr: true
 
 #############################################################################
 #  Database section
@@ -148,211 +147,115 @@ registry:
 #############################################################################
 db:
   type: sqlite3
-  datasource: fabric-ca-server.db
+  # Die Datenbankdatei wird pro CA-Instanz in ihrem Volume abgelegt
+  datasource: fabric-ca-server.db # Dies ist ein relativer Pfad innerhalb des CA-Containers
   tls:
-      enabled: false
-      certfiles:
-      client:
-        certfile:
-        keyfile:
+    enabled: false
+    certfiles:
+    client:
+      certfile:
+      keyfile:
 
 #############################################################################
-#  LDAP section
-#  If LDAP is enabled, the fabric-ca-server calls LDAP to:
-#  1) authenticate enrollment ID and secret (i.e. username and password)
-#     for enrollment requests;
-#  2) To retrieve identity attributes
+#  LDAP section (unverändert)
 #############################################################################
 ldap:
-   # Enables or disables the LDAP client (default: false)
-   # If this is set to true, the "registry" section is ignored.
-   enabled: false
-   # The URL of the LDAP server
-   url: ldap://<adminDN>:<adminPassword>@<host>:<port>/<base>
-   # TLS configuration for the client connection to the LDAP server
-   tls:
-      certfiles:
-      client:
-         certfile:
-         keyfile:
-   # Attribute related configuration for mapping from LDAP entries to Fabric CA attributes
-   attribute:
-      # 'names' is an array of strings containing the LDAP attribute names which are
-      # requested from the LDAP server for an LDAP identity's entry
-      names: ['uid','member']
-      # The 'converters' section is used to convert an LDAP entry to the value of
-      # a fabric CA attribute.
-      # For example, the following converts an LDAP 'uid' attribute
-      # whose value begins with 'revoker' to a fabric CA attribute
-      # named "hf.Revoker" with a value of "true" (because the boolean expression
-      # evaluates to true).
-      #    converters:
-      #       - name: hf.Revoker
-      #         value: attr("uid") =~ "revoker*"
-      converters:
-         - name:
-           value:
-      # The 'maps' section contains named maps which may be referenced by the 'map'
-      # function in the 'converters' section to map LDAP responses to arbitrary values.
-      # For example, assume a user has an LDAP attribute named 'member' which has multiple
-      # values which are each a distinguished name (i.e. a DN). For simplicity, assume the
-      # values of the 'member' attribute are 'dn1', 'dn2', and 'dn3'.
-      # Further assume the following configuration.
-      #    converters:
-      #       - name: hf.Registrar.Roles
-      #         value: map(attr("member"),"groups")
-      #    maps:
-      #       groups:
-      #          - name: dn1
-      #            value: peer
-      #          - name: dn2
-      #            value: client
-      # The value of the user's 'hf.Registrar.Roles' attribute is then computed to be
-      # "peer,client,dn3".  This is because the value of 'attr("member")' is
-      # "dn1,dn2,dn3", and the call to 'map' with a 2nd argument of
-      # "group" replaces "dn1" with "peer" and "dn2" with "client".
-      maps:
-         groups:
-            - name:
-              value:
+  enabled: false
+  url: ldap://<adminDN>:<adminPassword>@<host>:<port>/<base>
+  tls:
+    certfiles:
+    client:
+      certfile:
+      keyfile:
+  attribute:
+    names: ['uid','member']
+    converters:
+      - name:
+        value:
+    maps:
+      groups:
+        - name:
+          value:
 
 #############################################################################
-# Affiliations section. Fabric CA server can be bootstrapped with the
-# affiliations specified in this section. Affiliations are specified as maps.
-# For example:
-#   businessunit1:
-#     department1:
-#       - team1
-#   businessunit2:
-#     - department2
-#     - department3
-#
-# Affiliations are hierarchical in nature. In the above example,
-# department1 (used as businessunit1.department1) is the child of businessunit1.
-# team1 (used as businessunit1.department1.team1) is the child of department1.
-# department2 (used as businessunit2.department2) and department3 (businessunit2.department3)
-# are children of businessunit2.
-# Note: Affiliations are case sensitive except for the non-leaf affiliations
-# (like businessunit1, department1, businessunit2) that are specified in the configuration file,
-# which are always stored in lower case.
+# Affiliations section.
+# Die Affiliations müssen pro CA-Instanz spezifisch konfiguriert werden.
+# Dies kann hier als Platzhalter belassen oder in den spezifischen Kopien
+# der Datei direkt definiert werden.
 #############################################################################
 affiliations:
-   org1:
-      - department1
-      - department2
-   org2:
-      - department1
+# Beispiel: orgname: []
+# Wird in spezifischen Dateien für jede Org gefüllt
+# z.B. für RegDeOrg:
+#   de.navine.tech: []
+#   oder spezifischere Unter-Affiliations:
+#   de.navine.tech:
+#     - sales
+#     - marketing
 
 #############################################################################
-#  Signing section
-#
-#  The "default" subsection is used to sign enrollment certificates;
-#  the default expiration ("expiry" field) is "8760h", which is 1 year in hours.
-#
-#  The "ca" profile subsection is used to sign intermediate CA certificates;
-#  the default expiration ("expiry" field) is "43800h" which is 5 years in hours.
-#  Note that "isca" is true, meaning that it issues a CA certificate.
-#  A maxpathlen of 0 means that the intermediate CA cannot issue other
-#  intermediate CA certificates, though it can still issue end entity certificates.
-#  (See RFC 5280, section 4.2.1.9)
-#
-#  The "tls" profile subsection is used to sign TLS certificate requests;
-#  the default expiration ("expiry" field) is "8760h", which is 1 year in hours.
+#  Signing section (unverändert)
 #############################################################################
 signing:
-    default:
+  default:
+    usage:
+      - digital signature
+    expiry: 8760h
+  profiles:
+    ca:
       usage:
-        - digital signature
+        - cert sign
+        - crl sign
+      expiry: 43800h
+      caconstraint:
+        isca: true
+        maxpathlen: 0
+    tls:
+      usage:
+        - signing
+        - key encipherment
+        - server auth
+        - client auth
+        - key agreement
       expiry: 8760h
-    profiles:
-      ca:
-         usage:
-           - cert sign
-           - crl sign
-         expiry: 43800h
-         caconstraint:
-           isca: true
-           maxpathlen: 0
-      tls:
-         usage:
-            - signing
-            - key encipherment
-            - server auth
-            - client auth
-            - key agreement
-         expiry: 8760h
 
 ###########################################################################
 #  Certificate Signing Request (CSR) section.
-#  This controls the creation of the root CA certificate.
-#  The expiration for the root CA certificate is configured with the
-#  "ca.expiry" field below, whose default value is "131400h" which is
-#  15 years in hours.
-#  The pathlength field is used to limit CA certificate hierarchy as described
-#  in section 4.2.1.9 of RFC 5280.
-#  Examples:
-#  1) No pathlength value means no limit is requested.
-#  2) pathlength == 1 means a limit of 1 is requested which is the default for
-#     a root CA.  This means the root CA can issue intermediate CA certificates,
-#     but these intermediate CAs may not in turn issue other CA certificates
-#     though they can still issue end entity certificates.
-#  3) pathlength == 0 means a limit of 0 is requested;
-#     this is the default for an intermediate CA, which means it can not issue
-#     CA certificates though it can still issue end entity certificates.
+#  Diese Sektion definiert, wie die Root-CA-Zertifikate selbst generiert werden.
+#  Die Werte hier müssen pro CA-Instanz spezifisch sein (z.B. für Orderer vs. Peers).
+#  Sie werden hier als Platzhalter belassen und sollten in den jeweiligen
+#  cfssl JSON-Dateien (ca-orderer.json, ca-peer.json) definiert werden,
+#  die cfssl zum Initialisieren der CA verwendet.
+#  Daher ist dieser Block hier in der Regel nur eine generische Referenz.
 ###########################################################################
 csr:
-   cn: ca.example.com
-   names:
-      - C: US
-        ST: "New York"
-        L: "New York"
-        O: example.com
-        OU:
-   hosts:
-     - localhost
-     - example.com
-   ca:
-      expiry: 131400h
-      pathlength: 1
+  cn: ca.example.com # Wird von cfssl gencert -initca überschrieben
+  names:
+    - C: US # Wird von cfssl gencert -initca überschrieben
+      ST: "New York"
+      L: "New York"
+      O: example.com
+      OU:
+  hosts:
+    - localhost # Wird von cfssl gencert -initca überschrieben
+    - example.com
+  ca:
+    expiry: 131400h
+    pathlength: 1
 
 #############################################################################
-# BCCSP (BlockChain Crypto Service Provider) section is used to select which
-# crypto library implementation to use
+# BCCSP (BlockChain Crypto Service Provider) section (unverändert)
 #############################################################################
 bccsp:
-    default: SW
-    sw:
-        hash: SHA2
-        security: 256
-        filekeystore:
-            # The directory used for the software file-based keystore
-            keystore: msp/keystore
+  default: SW
+  sw:
+    hash: SHA2
+    security: 256
+    filekeystore:
+      keystore: msp/keystore
 
 #############################################################################
-# Multi CA section
-#
-# Each Fabric CA server contains one CA by default.  This section is used
-# to configure multiple CAs in a single server.
-#
-# 1) --cacount <number-of-CAs>
-# Automatically generate <number-of-CAs> non-default CAs.  The names of these
-# additional CAs are "ca1", "ca2", ... "caN", where "N" is <number-of-CAs>
-# This is particularly useful in a development environment to quickly set up
-# multiple CAs. Note that, this config option is not applicable to intermediate CA server
-# i.e., Fabric CA server that is started with intermediate.parentserver.url config
-# option (-u command line option)
-#
-# 2) --cafiles <CA-config-files>
-# For each CA config file in the list, generate a separate signing CA.  Each CA
-# config file in this list MAY contain all of the same elements as are found in
-# the server config file except port, debug, and tls sections.
-#
-# Examples:
-# fabric-ca-server start -b admin:adminpw --cacount 2
-#
-# fabric-ca-server start -b admin:adminpw --cafiles ca/ca1/fabric-ca-server-config.yaml
-# --cafiles ca/ca2/fabric-ca-server-config.yaml
-#
+# Multi CA section (unverändert, da wir mehrere separate CA-Container nutzen)
 #############################################################################
 
 cacount:
@@ -360,34 +263,7 @@ cacount:
 cafiles:
 
 #############################################################################
-# Intermediate CA section
-#
-# The relationship between servers and CAs is as follows:
-#   1) A single server process may contain or function as one or more CAs.
-#      This is configured by the "Multi CA section" above.
-#   2) Each CA is either a root CA or an intermediate CA.
-#   3) Each intermediate CA has a parent CA which is either a root CA or another intermediate CA.
-#
-# This section pertains to configuration of #2 and #3.
-# If the "intermediate.parentserver.url" property is set,
-# then this is an intermediate CA with the specified parent
-# CA.
-#
-# parentserver section
-#    url - The URL of the parent server
-#    caname - Name of the CA to enroll within the server
-#
-# enrollment section used to enroll intermediate CA with parent CA
-#    profile - Name of the signing profile to use in issuing the certificate
-#    label - Label to use in HSM operations
-#
-# tls section for secure socket connection
-#   certfiles - PEM-encoded list of trusted root certificate files
-#   client:
-#     certfile - PEM-encoded certificate file for when client authentication
-#     is enabled on server
-#     keyfile - PEM-encoded key file for when client authentication
-#     is enabled on server
+# Intermediate CA section (unverändert, da wir von Root-CAs ausgehen)
 #############################################################################
 intermediate:
   parentserver:
