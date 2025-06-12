@@ -16,9 +16,9 @@ function networkUp() {
 	./install-fabric.sh --fabric-version ${FABRIC_VERSION} --ca-version ${CA_VERSION}
 
   ## Meine Überschreibungen
-  cp -r ./common/organizations ./fabric-samples/test-network/organizations/
-  cp -r ./common/compose ./fabric-samples/test-network/compose/
-  cp -r ./common/configtx ./fabric-samples/test-network/configtx/
+  cp -r ./common/organizations ./fabric-samples/test-network/
+  cp -r ./common/compose ./fabric-samples/test-network/
+  cp -r ./common/configtx ./fabric-samples/test-network/
 
 	cd fabric-samples
 
