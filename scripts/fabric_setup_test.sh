@@ -15,6 +15,11 @@ function networkUp() {
 	curl -sSLO https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh && chmod +x install-fabric.sh
 	./install-fabric.sh --fabric-version ${FABRIC_VERSION} --ca-version ${CA_VERSION}
 
+  ## Meine Überschreibungen
+  cp -r ./common/organizations ./fabric-samples/test-network/organizations/
+  cp -r ./common/compose ./fabric-samples/test-network/compose/
+  cp -r ./common/configtx ./fabric-samples/test-network/configtx/
+
 	cd fabric-samples
 
 	# default to fabric-samples main branch unless v2.2.x is downloaded
