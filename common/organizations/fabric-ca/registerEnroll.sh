@@ -48,10 +48,10 @@ function createOrg() {
   export FABRIC_CA_CLIENT_HOME="${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/"
 
   set -x
-  # Korrekter Pfad zum CA-Zertifikat für --tls.certfiles. Geht vom Test-Netzwerk-Root aus.
-  # Annahme: 'organizations' und 'fabric-ca' liegen auf gleicher Ebene unterhalb von 'test-network/'
   fabric-ca-client enroll -u "https://admin:adminpw@localhost:${CA_HOST_PORT}" --caname "${CA_NAME}" --tls.certfiles "organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem"
+  res=$? # Fehlerprüfung hinzufügen
   { set +x; } 2>/dev/null
+  if [ $res -ne 0 ]; then errorln "Failed to enroll CA admin for ${ORG_DOMAIN}. Exiting."; exit 1; fi
 
   echo 'NodeOUs:
   Enable: true
@@ -68,14 +68,10 @@ function createOrg() {
     Certificate: cacerts/ca.crt
     OrganizationalUnitIdentifier: orderer' > "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/msp/config.yaml"
 
-  # Kopieren des Org CA-Zertifikats in die org-level ca und tlsca Verzeichnisse
   mkdir -p "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/msp/tlscacerts"
-  # Diese Kopie ist für die Channel MSP Definition und sollte das Root CA Zertifikat der Org sein
   cp "organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem" "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/msp/tlscacerts/ca.crt"
 
-  # Explizites Kopieren des CA-Zertifikats als ca.crt in msp/cacerts
   mkdir -p "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/msp/cacerts"
-  # Dies behebt den Fehler "Failed loading ClientOU certificate at ... cacerts/ca.crt: no such file or directory"
   cp "organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem" "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/msp/cacerts/ca.crt"
 
 
@@ -88,50 +84,68 @@ function createOrg() {
   infoln "Registering peer0 for ${ORG_DOMAIN}"
   set -x
   fabric-ca-client register --caname "${CA_NAME}" --id.name "peer0.${ORG_DOMAIN}" --id.secret "peer0pw" --id.type peer --tls.certfiles "organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem"
+  res=$? # Fehlerprüfung hinzufügen
   { set +x; } 2>/dev/null
+  if [ $res -ne 0 ]; then errorln "Failed to register peer0 for ${ORG_DOMAIN}. Exiting."; exit 1; fi
 
   infoln "Registering user1 for ${ORG_DOMAIN}"
   set -x
   fabric-ca-client register --caname "${CA_NAME}" --id.name "user1" --id.secret "user1pw" --id.type client --tls.certfiles "organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem"
+  res=$? # Fehlerprüfung hinzufügen
   { set +x; } 2>/dev/null
+  if [ $res -ne 0 ]; then errorln "Failed to register user1 for ${ORG_DOMAIN}. Exiting."; exit 1; fi
 
   infoln "Registering the org admin for ${ORG_DOMAIN}"
   set -x
   fabric-ca-client register --caname "${CA_NAME}" --id.name "${ORG_NAME_SHORT}admin" --id.secret "${ORG_NAME_SHORT}adminpw" --id.type admin --tls.certfiles "organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem"
+  res=$? # Fehlerprüfung hinzufügen
   { set +x; } 2>/dev/null
+  if [ $res -ne 0 ]; then errorln "Failed to register org admin for ${ORG_DOMAIN}. Exiting."; exit 1; fi
 
   infoln "Generating the peer0 msp for ${ORG_DOMAIN}"
   set -x
   fabric-ca-client enroll -u "https://peer0.${ORG_DOMAIN}:peer0pw@localhost:${CA_HOST_PORT}" --caname "${CA_NAME}" -M "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/peers/peer0.${ORG_DOMAIN}/msp" --tls.certfiles "organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem"
+  res=$? # Fehlerprüfung hinzufügen
   { set +x; } 2>/dev/null
+  if [ $res -ne 0 ]; then errorln "Failed to enroll peer0 MSP for ${ORG_DOMAIN}. Exiting."; exit 1; fi
 
   cp "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/msp/config.yaml" "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/peers/peer0.${ORG_DOMAIN}/msp/config.yaml"
 
   infoln "Generating the peer0-tls certificates for ${ORG_DOMAIN}, use --csr.hosts to specify Subject Alternative Names"
   set -x
   fabric-ca-client enroll -u "https://peer0.${ORG_DOMAIN}:peer0pw@localhost:${CA_HOST_PORT}" --caname "${CA_NAME}" -M "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/peers/peer0.${ORG_DOMAIN}/tls" --enrollment.profile tls --csr.hosts "peer0.${ORG_DOMAIN}" --csr.hosts localhost --tls.certfiles "organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem"
+  res=$? # Fehlerprüfung hinzufügen
   { set +x; } 2>/dev/null
+  if [ $res -ne 0 ]; then errorln "Failed to enroll peer0 TLS certificates for ${ORG_DOMAIN}. Exiting."; exit 1; fi
 
-  # KORREKTUR: Kopieren des TLS CA Root Certs für den Peer-TLS-Ordner
-  # Sicherstellen, dass die Datei 'ca.crt' im 'tls/' Ordner des Peers liegt,
-  # da dies der Pfad ist, der von 'ccp-generate.sh' und dem Peer erwartet wird.
-  cp "organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem" "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/peers/peer0.${ORG_DOMAIN}/tls/ca.crt" # <- DIES IST DIE KRITISCHE KORREKTUR FÜR AWK FEHLER!
-  # Die folgenden Zeilen sind für Server- und Key-Zertifikate, diese sollten schon funktionieren.
+  # WICHTIGE ANPASSUNG HIER: explizite Pfade und Fehlerprüfung für cp
+  # Kopieren des TLS CA Root Certs für den Peer-TLS-Ordner
+  cp "organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem" "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/peers/peer0.${ORG_DOMAIN}/tls/ca.crt"
+  if [ $? -ne 0 ]; then errorln "Failed to copy CA root cert to peer TLS/ca.crt for ${ORG_DOMAIN}. Exiting."; exit 1; fi
+
+  # Kopieren der generierten Server- und Key-Zertifikate
   cp "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/peers/peer0.${ORG_DOMAIN}/tls/signcerts/"* "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/peers/peer0.${ORG_DOMAIN}/tls/server.crt"
+  if [ $? -ne 0 ]; then errorln "Failed to copy peer TLS server.crt for ${ORG_DOMAIN}. Exiting."; exit 1; fi
+
   cp "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/peers/peer0.${ORG_DOMAIN}/tls/keystore/"* "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/peers/peer0.${ORG_DOMAIN}/tls/server.key"
+  if [ $? -ne 0 ]; then errorln "Failed to copy peer TLS server.key for ${ORG_DOMAIN}. Exiting."; exit 1; fi
 
 
   infoln "Generating the user msp for ${ORG_DOMAIN}"
   set -x
   fabric-ca-client enroll -u "https://user1:user1pw@localhost:${CA_HOST_PORT}" --caname "${CA_NAME}" -M "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/users/User1@${ORG_DOMAIN}/msp" --tls.certfiles "organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem"
+  res=$? # Fehlerprüfung hinzufügen
   { set +x; } 2>/dev/null
+  if [ $res -ne 0 ]; then errorln "Failed to enroll user1 MSP for ${ORG_DOMAIN}. Exiting."; exit 1; fi
 
   cp "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/msp/config.yaml" "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/users/User1@${ORG_DOMAIN}/msp/config.yaml"
 
   infoln "Generating the org admin msp for ${ORG_DOMAIN}"
   set -x
   fabric-ca-client enroll -u "https://${ORG_NAME_SHORT}admin:${ORG_NAME_SHORT}adminpw@localhost:${CA_HOST_PORT}" --caname "${CA_NAME}" -M "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/users/Admin@${ORG_DOMAIN}/msp" --tls.certfiles "organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem"
+  res=$? # Fehlerprüfung hinzufügen
   { set +x; } 2>/dev/null
+  if [ $res -ne 0 ]; then errorln "Failed to enroll org admin MSP for ${ORG_DOMAIN}. Exiting."; exit 1; fi
 
   cp "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/msp/config.yaml" "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/users/Admin@${ORG_DOMAIN}/msp/config.yaml"
 }
@@ -152,10 +166,10 @@ function createOrdererOrg() {
   export FABRIC_CA_CLIENT_HOME="${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}"
 
   set -x
-  # ANPASSUNG: Korrekter Pfad zum CA-Zertifikat. Annahme: script läuft von test-network/
-  # und die CA-Zertifikate liegen in organizations/fabric-ca/
   fabric-ca-client enroll -u "https://admin:adminpw@localhost:${ORDERER_CA_HOST_PORT}" --caname "${ORDERER_CA_NAME}" --tls.certfiles "organizations/fabric-ca/ordererOrg/ca-cert.pem"
+  res=$? # Fehlerprüfung hinzufügen
   { set +x; } 2>/dev/null
+  if [ $res -ne 0 ]; then errorln "Failed to enroll CA admin for Orderer Org. Exiting."; exit 1; fi
 
   echo "NodeOUs:
   Enable: true
@@ -172,11 +186,9 @@ function createOrdererOrg() {
     Certificate: cacerts/ca.crt
     OrganizationalUnitIdentifier: orderer" > "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/msp/config.yaml"
 
-  # Kopieren des Orderer CA-Zertifikats in die orderer org-level ca und tlsca Verzeichnisse
   mkdir -p "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/msp/tlscacerts"
   cp "organizations/fabric-ca/ordererOrg/ca-cert.pem" "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/msp/tlscacerts/tlsca.${ORDERER_ORG_DOMAIN}-cert.pem"
 
-  # ANPASSUNG: Explizites Kopieren des CA-Zertifikats als ca.crt in msp/cacerts
   mkdir -p "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/msp/cacerts"
   cp "organizations/fabric-ca/ordererOrg/ca-cert.pem" "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/msp/cacerts/ca.crt"
 
@@ -184,52 +196,67 @@ function createOrdererOrg() {
   mkdir -p "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/tlsca"
   cp "organizations/fabric-ca/ordererOrg/ca-cert.pem" "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/tlsca/tlsca.${ORDERER_ORG_DOMAIN}-cert.pem"
 
-  # Schleife durch jeden Orderer-Knoten (hier nehmen wir einen einzelnen Orderer an: orderer.navine.tech)
   local ORDERER_NAME="orderer" # Name des einzelnen Orderer-Knotens
 
   infoln "Registering ${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}"
   set -x
   fabric-ca-client register --caname "${ORDERER_CA_NAME}" --id.name "${ORDERER_NAME}" --id.secret "ordererpw" --id.type orderer --tls.certfiles "organizations/fabric-ca/ordererOrg/ca-cert.pem"
+  res=$? # Fehlerprüfung hinzufügen
   { set +x; } 2>/dev/null
+  if [ $res -ne 0 ]; then errorln "Failed to register orderer ${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}. Exiting."; exit 1; fi
+
 
   infoln "Generating the ${ORDERER_NAME}.${ORDERER_ORG_DOMAIN} MSP"
   set -x
   fabric-ca-client enroll -u "https://${ORDERER_NAME}:ordererpw@localhost:${ORDERER_CA_HOST_PORT}" --caname "${ORDERER_CA_NAME}" -M "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/msp" --tls.certfiles "organizations/fabric-ca/ordererOrg/ca-cert.pem"
+  res=$? # Fehlerprüfung hinzufügen
   { set +x; } 2>/dev/null
+  if [ $res -ne 0 ]; then errorln "Failed to enroll orderer MSP for ${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}. Exiting."; exit 1; fi
 
   cp "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/msp/config.yaml" "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/msp/config.yaml"
 
   # Workaround: Rename the signcert file to ensure consistency with Cryptogen generated artifacts
   mv "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/msp/signcerts/cert.pem" "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/msp/signcerts/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}-cert.pem"
+  if [ $? -ne 0 ]; then errorln "Failed to rename orderer signcert for ${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}. Exiting."; exit 1; fi
+
 
   infoln "Generating the ${ORDERER_NAME}.${ORDERER_ORG_DOMAIN} TLS certificates, use --csr.hosts to specify Subject Alternative Names"
   set -x
   fabric-ca-client enroll -u "https://${ORDERER_NAME}:ordererpw@localhost:${ORDERER_CA_HOST_PORT}" --caname "${ORDERER_CA_NAME}" -M "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/tls" --enrollment.profile tls --csr.hosts "${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}" --csr.hosts localhost --tls.certfiles "organizations/fabric-ca/ordererOrg/ca-cert.pem"
+  res=$? # Fehlerprüfung hinzufügen
   { set +x; } 2>/dev/null
+  if [ $res -ne 0 ]; then errorln "Failed to enroll orderer TLS certificates for ${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}. Exiting."; exit 1; fi
 
-  # KORREKTUR: Kopieren des TLS CA Root Certs für den Orderer-TLS-Ordner
-  # Sicherstellen, dass die Datei 'ca.crt' im 'tls/' Ordner des Orderers liegt,
-  # da dies der Pfad ist, der vom Orderer erwartet wird.
-  cp "organizations/fabric-ca/ordererOrg/ca-cert.pem" "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/tls/ca.crt" # <- DIES IST DIE KRITISCHE KORREKTUR FÜR AWK FEHLER!
-  # Die folgenden Zeilen sind für Server- und Key-Zertifikate, diese sollten schon funktionieren.
+  # WICHTIGE ANPASSUNG HIER: explizite Pfade und Fehlerprüfung für cp
+  cp "organizations/fabric-ca/ordererOrg/ca-cert.pem" "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/tls/ca.crt"
+  if [ $? -ne 0 ]; then errorln "Failed to copy CA root cert to orderer TLS/ca.crt for ${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}. Exiting."; exit 1; fi
+
   cp "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/tls/signcerts/"* "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/tls/server.crt"
+  if [ $? -ne 0 ]; then errorln "Failed to copy orderer TLS server.crt for ${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}. Exiting."; exit 1; fi
+
   cp "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/tls/keystore/"* "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/tls/server.key"
+  if [ $? -ne 0 ]; then errorln "Failed to copy orderer TLS server.key for ${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}. Exiting."; exit 1; fi
 
 
   # Kopieren des Orderer Org CA-Zertifikats in das /msp/tlscacerts Verzeichnis des Orderers
   mkdir -p "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/msp/tlscacerts"
   cp "organizations/fabric-ca/ordererOrg/ca-cert.pem" "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/msp/tlscacerts/tlsca.${ORDERER_ORG_DOMAIN}-cert.pem"
+  if [ $? -ne 0 ]; then errorln "Failed to copy OrdererOrg CA cert to Orderer MSP tlscacerts for ${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}. Exiting."; exit 1; fi
 
   # Registrieren und Generieren von Artefakten für den Orderer Admin
   infoln "Registering the orderer admin"
   set -x
   fabric-ca-client register --caname "${ORDERER_CA_NAME}" --id.name "ordererAdmin" --id.secret "ordererAdminpw" --id.type admin --tls.certfiles "organizations/fabric-ca/ordererOrg/ca-cert.pem"
+  res=$? # Fehlerprüfung hinzufügen
   { set +x; } 2>/dev/null
+  if [ $res -ne 0 ]; then errorln "Failed to register orderer admin. Exiting."; exit 1; fi
 
   infoln "Generating the admin msp"
   set -x
   fabric-ca-client enroll -u "https://ordererAdmin:ordererAdminpw@localhost:${ORDERER_CA_HOST_PORT}" --caname "${ORDERER_CA_NAME}" -M "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/users/Admin@${ORDERER_ORG_DOMAIN}/msp" --tls.certfiles "organizations/fabric-ca/ordererOrg/ca-cert.pem"
+  res=$? # Fehlerprüfung hinzufügen
   { set +x; } 2>/dev/null
+  if [ $res -ne 0 ]; then errorln "Failed to enroll orderer admin MSP. Exiting."; exit 1; fi
 
   cp "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/msp/config.yaml" "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/users/Admin@${ORDERER_ORG_DOMAIN}/msp/config.yaml"
 }
