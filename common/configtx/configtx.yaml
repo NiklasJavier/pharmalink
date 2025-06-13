@@ -16,8 +16,6 @@ Organizations:
   - &OrdererOrg
     Name: OrdererMSP
     ID: OrdererMSP
-    # Angepasster MSPDir-Pfad für den Orderer.
-    # Wichtig: Dieser Pfad ist relativ zum FABRIC_CFG_PATH, der in network.sh gesetzt wird.
     MSPDir: organizations/ordererOrganizations/navine.tech/msp
     Policies:
       Readers:
@@ -30,7 +28,7 @@ Organizations:
         Type: Signature
         Rule: "OR('OrdererMSP.admin')"
     OrdererEndpoints:
-      - orderer.navine.tech:7050 # Angepasste Orderer-Domain
+      - orderer.navine.tech:7050
 
   - &RegDeOrg # Deutschland
     Name: RegDeMSP
@@ -108,17 +106,14 @@ Organizations:
 #
 #   SECTION: Consortiums
 #
-#   - DIES IST DER NEUE ODER KORRIGIERTE ABSCHNITT!
-#   - Hier definierst du deine Konsortien. Ein Konsortium ist eine Liste von
-#     Organisationen, die auf diesem Ordering Service Kanäle erstellen dürfen.
-#   - Der Name des Konsortiums (hier "PharmaLinkConsortium") wird später im
-#     Kanalprofil referenziert.
+#   - DIES IST DER KRITISCHE ABSCHNITT FÜR DIE EINRÜCKUNG!
+#   - Er muss auf der GLEICHEN EINRÜCKUNGSEBENE wie 'Organizations' liegen.
 #
 ################################################################################
-Consortiums:
-  PharmaLinkConsortium: # Wähle einen aussagekräftigen Namen für dein Konsortium
-    Organizations:
-      - *RegDeOrg # Alle Peer-Organisationen, die Teil dieses Konsortiums sind
+Consortiums: # <--- HIER AUF DER TOP-LEVEL, OHNE EINRÜCKUNG!
+  PharmaLinkConsortium: # <--- Zwei Leerzeichen Einrückung
+    Organizations:      # <--- Vier Leerzeichen Einrückung
+      - *RegDeOrg
       - *RegFrOrg
       - *RegBeOrg
       - *RegEsOrg
@@ -127,7 +122,7 @@ Consortiums:
 #
 #   SECTION: Capabilities
 #
-#   - This section defines the capabilities of fabric network.
+#   - Muss ebenfalls auf der TOP-LEVEL liegen.
 #
 ################################################################################
 Capabilities:
@@ -140,9 +135,6 @@ Capabilities:
 ################################################################################
 #
 #   SECTION: Application
-#
-#   - This section defines the values to encode into a config transaction or
-#   genesis block for application related parameters
 #
 ################################################################################
 Application: &ApplicationDefaults
@@ -169,12 +161,8 @@ Application: &ApplicationDefaults
 #
 #   SECTION: Orderer
 #
-#   - This section defines the values to encode into a config transaction or
-#   genesis block for orderer related parameters
-#
 ################################################################################
 Orderer: &OrdererDefaults
-  # Angepasste Orderer-Adresse
   Addresses:
     - orderer.navine.tech:7050
   BatchTimeout: 2s
@@ -200,9 +188,6 @@ Orderer: &OrdererDefaults
 #
 #   CHANNEL
 #
-#   This section defines the values to encode into a config transaction or
-#   genesis block for channel related parameters.
-#
 ################################################################################
 Channel: &ChannelDefaults
   Policies:
@@ -221,14 +206,10 @@ Channel: &ChannelDefaults
 #
 #   Profile
 #
-#   - Different configuration profiles may be encoded here to be specified
-#   as parameters to the configtxgen tool
-#
 ################################################################################
 Profiles:
   ChannelUsingRaft: # Dies ist das Profil, das für die Kanalkreation verwendet wird
     <<: *ChannelDefaults
-    # HIER IST DIE KRITISCHE NEUE ZEILE!
     Consortium: PharmaLinkConsortium # MUSS mit dem Namen übereinstimmen, den du in der Consortiums-Sektion gewählt hast!
 
     Orderer:
@@ -236,9 +217,8 @@ Profiles:
       OrdererType: etcdraft
       EtcdRaft:
         Consenters:
-          - Host: orderer.navine.tech # Angepasste Orderer-Domain
+          - Host: orderer.navine.tech
             Port: 7050
-            # Angepasste TLS-Zertifikatspfade. Annahme: relativ zum FABRIC_CFG_PATH
             ClientTLSCert: organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/server.crt
             ServerTLSCert: organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/server.crt
       Organizations:
@@ -247,30 +227,8 @@ Profiles:
     Application:
       <<: *ApplicationDefaults
       Organizations:
-        - *RegDeOrg # Hinzugefügt: Deutschland
-        - *RegFrOrg # Hinzugefügt: Frankreich
-        - *RegBeOrg # Hinzugefügt: Belgien
-        - *RegEsOrg # Hinzugefügt: Spanien
+        - *RegDeOrg
+        - *RegFrOrg
+        - *RegBeOrg
+        - *RegEsOrg
       Capabilities: *ApplicationCapabilities
-
-  # Optional: Ein separates Profil für den Genesis-Block des Systems (falls nicht 'ChannelUsingRaft' verwendet wird)
-  # Dies ist das Profil, das network.sh für den system-genesis-block verwenden könnte,
-  # wenn network.sh nicht das ChannelUsingRaft-Profil direkt dafür nimmt.
-  # OrdererGenesis: # Beispiel für ein System-Channel-Genesis-Block-Profil
-  #   <<: *ChannelDefaults
-  #   Orderer:
-  #     <<: *OrdererDefaults
-  #     OrdererType: etcdraft
-  #     EtcdRaft:
-  #       Consenters:
-  #         - Host: orderer.navine.tech
-  #           Port: 7050
-  #           ClientTLSCert: organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/server.crt
-  #           ServerTLSCert: organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/server.crt
-  #     Organizations:
-  #       - *OrdererOrg
-  #     Capabilities: *OrdererCapabilities
-  #   Application:
-  #     <<: *ApplicationDefaults
-  #     Organizations: # Keine Anwendungsorganisationen im Systemkanal
-  #     Capabilities: *ApplicationCapabilities
