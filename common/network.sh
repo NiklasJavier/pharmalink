@@ -142,7 +142,7 @@ function createOrgs() {
   infoln "Generating certificates using Fabric CA"
   # Starten der CA-Dienste
   # Hier nur die CA-Compose-Dateien hochfahren
-  ${CONTAINER_CLI_COMPOSE} -f compose/${COMPOSE_FILE_CA} up -d 2>&1
+  ${CONTAINER_CLI_COMPOSE} -f compose/${COMPOSE_FILE_CA} up -d
 
   # Ausführen des registerEnroll.sh Skripts aus dem fabric-ca Ordner
   # Wichtig: Der Pfad muss relativ zur Ausführungsposition von network.sh sein.
