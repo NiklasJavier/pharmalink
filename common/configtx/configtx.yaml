@@ -16,8 +16,9 @@ Organizations:
   - &OrdererOrg
     Name: OrdererMSP
     ID: OrdererMSP
-    # Angepasster MSPDir-Pfad für den Orderer
-    MSPDir: ../organizations/ordererOrganizations/navine.tech/msp
+    # Angepasster MSPDir-Pfad für den Orderer.
+    # Wichtig: Dieser Pfad ist relativ zum FABRIC_CFG_PATH, der in network.sh gesetzt wird.
+    MSPDir: organizations/ordererOrganizations/navine.tech/msp
     Policies:
       Readers:
         Type: Signature
@@ -34,8 +35,7 @@ Organizations:
   - &RegDeOrg # Deutschland
     Name: RegDeMSP
     ID: RegDeMSP
-    # Angepasster MSPDir-Pfad für Deutschland
-    MSPDir: ../organizations/peerOrganizations/de.navine.tech/msp
+    MSPDir: organizations/peerOrganizations/de.navine.tech/msp
     Policies:
       Readers:
         Type: Signature
@@ -53,12 +53,11 @@ Organizations:
   - &RegFrOrg # Frankreich
     Name: RegFrMSP
     ID: RegFrMSP
-    # Angepasster MSPDir-Pfad für Frankreich
-    MSPDir: ../organizations/peerOrganizations/fr.navine.tech/msp
+    MSPDir: organizations/peerOrganizations/fr.navine.tech/msp
     Policies:
       Readers:
         Type: Signature
-        Rule: "OR('RegFrMSP.admin', 'RegFrMSP.peer', 'RegFrMSP.client')"
+        Rule: "OR('RegFrMSP.admin', 'RegFrMSP.peer', 'OR('RegFrMSP.client')"
       Writers:
         Type: Signature
         Rule: "OR('RegFrMSP.admin', 'RegFrMSP.client')"
@@ -72,8 +71,7 @@ Organizations:
   - &RegBeOrg # Belgien
     Name: RegBeMSP
     ID: RegBeMSP
-    # Angepasster MSPDir-Pfad für Belgien
-    MSPDir: ../organizations/peerOrganizations/be.navine.tech/msp
+    MSPDir: organizations/peerOrganizations/be.navine.tech/msp
     Policies:
       Readers:
         Type: Signature
@@ -91,8 +89,7 @@ Organizations:
   - &RegEsOrg # Spanien
     Name: RegEsMSP
     ID: RegEsMSP
-    # Angepasster MSPDir-Pfad für Spanien
-    MSPDir: ../organizations/peerOrganizations/es.navine.tech/msp
+    MSPDir: organizations/peerOrganizations/es.navine.tech/msp
     Policies:
       Readers:
         Type: Signature
@@ -109,21 +106,28 @@ Organizations:
 
 ################################################################################
 #
+#   SECTION: Consortiums
+#
+#   - DIES IST DER NEUE ODER KORRIGIERTE ABSCHNITT!
+#   - Hier definierst du deine Konsortien. Ein Konsortium ist eine Liste von
+#     Organisationen, die auf diesem Ordering Service Kanäle erstellen dürfen.
+#   - Der Name des Konsortiums (hier "PharmaLinkConsortium") wird später im
+#     Kanalprofil referenziert.
+#
+################################################################################
+Consortiums:
+  PharmaLinkConsortium: # Wähle einen aussagekräftigen Namen für dein Konsortium
+    Organizations:
+      - *RegDeOrg # Alle Peer-Organisationen, die Teil dieses Konsortiums sind
+      - *RegFrOrg
+      - *RegBeOrg
+      - *RegEsOrg
+
+################################################################################
+#
 #   SECTION: Capabilities
 #
-#   - This section defines the capabilities of fabric network. This is a new
-#   concept as of v1.1.0 and should not be utilized in mixed networks with
-#   v1.0.x peers and orderers.  Capabilities define features which must be
-#   present in a fabric binary for that binary to safely participate in the
-#   fabric network.  For instance, if a new MSP type is added, newer binaries
-#   might recognize and validate the signatures from this type, while older
-#   binaries without this support would be unable to validate those
-#   transactions.  This could lead to different versions of the fabric binaries
-#   having different world states.  Instead, defining a capability for a channel
-#   informs those binaries without this capability that they must cease
-#   processing transactions until they have been upgraded.  For v1.0.x if any
-#   capabilities are defined (including a map with all capabilities turned off)
-#   then the v1.0.x peer will deliberately crash.
+#   - This section defines the capabilities of fabric network.
 #
 ################################################################################
 Capabilities:
@@ -224,6 +228,9 @@ Channel: &ChannelDefaults
 Profiles:
   ChannelUsingRaft: # Dies ist das Profil, das für die Kanalkreation verwendet wird
     <<: *ChannelDefaults
+    # HIER IST DIE KRITISCHE NEUE ZEILE!
+    Consortium: PharmaLinkConsortium # MUSS mit dem Namen übereinstimmen, den du in der Consortiums-Sektion gewählt hast!
+
     Orderer:
       <<: *OrdererDefaults
       OrdererType: etcdraft
@@ -231,9 +238,9 @@ Profiles:
         Consenters:
           - Host: orderer.navine.tech # Angepasste Orderer-Domain
             Port: 7050
-            # Angepasste TLS-Zertifikatspfade
-            ClientTLSCert: ../organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/server.crt
-            ServerTLSCert: ../organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/server.crt
+            # Angepasste TLS-Zertifikatspfade. Annahme: relativ zum FABRIC_CFG_PATH
+            ClientTLSCert: organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/server.crt
+            ServerTLSCert: organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/server.crt
       Organizations:
         - *OrdererOrg
       Capabilities: *OrdererCapabilities
@@ -247,11 +254,23 @@ Profiles:
       Capabilities: *ApplicationCapabilities
 
   # Optional: Ein separates Profil für den Genesis-Block des Systems (falls nicht 'ChannelUsingRaft' verwendet wird)
-  # TwoOrgsChannel: # Beispiel für ein Channel-Profil, das Org1 und Org2 enthält
+  # Dies ist das Profil, das network.sh für den system-genesis-block verwenden könnte,
+  # wenn network.sh nicht das ChannelUsingRaft-Profil direkt dafür nimmt.
+  # OrdererGenesis: # Beispiel für ein System-Channel-Genesis-Block-Profil
   #   <<: *ChannelDefaults
+  #   Orderer:
+  #     <<: *OrdererDefaults
+  #     OrdererType: etcdraft
+  #     EtcdRaft:
+  #       Consenters:
+  #         - Host: orderer.navine.tech
+  #           Port: 7050
+  #           ClientTLSCert: organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/server.crt
+  #           ServerTLSCert: organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/server.crt
+  #     Organizations:
+  #       - *OrdererOrg
+  #     Capabilities: *OrdererCapabilities
   #   Application:
   #     <<: *ApplicationDefaults
-  #     Organizations:
-  #       - *Org1
-  #       - *Org2
+  #     Organizations: # Keine Anwendungsorganisationen im Systemkanal
   #     Capabilities: *ApplicationCapabilities
