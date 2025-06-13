@@ -57,16 +57,16 @@ function createOrg() {
   echo "NodeOUs:
   Enable: true
   ClientOUIdentifier:
-    Certificate: cacerts/ca.crt
+    Certificate: cacerts/localhost-${CA_HOST_PORT}-${CA_IDENTIFIER}.pem
     OrganizationalUnitIdentifier: client
   PeerOUIdentifier:
-    Certificate: cacerts/ca.crt
+    Certificate: cacerts/localhost-${CA_HOST_PORT}-${CA_IDENTIFIER}.pem
     OrganizationalUnitIdentifier: peer
   AdminOUIdentifier:
-    Certificate: cacerts/ca.crt
+    Certificate: cacerts/localhost-${CA_HOST_PORT}-${CA_IDENTIFIER}.pem
     OrganizationalUnitIdentifier: admin
   OrdererOUIdentifier:
-    Certificate: cacerts/ca.crt
+    Certificate: cacerts/localhost-${CA_HOST_PORT}-${CA_IDENTIFIER}.pem
     OrganizationalUnitIdentifier: orderer" > "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/msp/config.yaml"
 
   # Kopieren des Org CA-Zertifikats in die org-level ca und tlsca Verzeichnisse
@@ -151,16 +151,16 @@ function createOrdererOrg() {
   echo "NodeOUs:
   Enable: true
   ClientOUIdentifier:
-    Certificate: cacerts/ca.crt
+    Certificate: cacerts/localhost-${ORDERER_CA_HOST_PORT}-${ORDERER_CA_NAME}.pem
     OrganizationalUnitIdentifier: client
   PeerOUIdentifier:
-    Certificate: cacerts/ca.crt
+    Certificate: cacerts/localhost-${ORDERER_CA_HOST_PORT}-${ORDERER_CA_NAME}.pem
     OrganizationalUnitIdentifier: peer
   AdminOUIdentifier:
-    Certificate: cacerts/ca.crt
+    Certificate: cacerts/localhost-${ORDERER_CA_HOST_PORT}-${ORDERER_CA_NAME}.pem
     OrganizationalUnitIdentifier: admin
   OrdererOUIdentifier:
-    Certificate: cacerts/ca.crt
+    Certificate: cacerts/localhost-${ORDERER_CA_HOST_PORT}-${ORDERER_CA_NAME}.pem
     OrganizationalUnitIdentifier: orderer" > "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/msp/config.yaml"
 
   # Kopieren des Orderer CA-Zertifikats in die orderer org-level ca und tlsca Verzeichnisse
