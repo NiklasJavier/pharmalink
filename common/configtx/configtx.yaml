@@ -1,17 +1,8 @@
 # Copyright IBM Corp. All Rights Reserved. DEMO
 #
 # SPDX-License-Identifier: Apache-2.0
-#
 
----
-################################################################################
-#
-#   Section: Organizations
-#
-#   - This section defines the different organizational identities which will
-#   be referenced later in the configuration.
-#
-################################################################################
+# Sektion: Organizations
 Organizations:
   - &OrdererOrg
     Name: OrdererMSP
@@ -102,29 +93,16 @@ Organizations:
         Type: Signature
         Rule: "OR('RegEsMSP.peer')"
 
-################################################################################
-#
-#   SECTION: Consortiums
-#
-#   - DIES IST DER KRITISCHE ABSCHNITT FÜR DIE EINRÜCKUNG!
-#   - Er muss auf der GLEICHEN EINRÜCKUNGSEBENE wie 'Organizations' liegen.
-#
-################################################################################
-Consortiums: # <--- HIER AUF DER TOP-LEVEL, OHNE EINRÜCKUNG!
-  PharmaLinkConsortium: # <--- Zwei Leerzeichen Einrückung
-    Organizations:      # <--- Vier Leerzeichen Einrückung
+# SECTION: Consortiums
+Consortiums:
+  PharmaLinkConsortium: # Der Name deines Konsortiums
+    Organizations:
       - *RegDeOrg
       - *RegFrOrg
       - *RegBeOrg
       - *RegEsOrg
 
-################################################################################
-#
-#   SECTION: Capabilities
-#
-#   - Muss ebenfalls auf der TOP-LEVEL liegen.
-#
-################################################################################
+# SECTION: Capabilities
 Capabilities:
   Channel: &ChannelCapabilities
     V2_0: true
@@ -132,11 +110,8 @@ Capabilities:
     V2_0: true
   Application: &ApplicationCapabilities
     V2_5: true
-################################################################################
-#
-#   SECTION: Application
-#
-################################################################################
+
+# SECTION: Application
 Application: &ApplicationDefaults
   Organizations:
   Policies:
@@ -157,11 +132,8 @@ Application: &ApplicationDefaults
       Rule: "MAJORITY Endorsement"
   Capabilities:
     <<: *ApplicationCapabilities
-################################################################################
-#
-#   SECTION: Orderer
-#
-################################################################################
+
+# SECTION: Orderer
 Orderer: &OrdererDefaults
   Addresses:
     - orderer.navine.tech:7050
@@ -184,11 +156,8 @@ Orderer: &OrdererDefaults
     BlockValidation:
       Type: ImplicitMeta
       Rule: "ANY Writers"
-################################################################################
-#
-#   CHANNEL
-#
-################################################################################
+
+# SECTION: Channel
 Channel: &ChannelDefaults
   Policies:
     Readers:
@@ -202,16 +171,12 @@ Channel: &ChannelDefaults
       Rule: "MAJORITY Admins"
   Capabilities:
     <<: *ChannelCapabilities
-################################################################################
-#
-#   Profile
-#
-################################################################################
+
+# SECTION: Profile
 Profiles:
-  ChannelUsingRaft: # Dies ist das Profil, das für die Kanalkreation verwendet wird
+  ChannelUsingRaft:
     <<: *ChannelDefaults
     Consortium: PharmaLinkConsortium # MUSS mit dem Namen übereinstimmen, den du in der Consortiums-Sektion gewählt hast!
-
     Orderer:
       <<: *OrdererDefaults
       OrdererType: etcdraft
