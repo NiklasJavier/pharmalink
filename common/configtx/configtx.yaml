@@ -17,7 +17,7 @@ Organizations:
     Name: OrdererMSP
     ID: OrdererMSP
     # Angepasster MSPDir-Pfad für den Orderer
-    MSPDir: ../../../fabric-org/organizations/ordererOrganizations/navine.tech/msp
+    MSPDir: ../organizations/ordererOrganizations/navine.tech/msp
     Policies:
       Readers:
         Type: Signature
@@ -35,7 +35,7 @@ Organizations:
     Name: RegDeMSP
     ID: RegDeMSP
     # Angepasster MSPDir-Pfad für Deutschland
-    MSPDir: ../../../fabric-org/organizations/peerOrganizations/de.navine.tech/msp
+    MSPDir: ../organizations/peerOrganizations/de.navine.tech/msp
     Policies:
       Readers:
         Type: Signature
@@ -54,7 +54,7 @@ Organizations:
     Name: RegFrMSP
     ID: RegFrMSP
     # Angepasster MSPDir-Pfad für Frankreich
-    MSPDir: ../../../fabric-org/organizations/peerOrganizations/fr.navine.tech/msp
+    MSPDir: ../organizations/peerOrganizations/fr.navine.tech/msp
     Policies:
       Readers:
         Type: Signature
@@ -73,7 +73,7 @@ Organizations:
     Name: RegBeMSP
     ID: RegBeMSP
     # Angepasster MSPDir-Pfad für Belgien
-    MSPDir: ../../../fabric-org/organizations/peerOrganizations/be.navine.tech/msp
+    MSPDir: ../organizations/peerOrganizations/be.navine.tech/msp
     Policies:
       Readers:
         Type: Signature
@@ -92,7 +92,7 @@ Organizations:
     Name: RegEsMSP
     ID: RegEsMSP
     # Angepasster MSPDir-Pfad für Spanien
-    MSPDir: ../../../fabric-org/organizations/peerOrganizations/es.navine.tech/msp
+    MSPDir: ../organizations/peerOrganizations/es.navine.tech/msp
     Policies:
       Readers:
         Type: Signature
@@ -232,8 +232,8 @@ Profiles:
           - Host: orderer.navine.tech # Angepasste Orderer-Domain
             Port: 7050
             # Angepasste TLS-Zertifikatspfade
-            ClientTLSCert: ../../../fabric-org/organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/server.crt
-            ServerTLSCert: ../../../fabric-org/organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/server.crt
+            ClientTLSCert: ../organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/server.crt
+            ServerTLSCert: ../organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/server.crt
       Organizations:
         - *OrdererOrg
       Capabilities: *OrdererCapabilities
