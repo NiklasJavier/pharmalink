@@ -142,7 +142,17 @@ function createOrgs() {
   infoln "Generating certificates using Fabric CA"
   # Starten der CA-Dienste
   # Hier nur die CA-Compose-Dateien hochfahren
-  ${CONTAINER_CLI_COMPOSE} -f compose/${COMPOSE_FILE_CA} up -d
+  ${CONTAINER_CLI_COMPOSE} -f compose/${COMPOSE_FILE_CA} up -d 2>&1
+
+    # Make sure CA files have been created
+    while :
+    do
+      if [ ! -f "organizations/peerOrganizations/es.navine.tech/ca/ca.es.navine.tech-cert.pem" ]; then
+        sleep 1
+      else
+        break
+      fi
+    done
 
   # Ausführen des registerEnroll.sh Skripts aus dem fabric-ca Ordner
   # Wichtig: Der Pfad muss relativ zur Ausführungsposition von network.sh sein.
