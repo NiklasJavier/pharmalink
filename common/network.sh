@@ -64,7 +64,7 @@ function checkPrereqs() {
   ## Check if your have cloned the peer binaries and configuration files.
   peer version > /dev/null 2>&1
 
-  if [[ $? -ne 0 || ! -d "config" ]]; then # Geändert von "../config" zu "config"
+  if [[ $? -ne 0 || ! -d "../config" ]]; then # Geändert von "../config" zu "config"
     errorln "Peer binary and configuration files not found.."
     errorln
     errorln "Follow the instructions in the Fabric docs to install the Fabric Binaries:"
@@ -144,41 +144,10 @@ function createOrgs() {
   # Hier nur die CA-Compose-Dateien hochfahren
   ${CONTAINER_CLI_COMPOSE} -f compose/${COMPOSE_FILE_CA} up -d 2>&1
 
-  # Optional: Kurze Pause, um sicherzustellen, dass die CAs starten
-  sleep 3
-
-  # Warten bis alle CA-Container gesund sind
-  # Dies ist robuster als auf eine einzelne Datei zu warten
-  infoln "Waiting for all CA containers to become healthy..."
-  local CA_CONTAINERS=("ca_orderer" "ca_reg_de" "ca_reg_fr" "ca_reg_be" "ca_reg_es")
-  for CA_CONT in "${CA_CONTAINERS[@]}"; do
-    infoln "Waiting for $CA_CONT to be healthy..."
-    COUNTER=0
-    HEALTHY=0
-    while [[ $HEALTHY -ne 1 && $COUNTER -lt $MAX_RETRY ]]; do
-      sleep 2
-      HEALTH_STATUS=$(${CONTAINER_CLI} inspect --format='{{.State.Health.Status}}' "$CA_CONT" 2>/dev/null || true)
-      if [ "$HEALTH_STATUS" == "healthy" ]; then
-        HEALTHY=1
-      elif [ "$HEALTH_STATUS" == "unhealthy" ]; then
-        fatalln "$CA_CONT is unhealthy. Check its logs."
-      fi
-      COUNTER=$((COUNTER + 1))
-      if [[ $COUNTER -ge $MAX_RETRY ]]; then
-        fatalln "CA container $CA_CONT did not become healthy in time. Exiting."
-      fi
-    done
-    if [[ $HEALTHY -ne 1 ]]; then
-      fatalln "Problem with CA container $CA_CONT health check."
-    fi
-    infoln "$CA_CONT is healthy."
-  done
-
-
   # Ausführen des registerEnroll.sh Skripts aus dem fabric-ca Ordner
   # Wichtig: Der Pfad muss relativ zur Ausführungsposition von network.sh sein.
   # Annahme: network.sh und fabric-ca/ liegen im selben Verzeichnis (test-network/).
-  . fabric-ca/registerEnroll.sh # Angepasster Pfad
+  . organizations/fabric-ca/registerEnroll.sh # Angepasster Pfad
 
   infoln "Creating Orderer Org Identities (navine.tech)..."
   # Parameter: Domain, CA-Host-Port, CA-Name
