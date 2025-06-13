@@ -258,9 +258,14 @@ function createOrgs() {
 
   fi
 
+  infoln "Generating CCP files for all Regulatory Orgs"  # === NEUE POSITION FÜR CCP-GENERIERUNG ===
+  # Führe ccp-generate.sh HIER aus, NACHDEM createOrgs (und damit registerEnroll.sh)
+  # vollständig abgeschlossen ist und die tls/ca.crt Dateien existieren sollten.
   infoln "Generating CCP files for all Regulatory Orgs"
-  # Pfad zu ccp-generate.sh anpassen, angenommen, es liegt im 'organizations'-Ordner
   ./organizations/ccp-generate.sh
+  if [ $? -ne 0 ]; then
+    fatalln "Failed to generate Client Connection Profiles."
+  fi
 }
 
 # Once you create the organization crypto material, you need to create the
