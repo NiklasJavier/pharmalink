@@ -5,12 +5,11 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-# Dieses Skript bringt ein Hyperledger Fabric Netzwerk für den Test von Smart Contracts
-# und Anwendungen auf. Das Netzwerk besteht aus VIER Organisationen (DE, FR, BE, ES)
-# mit je einem Peer, und einem einzelnen Orderer-Knoten im Raft Ordering Service.
-# Benutzer können dieses Skript auch verwenden, um einen Kanal zu erstellen und einen Chaincode
-# auf diesem Kanal bereitzustellen.
-
+# This script brings up a Hyperledger Fabric network for testing smart contracts
+# and applications. The test network consists of two organizations with one
+# peer each, and a single node Raft ordering service. Users can also use this
+# script to create a channel deploy a chaincode on the channel
+#
 # prepending $PWD/../bin to PATH to ensure we are picking up the correct binaries
 # this may be commented out to resolve installed version of tools if desired
 #
@@ -19,16 +18,15 @@
 # this script is actually in and infer location from there. (putting first)
 
 ROOTDIR=$(cd "$(dirname "$0")" && pwd)
-# Korrektur: Pfad zu bin-Verzeichnis, angenommen, es liegt im 'test-network/bin'
-export PATH=${ROOTDIR}/bin:${PATH} # Nur das eigene bin-Verzeichnis hinzufügen, da ROOTDIR bereits 'test-network' ist
-export FABRIC_CFG_PATH=${ROOTDIR}/configtx # configtx sollte direkt im ROOTDIR liegen
+export PATH=${ROOTDIR}/../bin:${PWD}/../bin:$PATH
+export FABRIC_CFG_PATH=${PWD}/configtx
 export VERBOSE=false
 
 # push to the required directory & set a trap to go back if needed
 pushd ${ROOTDIR} > /dev/null
 trap "popd > /dev/null" EXIT
 
-. scripts/utils.sh # Annahme: scripts/utils.sh liegt relativ zu ROOTDIR
+. scripts/utils.sh
 
 : ${CONTAINER_CLI:="docker"}
 if command -v ${CONTAINER_CLI}-compose > /dev/null 2>&1; then
@@ -59,18 +57,21 @@ function removeUnwantedImages() {
 NONWORKING_VERSIONS="^1\.0\. ^1\.1\. ^1\.2\. ^1\.3\. ^1\.4\."
 
 # Do some basic sanity checking to make sure that the appropriate versions of fabric
-# binaries/images are available.
+# binaries/images are available. In the future, additional checking for the presence
+# of go or other items could be added.
 function checkPrereqs() {
   ## Check if your have cloned the peer binaries and configuration files.
   peer version > /dev/null 2>&1
 
-  if [[ $? -ne 0 || ! -d "../config" ]]; then # Geändert von "../config" zu "config"
+  if [[ $? -ne 0 || ! -d "../config" ]]; then
     errorln "Peer binary and configuration files not found.."
     errorln
     errorln "Follow the instructions in the Fabric docs to install the Fabric Binaries:"
     errorln "https://hyperledger-fabric.readthedocs.io/en/latest/install.html"
     exit 1
   fi
+  # use the fabric peer container to see if the samples and binaries match your
+  # docker images
   LOCAL_VERSION=$(peer version | sed -ne 's/^ Version: //p')
   DOCKER_IMAGE_VERSION=$(${CONTAINER_CLI} run --rm hyperledger/fabric-peer:latest peer version | sed -ne 's/^ Version: //p')
 
@@ -82,98 +83,188 @@ function checkPrereqs() {
   fi
 
   for UNSUPPORTED_VERSION in $NONWORKING_VERSIONS; do
-    infoln "$LOCAL_VERSION" | grep -q "$UNSUPPORTED_VERSION"
+    infoln "$LOCAL_VERSION" | grep -q $UNSUPPORTED_VERSION
     if [ $? -eq 0 ]; then
       fatalln "Local Fabric binary version of $LOCAL_VERSION does not match the versions supported by the test network."
     fi
 
-    infoln "$DOCKER_IMAGE_VERSION" | grep -q "$UNSUPPORTED_VERSION"
+    infoln "$DOCKER_IMAGE_VERSION" | grep -q $UNSUPPORTED_VERSION
     if [ $? -eq 0 ]; then
       fatalln "Fabric Docker image version of $DOCKER_IMAGE_VERSION does not match the versions supported by the test network."
     fi
   done
 
   ## check for cfssl binaries
-  # if [ "$CRYPTO" == "cfssl" ]; then # Dieser Block wird nicht benötigt, wenn nur Fabric CA verwendet wird
-  #   cfssl version > /dev/null 2>&1
-  #   if [[ $? -ne 0 ]]; then
-  #     errorln "cfssl binary not found.."
-  #     errorln
-  #     errorln "Follow the instructions to install the cfssl and cfssljson binaries:"
-  #     errorln "https://github.com/cloudflare/cfssl#installation"
-  #     exit 1
-  #   fi
-  # fi
+  if [ "$CRYPTO" == "cfssl" ]; then
 
-  ## Check for fabric-ca (immer prüfen, da wir Fabric CA verwenden)
-  fabric-ca-client version > /dev/null 2>&1
-  if [[ $? -ne 0 ]]; then
-    errorln "fabric-ca-client binary not found.."
-    errorln
-    errorln "Follow the instructions in the Fabric docs to install the Fabric Binaries:"
-    errorln "https://hyperledger-fabric.readthedocs.io/en/latest/install.html"
-    exit 1
+    cfssl version > /dev/null 2>&1
+    if [[ $? -ne 0 ]]; then
+      errorln "cfssl binary not found.."
+      errorln
+      errorln "Follow the instructions to install the cfssl and cfssljson binaries:"
+      errorln "https://github.com/cloudflare/cfssl#installation"
+      exit 1
+    fi
   fi
-  CA_LOCAL_VERSION=$(fabric-ca-client version | sed -ne 's/ Version: //p')
-  CA_DOCKER_IMAGE_VERSION=$(${CONTAINER_CLI} run --rm hyperledger/fabric-ca:latest fabric-ca-client version | sed -ne 's/ Version: //p' | head -1)
-  infoln "CA_LOCAL_VERSION=$CA_LOCAL_VERSION"
-  infoln "CA_DOCKER_IMAGE_VERSION=$CA_DOCKER_IMAGE_VERSION"
 
-  if [ "$CA_LOCAL_VERSION" != "$CA_DOCKER_IMAGE_VERSION" ]; then
-    warnln "Local fabric-ca binaries and docker images are out of sync. This may cause problems."
+  ## Check for fabric-ca
+  if [ "$CRYPTO" == "Certificate Authorities" ]; then
+
+    fabric-ca-client version > /dev/null 2>&1
+    if [[ $? -ne 0 ]]; then
+      errorln "fabric-ca-client binary not found.."
+      errorln
+      errorln "Follow the instructions in the Fabric docs to install the Fabric Binaries:"
+      errorln "https://hyperledger-fabric.readthedocs.io/en/latest/install.html"
+      exit 1
+    fi
+    CA_LOCAL_VERSION=$(fabric-ca-client version | sed -ne 's/ Version: //p')
+    CA_DOCKER_IMAGE_VERSION=$(${CONTAINER_CLI} run --rm hyperledger/fabric-ca:latest fabric-ca-client version | sed -ne 's/ Version: //p' | head -1)
+    infoln "CA_LOCAL_VERSION=$CA_LOCAL_VERSION"
+    infoln "CA_DOCKER_IMAGE_VERSION=$CA_DOCKER_IMAGE_VERSION"
+
+    if [ "$CA_LOCAL_VERSION" != "$CA_DOCKER_IMAGE_VERSION" ]; then
+      warnln "Local fabric-ca binaries and docker images are out of sync. This may cause problems."
+    fi
   fi
 }
 
-# Create Organization crypto material using cryptogen or Fabric CAs
+# Before you can bring up a network, each organization needs to generate the crypto
+# material that will define that organization on the network. Because Hyperledger
+# Fabric is a permissioned blockchain, each node and user on the network needs to
+# use certificates and keys to sign and verify its actions. In addition, each user
+# needs to belong to an organization that is recognized as a member of the network.
+# You can use the Cryptogen tool or Fabric CAs to generate the organization crypto
+# material.
+
+# By default, the sample network uses cryptogen. Cryptogen is a tool that is
+# meant for development and testing that can quickly create the certificates and keys
+# that can be consumed by a Fabric network. The cryptogen tool consumes a series
+# of configuration files for each organization in the "organizations/cryptogen"
+# directory. Cryptogen uses the files to generate the crypto  material for each
+# org in the "organizations" directory.
+
+# You can also use Fabric CAs to generate the crypto material. CAs sign the certificates
+# and keys that they generate to create a valid root of trust for each organization.
+# The script uses Docker Compose to bring up three CAs, one for each peer organization
+# and the ordering organization. The configuration file for creating the Fabric CA
+# servers are in the "organizations/fabric-ca" directory. Within the same directory,
+# the "registerEnroll.sh" script uses the Fabric CA client to create the identities,
+# certificates, and MSP folders that are needed to create the test network in the
+# "organizations/ordererOrganizations" directory.
+
+# Create Organization crypto material using cryptogen or CAs
 function createOrgs() {
-  # Aufräumen von alten Krypto-Materialien
   if [ -d "organizations/peerOrganizations" ]; then
     rm -Rf organizations/peerOrganizations && rm -Rf organizations/ordererOrganizations
   fi
-  # Aufräumen von alten Fabric CA Ordnern (um sicherzustellen, dass keine alten ca-cert.pem liegen)
-  rm -rf organizations/fabric-ca/ordererOrg
-  rm -rf organizations/fabric-ca/reg-de
-  rm -rf organizations/fabric-ca/reg-fr
-  rm -rf organizations/fabric-ca/reg-be
-  rm -rf organizations/fabric-ca/reg-es
 
+  # Create crypto material using cryptogen
+  if [ "$CRYPTO" == "cryptogen" ]; then
+    which cryptogen
+    if [ "$?" -ne 0 ]; then
+      fatalln "cryptogen tool not found. exiting"
+    fi
+    infoln "Generating certificates using cryptogen tool"
 
-  # Wir verwenden ausschließlich Fabric CAs
+    infoln "Creating Org1 Identities"
+
+    set -x
+    cryptogen generate --config=./organizations/cryptogen/crypto-config-org1.yaml --output="organizations"
+    res=$?
+    { set +x; } 2>/dev/null
+    if [ $res -ne 0 ]; then
+      fatalln "Failed to generate certificates..."
+    fi
+
+    infoln "Creating Org2 Identities"
+
+    set -x
+    cryptogen generate --config=./organizations/cryptogen/crypto-config-org2.yaml --output="organizations"
+    res=$?
+    { set +x; } 2>/dev/null
+    if [ $res -ne 0 ]; then
+      fatalln "Failed to generate certificates..."
+    fi
+
+    infoln "Creating Orderer Org Identities"
+
+    set -x
+    cryptogen generate --config=./organizations/cryptogen/crypto-config-orderer.yaml --output="organizations"
+    res=$?
+    { set +x; } 2>/dev/null
+    if [ $res -ne 0 ]; then
+      fatalln "Failed to generate certificates..."
+    fi
+
+  fi
+
+  # Create crypto material using cfssl
+  if [ "$CRYPTO" == "cfssl" ]; then
+
+    . organizations/cfssl/registerEnroll.sh
+    #function_name cert-type   CN   org
+    peer_cert peer peer0.org1.example.com org1
+    peer_cert admin Admin@org1.example.com org1
+
+    infoln "Creating Org2 Identities"
+    #function_name cert-type   CN   org
+    peer_cert peer peer0.org2.example.com org2
+    peer_cert admin Admin@org2.example.com org2
+
+    infoln "Creating Orderer Org Identities"
+    #function_name cert-type   CN
+    orderer_cert orderer orderer.example.com
+    orderer_cert admin Admin@example.com
+
+  fi
+
   # Create crypto material using Fabric CA
   if [ "$CRYPTO" == "Certificate Authorities" ]; then
     infoln "Generating certificates using Fabric CA"
     ${CONTAINER_CLI_COMPOSE} -f compose/$COMPOSE_FILE_CA -f compose/$CONTAINER_CLI/${CONTAINER_CLI}-$COMPOSE_FILE_CA up -d 2>&1
 
-  # Ausführen des registerEnroll.sh Skripts aus dem fabric-ca Ordner
-  # Wichtig: Der Pfad muss relativ zur Ausführungsposition von network.sh sein.
-  # Annahme: network.sh und fabric-ca/ liegen im selben Verzeichnis (test-network/).
-  . organizations/fabric-ca/registerEnroll.sh # Angepasster Pfad
+    . organizations/fabric-ca/registerEnroll.sh
 
     # Make sure CA files have been created
-  while :
-  do
-    if [ ! -f "organizations/peerOrganizations/es.navine.tech/ca/ca.es.navine.tech-cert.pem" ]; then
+    while :
+    do
+      if [ ! -f "organizations/peerOrganizations/es.navine.tech/ca/ca.es.navine.tech-cert.pem" ]; then
+        sleep 1
+      else
+        break
+      fi
+    done
+
+    # Make sure CA service is initialized and can accept requests before making register and enroll calls
+    export FABRIC_CA_CLIENT_HOME=${PWD}/organizations/peerOrganizations/org1.example.com/
+    COUNTER=0
+    rc=1
+    while [[ $rc -ne 0 && $COUNTER -lt $MAX_RETRY ]]; do
       sleep 1
-    else
-      break
-    fi
-  done
+      set -x
+      fabric-ca-client getcainfo -u https://admin:adminpw@localhost:7054 --caname ca-org1 --tls.certfiles "${PWD}/organizations/fabric-ca/org1/ca-cert.pem"
+      res=$?
+    { set +x; } 2>/dev/null
+    rc=$res  # Update rc
+    COUNTER=$((COUNTER + 1))
+    done
 
-  infoln "Creating Orderer Org Identities (navine.tech)..."
-  # Parameter: Domain, CA-Host-Port, CA-Name
-  createOrdererOrg "navine.tech" "11054" "ca-orderer"
+    infoln "Creating Orderer Org Identities (navine.tech)..."
+    # Parameter: Domain, CA-Host-Port, CA-Name
+    createOrdererOrg "navine.tech" "11054" "ca-orderer"
 
-  infoln "Creating Regulatory Organization Germany (de.navine.tech)..."
-  createOrg "reg-de" "de.navine.tech" "RegDeMSP" "7054" "ca-reg-de"
+    infoln "Creating Regulatory Organization Germany (de.navine.tech)..."
+    createOrg "reg-de" "de.navine.tech" "RegDeMSP" "7054" "ca-reg-de"
 
-  infoln "Creating Regulatory Organization France (fr.navine.tech)..."
-  createOrg "reg-fr" "fr.navine.tech" "RegFrMSP" "8054" "ca-reg-fr"
+    infoln "Creating Regulatory Organization France (fr.navine.tech)..."
+    createOrg "reg-fr" "fr.navine.tech" "RegFrMSP" "8054" "ca-reg-fr"
 
-  infoln "Creating Regulatory Organization Belgium (be.navine.tech)..."
-  createOrg "reg-be" "be.navine.tech" "RegBeMSP" "9054" "ca-reg-be"
+    infoln "Creating Regulatory Organization Belgium (be.navine.tech)..."
+    createOrg "reg-be" "be.navine.tech" "RegBeMSP" "9054" "ca-reg-be"
 
-  infoln "Creating Regulatory Organization Spain (es.navine.tech)..."
-  createOrg "reg-es" "es.navine.tech" "RegEsMSP" "10054" "ca-reg-es"
+    infoln "Creating Regulatory Organization Spain (es.navine.tech)..."
+    createOrg "reg-es" "es.navine.tech" "RegEsMSP" "10054" "ca-reg-es"
 
   fi
 
@@ -184,8 +275,29 @@ function createOrgs() {
 
 # Once you create the organization crypto material, you need to create the
 # genesis block of the application channel.
-# The configtxgen tool is used to create the genesis block.
-# We will use the 'ChannelUsingRaft' profile from 'configtx.yaml'.
+
+# The configtxgen tool is used to create the genesis block. Configtxgen consumes a
+# "configtx.yaml" file that contains the definitions for the sample network. The
+# genesis block is defined using the "ChannelUsingRaft" profile at the bottom
+# of the file. This profile defines an application channel consisting of our two Peer Orgs.
+# The peer and ordering organizations are defined in the "Profiles" section at the
+# top of the file. As part of each organization profile, the file points to the
+# location of the MSP directory for each member. This MSP is used to create the channel
+# MSP that defines the root of trust for each organization. In essence, the channel
+# MSP allows the nodes and users to be recognized as network members.
+#
+# If you receive the following warning, it can be safely ignored:
+#
+# [bccsp] GetDefault -> WARN 001 Before using BCCSP, please call InitFactories(). Falling back to bootBCCSP.
+#
+# You can ignore the logs regarding intermediate certs, we are not using them in
+# this crypto implementation.
+
+# After we create the org crypto material and the application channel genesis block,
+# we can now bring up the peers and ordering service. By default, the base
+# file for creating the network is "docker-compose-test-net.yaml" in the ``docker``
+# folder. This file defines the environment variables and file mounts that
+# point the crypto material and genesis block that were created in earlier.
 
 # Bring up the peer and orderer nodes using docker compose.
 function networkUp() {
@@ -197,30 +309,10 @@ function networkUp() {
     createOrgs
   fi
 
-  # Generiere Orderer Genesis Block (system-genesis-block) und Channel Transaction Artefakte
-  infoln "Generating Orderer Genesis block and Channel Transaction artifacts..."
-  export FABRIC_CFG_PATH=${ROOTDIR}/configtx # Sicherstellen, dass FABRIC_CFG_PATH korrekt ist
-  configtxgen -profile ChannelUsingRaft -channelID system-channel -outputBlock ./system-genesis-block/genesis.block
-  if [ $? -ne 0 ]; then
-    fatalln "Failed to generate Orderer Genesis block"
-  fi
-  # Hier kannst du weitere configtxgen Aufrufe hinzufügen, um Kanaltransaktionen zu erstellen,
-  # z.B. configtxgen -profile <YourChannelProfile> -outputCreateChannelTx ./channel-artifacts/mychannel.tx -channelID mychannel
-
-  # Kombinieren aller Docker Compose Dateien für den Start des gesamten Netzwerks
-  # Annahme: Deine Compose-Dateien liegen im 'compose/' Unterordner
-  COMPOSE_FILES="-f compose/${COMPOSE_FILE_CA} \
-                 -f compose/${COMPOSE_FILE_ORDERER} \
-                 -f compose/${COMPOSE_FILE_PEERS}"
+  COMPOSE_FILES="-f compose/${COMPOSE_FILE_BASE} -f compose/${CONTAINER_CLI}/${CONTAINER_CLI}-${COMPOSE_FILE_BASE}"
 
   if [ "${DATABASE}" == "couchdb" ]; then
-    # Die CouchDB-Dienste sind in unserer 'compose-peers.yaml' integriert
-    # Daher ist hier keine zusätzliche CouchDB-Compose-Datei notwendig, es sei denn,
-    # du hast sie als separate Datei. Wenn ja, füge sie hier hinzu:
-    # COMPOSE_FILES="${COMPOSE_FILES} -f compose/${COMPOSE_FILE_COUCH}"
-    # Da wir CouchDB bereits in docker-compose-peers.yaml integriert haben,
-    # muss diese Zeile hier nicht angepasst werden, es sei denn, es gibt eine separate Datei.
-    true # Platzhalter, falls kein zusätzlicher CouchDB-File
+    COMPOSE_FILES="${COMPOSE_FILES} -f compose/${COMPOSE_FILE_COUCH} -f compose/${CONTAINER_CLI}/${CONTAINER_CLI}-${COMPOSE_FILE_COUCH}"
   fi
 
   DOCKER_SOCK="${DOCKER_SOCK}" ${CONTAINER_CLI_COMPOSE} ${COMPOSE_FILES} up -d 2>&1
@@ -243,31 +335,31 @@ function createChannel() {
     fatalln "$CONTAINER_CLI network is required to be running to create a channel"
   fi
 
-  # Check if all containers are present - Passt die Anzahl der erwarteten Container an:
-  # 5 CAs + 1 Orderer + 4 Peers + 4 CouchDBs = 14 Dienste
-  # plus optionaler CLI-Container
+  # check if all containers are present
   CONTAINERS=($($CONTAINER_CLI ps | grep hyperledger/ | awk '{print $2}'))
   len=$(echo ${#CONTAINERS[@]})
 
-  # Wenn weniger als 14 Hyperledger-Container laufen ODER die Krypto-Materialien fehlen, bring das Netzwerk hoch
-  if [[ $len -lt 14 ]] || [[ ! -d "organizations/peerOrganizations" ]]; then
-    bringUpNetwork="true"
-    infoln "Bringing up network to create channel..."
+  if [[ $len -ge 4 ]] && [[ ! -d "organizations/peerOrganizations" ]]; then
+    echo "Bringing network down to sync certs with containers"
+    networkDown
+  fi
+
+  [[ $len -lt 4 ]] || [[ ! -d "organizations/peerOrganizations" ]] && bringUpNetwork="true" || echo "Network Running Already"
+
+  if [ $bringUpNetwork == "true"  ]; then
+    infoln "Bringing up network"
     networkUp
-  else
-    echo "Network Running Already"
   fi
 
   # now run the script that creates a channel. This script uses configtxgen once
   # to create the channel creation transaction and the anchor peer updates.
-  # Dies ist ein separates Skript, das wir auch anpassen müssen (scripts/createChannel.sh)
-  scripts/createChannel.sh "$CHANNEL_NAME" "$CLI_DELAY" "$MAX_RETRY" "$VERBOSE" "$bft_true"
+  scripts/createChannel.sh $CHANNEL_NAME $CLI_DELAY $MAX_RETRY $VERBOSE $bft_true
 }
 
 
 ## Call the script to deploy a chaincode to the channel
 function deployCC() {
-  scripts/deployCC.sh "$CHANNEL_NAME" "$CC_NAME" "$CC_SRC_PATH" "$CC_SRC_LANGUAGE" "$CC_VERSION" "$CC_SEQUENCE" "$CC_INIT_FCN" "$CC_END_POLICY" "$CC_COLL_CONFIG" "$CLI_DELAY" "$MAX_RETRY" "$VERBOSE"
+  scripts/deployCC.sh $CHANNEL_NAME $CC_NAME $CC_SRC_PATH $CC_SRC_LANGUAGE $CC_VERSION $CC_SEQUENCE $CC_INIT_FCN $CC_END_POLICY $CC_COLL_CONFIG $CLI_DELAY $MAX_RETRY $VERBOSE
 
   if [ $? -ne 0 ]; then
     fatalln "Deploying chaincode failed"
@@ -276,7 +368,7 @@ function deployCC() {
 
 ## Call the script to deploy a chaincode to the channel
 function deployCCAAS() {
-  scripts/deployCCAAS.sh "$CHANNEL_NAME" "$CC_NAME" "$CC_SRC_PATH" "$CCAAS_DOCKER_RUN" "$CC_VERSION" "$CC_SEQUENCE" "$CC_INIT_FCN" "$CC_END_POLICY" "$CC_COLL_CONFIG" "$CLI_DELAY" "$MAX_RETRY" "$VERBOSE" "$CCAAS_DOCKER_RUN"
+  scripts/deployCCAAS.sh $CHANNEL_NAME $CC_NAME $CC_SRC_PATH $CCAAS_DOCKER_RUN $CC_VERSION $CC_SEQUENCE $CC_INIT_FCN $CC_END_POLICY $CC_COLL_CONFIG $CLI_DELAY $MAX_RETRY $VERBOSE $CCAAS_DOCKER_RUN
 
   if [ $? -ne 0 ]; then
     fatalln "Deploying chaincode-as-a-service failed"
@@ -288,7 +380,7 @@ function packageChaincode() {
 
   infoln "Packaging chaincode"
 
-  scripts/packageCC.sh "$CC_NAME" "$CC_SRC_PATH" "$CC_SRC_LANGUAGE" "$CC_VERSION" true
+  scripts/packageCC.sh $CC_NAME $CC_SRC_PATH $CC_SRC_LANGUAGE $CC_VERSION true
 
   if [ $? -ne 0 ]; then
     fatalln "Packaging the chaincode failed"
@@ -299,127 +391,121 @@ function packageChaincode() {
 ## Call the script to list installed and committed chaincode on a peer
 function listChaincode() {
 
-  # Korrektur: FABRIC_CFG_PATH ist relativ zum aktuellen Skript, nicht zum übergeordneten config
-  export FABRIC_CFG_PATH=${ROOTDIR}/config
+  export FABRIC_CFG_PATH=${PWD}/../config
 
-  . scripts/envVar.sh # Muss separat angepasst werden
-  . scripts/ccutils.sh # Muss separat angepasst werden
+  . scripts/envVar.sh
+  . scripts/ccutils.sh
 
-  # Das Org-Argument muss hier übergeben werden, da wir mehrere haben
-  # setGlobals $ORG # Muss angepasst werden, um für die richtige Org zu funktionieren
+  setGlobals $ORG
 
   println
-  # queryInstalledOnPeer # Muss angepasst werden, um für die richtige Org zu funktionieren
+  queryInstalledOnPeer
   println
 
-  # listAllCommitted # Muss angepasst werden, um für die richtige Org zu funktionieren
+  listAllCommitted
 
-  errorln "TODO: listChaincode-Funktion muss für mehrere Orgs angepasst werden."
-  exit 1
 }
 
 ## Call the script to invoke
 function invokeChaincode() {
 
-  # Korrektur: FABRIC_CFG_PATH ist relativ zum aktuellen Skript, nicht zum übergeordneten config
-  export FABRIC_CFG_PATH=${ROOTDIR}/config
+  export FABRIC_CFG_PATH=${PWD}/../config
 
-  . scripts/envVar.sh # Muss separat angepasst werden
-  . scripts/ccutils.sh # Muss separat angepasst werden
+  . scripts/envVar.sh
+  . scripts/ccutils.sh
 
-  # Das Org-Argument muss hier übergeben werden, da wir mehrere haben
-  # setGlobals $ORG # Muss angepasst werden, um für die richtige Org zu funktionieren
+  setGlobals $ORG
 
-  # chaincodeInvoke $ORG $CHANNEL_NAME $CC_NAME $CC_INVOKE_CONSTRUCTOR # Muss angepasst werden
+  chaincodeInvoke $ORG $CHANNEL_NAME $CC_NAME $CC_INVOKE_CONSTRUCTOR
 
-  errorln "TODO: invokeChaincode-Funktion muss für mehrere Orgs angepasst werden."
-  exit 1
 }
 
 ## Call the script to query chaincode
 function queryChaincode() {
 
-  # Korrektur: FABRIC_CFG_PATH ist relativ zum aktuellen Skript, nicht zum übergeordneten config
-  export FABRIC_CFG_PATH=${ROOTDIR}/config
+  export FABRIC_CFG_PATH=${PWD}/../config
 
-  . scripts/envVar.sh # Muss separat angepasst werden
-  . scripts/ccutils.sh # Muss separat angepasst werden
+  . scripts/envVar.sh
+  . scripts/ccutils.sh
 
-  # Das Org-Argument muss hier übergeben werden, da wir mehrere haben
-  # setGlobals $ORG # Muss angepasst werden, um für die richtige Org zu funktionieren
+  setGlobals $ORG
 
-  # chaincodeQuery $ORG $CHANNEL_NAME $CC_NAME $CC_QUERY_CONSTRUCTOR # Muss angepasst werden
+  chaincodeQuery $ORG $CHANNEL_NAME $CC_NAME $CC_QUERY_CONSTRUCTOR
 
-  errorln "TODO: queryChaincode-Funktion muss für mehrere Orgs angepasst werden."
-  exit 1
 }
 
 
 # Tear down running network
 function networkDown() {
-  infoln "Stopping network and removing volumes..."
+  local temp_compose=$COMPOSE_FILE_BASE
+  COMPOSE_FILE_BASE=compose-bft-test-net.yaml
+  COMPOSE_BASE_FILES="-f compose/${COMPOSE_FILE_BASE} -f compose/${CONTAINER_CLI}/${CONTAINER_CLI}-${COMPOSE_FILE_BASE}"
+  COMPOSE_COUCH_FILES="-f compose/${COMPOSE_FILE_COUCH} -f compose/${CONTAINER_CLI}/${CONTAINER_CLI}-${COMPOSE_FILE_COUCH}"
+  COMPOSE_CA_FILES="-f compose/${COMPOSE_FILE_CA} -f compose/${CONTAINER_CLI}/${CONTAINER_CLI}-${COMPOSE_FILE_CA}"
+  COMPOSE_FILES="${COMPOSE_BASE_FILES} ${COMPOSE_COUCH_FILES} ${COMPOSE_CA_FILES}"
 
-  # Kombinieren aller Docker Compose Dateien für den Shutdown des gesamten Netzwerks
-  # Hier werden alle Compose-Dateien aufgelistet, die Teil deines Netzwerks sind.
-  COMPOSE_FILES_DOWN="-f compose/${COMPOSE_FILE_CA} \
-                      -f compose/${COMPOSE_FILE_ORDERER} \
-                      -f compose/${COMPOSE_FILE_PEERS}"
+  # stop org3 containers also in addition to org1 and org2, in case we were running sample to add org3
+  COMPOSE_ORG3_BASE_FILES="-f addOrg3/compose/${COMPOSE_FILE_ORG3_BASE} -f addOrg3/compose/${CONTAINER_CLI}/${CONTAINER_CLI}-${COMPOSE_FILE_ORG3_BASE}"
+  COMPOSE_ORG3_COUCH_FILES="-f addOrg3/compose/${COMPOSE_FILE_ORG3_COUCH} -f addOrg3/compose/${CONTAINER_CLI}/${CONTAINER_CLI}-${COMPOSE_FILE_ORG3_COUCH}"
+  COMPOSE_ORG3_CA_FILES="-f addOrg3/compose/${COMPOSE_FILE_ORG3_CA} -f addOrg3/compose/${CONTAINER_CLI}/${CONTAINER_CLI}-${COMPOSE_FILE_ORG3_CA}"
+  COMPOSE_ORG3_FILES="${COMPOSE_ORG3_BASE_FILES} ${COMPOSE_ORG3_COUCH_FILES} ${COMPOSE_ORG3_CA_FILES}"
 
-  # Führe den Docker Compose Down Befehl aus
   if [ "${CONTAINER_CLI}" == "docker" ]; then
-    # DOCKER_SOCK="${DOCKER_SOCK}" ist nur notwendig, wenn der Socket über eine Env-Variable übergeben wird
-    ${CONTAINER_CLI_COMPOSE} ${COMPOSE_FILES_DOWN} down --volumes --remove-orphans
+    DOCKER_SOCK=$DOCKER_SOCK ${CONTAINER_CLI_COMPOSE} ${COMPOSE_FILES} ${COMPOSE_ORG3_FILES} down --volumes --remove-orphans
   elif [ "${CONTAINER_CLI}" == "podman" ]; then
-    ${CONTAINER_CLI_COMPOSE} ${COMPOSE_FILES_DOWN} down --volumes
+    ${CONTAINER_CLI_COMPOSE} ${COMPOSE_FILES} ${COMPOSE_ORG3_FILES} down --volumes
   else
     fatalln "Container CLI  ${CONTAINER_CLI} not supported"
   fi
 
-  # Bereinigung der restlichen Ressourcen
-  # Entferne Chaincode-Container und Images
-  clearContainers
-  removeUnwantedImages
+  COMPOSE_FILE_BASE=$temp_compose
 
-  # Entferne Orderer-Block, Channel-Konfigurationen und Organisationen
-  infoln "Removing generated artifacts (genesis block, channel configs, crypto materials)..."
-  ${CONTAINER_CLI} run --rm -v "$(pwd):/data" busybox sh -c 'cd /data && rm -rf system-genesis-block/*.block channel-artifacts organizations/peerOrganizations organizations/ordererOrganizations'
-
-  # Entferne Fabric CA spezifische Artefakte (wenn sie nicht schon im 'organizations' Ordner sind)
-  # Annahme: 'fabric-ca' Ordner liegen direkt unter 'test-network/'
-  ${CONTAINER_CLI} run --rm -v "$(pwd):/data" busybox sh -c 'cd /data && rm -rf fabric-ca/ordererOrg/* fabric-ca/reg-de/* fabric-ca/reg-fr/* fabric-ca/reg-be/* fabric-ca/reg-es/*'
-
-  # Entferne channel und script artifacts
-  ${CONTAINER_CLI} run --rm -v "$(pwd):/data" busybox sh -c 'cd /data && rm -rf log.txt *.tar.gz'
-
-  infoln "Network successfully brought down."
+  # Don't remove the generated artifacts -- note, the ledgers are always removed
+  if [ "$MODE" != "restart" ]; then
+    # Bring down the network, deleting the volumes
+    ${CONTAINER_CLI} volume rm docker_orderer.example.com docker_peer0.org1.example.com docker_peer0.org2.example.com
+    #Cleanup the chaincode containers
+    clearContainers
+    #Cleanup images
+    removeUnwantedImages
+    # remove orderer block and other channel configuration transactions and certs
+    ${CONTAINER_CLI} run --rm -v "$(pwd):/data" busybox sh -c 'cd /data && rm -rf system-genesis-block/*.block organizations/peerOrganizations organizations/ordererOrganizations'
+    ## remove fabric ca artifacts
+    ${CONTAINER_CLI} run --rm -v "$(pwd):/data" busybox sh -c 'cd /data && rm -rf organizations/fabric-ca/org1/msp organizations/fabric-ca/org1/tls-cert.pem organizations/fabric-ca/org1/ca-cert.pem organizations/fabric-ca/org1/IssuerPublicKey organizations/fabric-ca/org1/IssuerRevocationPublicKey organizations/fabric-ca/org1/fabric-ca-server.db'
+    ${CONTAINER_CLI} run --rm -v "$(pwd):/data" busybox sh -c 'cd /data && rm -rf organizations/fabric-ca/org2/msp organizations/fabric-ca/org2/tls-cert.pem organizations/fabric-ca/org2/ca-cert.pem organizations/fabric-ca/org2/IssuerPublicKey organizations/fabric-ca/org2/IssuerRevocationPublicKey organizations/fabric-ca/org2/fabric-ca-server.db'
+    ${CONTAINER_CLI} run --rm -v "$(pwd):/data" busybox sh -c 'cd /data && rm -rf organizations/fabric-ca/ordererOrg/msp organizations/fabric-ca/ordererOrg/tls-cert.pem organizations/fabric-ca/ordererOrg/ca-cert.pem organizations/fabric-ca/ordererOrg/IssuerPublicKey organizations/fabric-ca/ordererOrg/IssuerRevocationPublicKey organizations/fabric-ca/ordererOrg/fabric-ca-server.db'
+    ${CONTAINER_CLI} run --rm -v "$(pwd):/data" busybox sh -c 'cd /data && rm -rf addOrg3/fabric-ca/org3/msp addOrg3/fabric-ca/org3/tls-cert.pem addOrg3/fabric-ca/org3/ca-cert.pem addOrg3/fabric-ca/org3/IssuerPublicKey addOrg3/fabric-ca/org3/IssuerRevocationPublicKey addOrg3/fabric-ca/org3/fabric-ca-server.db'
+    # remove channel and script artifacts
+    ${CONTAINER_CLI} run --rm -v "$(pwd):/data" busybox sh -c 'cd /data && rm -rf channel-artifacts log.txt *.tar.gz'
+  fi
 }
 
+. ./network.config
 
-# --- Standardkonfigurationen und Variablen ---
+# use this as the default docker-compose yaml definition
+COMPOSE_FILE_BASE=compose-test-net.yaml
+# docker-compose.yaml file if you are using couchdb
+COMPOSE_FILE_COUCH=compose-couch.yaml
+# certificate authorities compose file
+COMPOSE_FILE_CA=compose-ca.yaml
+# use this as the default docker-compose yaml definition for org3
+COMPOSE_FILE_ORG3_BASE=compose-org3.yaml
+# use this as the docker compose couch file for org3
+COMPOSE_FILE_ORG3_COUCH=compose-couch-org3.yaml
+# certificate authorities compose file
+COMPOSE_FILE_ORG3_CA=compose-ca-org3.yaml
+#
 
-# Die folgenden Compose-Dateien müssen in deinem 'compose/' Unterordner liegen
-COMPOSE_FILE_CA="docker-compose-ca.yaml"      # Enthält CA-Dienste für alle 5 Orgs
-COMPOSE_FILE_ORDERER="docker-compose-orderer.yaml" # Enthält den Orderer-Dienst
-COMPOSE_FILE_PEERS="docker-compose-peers.yaml"     # Enthält Peer- und CouchDB-Dienste für alle 4 Orgs
-
-# Standardwerte (können über Kommandozeilen-Flags überschrieben werden)
-CHANNEL_NAME="mychannel"
-CLI_DELAY="3"
-MAX_RETRY="5"
-DATABASE="couchdb" # Standard auf couchdb setzen, da wir es verwenden
-CRYPTO="Certificate Authorities" # Standard auf Fabric CA setzen
-
-# Get docker sock path from environment variable (oder direkter Pfad)
+# Get docker sock path from environment variable
 SOCK="${DOCKER_HOST:-/var/run/docker.sock}"
 DOCKER_SOCK="${SOCK##unix://}"
 
-# BFT activated flag (Bleibt so, falls du Raft/BFT nicht explizit umschaltest)
+# BFT activated flag
 BFT=0
 
-
-# --- Kommandozeilen-Argument Parsing (unverändert, außer Anpassung der Hilfe) ---
-
 # Parse commandline args
+
+## Parse mode
 if [[ $# -lt 1 ]] ; then
   printHelp
   exit 0
@@ -428,16 +514,20 @@ else
   shift
 fi
 
+## if no parameters are passed, show the help for cc
 if [ "$MODE" == "cc" ] && [[ $# -lt 1 ]]; then
   printHelp $MODE
   exit 0
 fi
 
+# parse subcommands if used
 if [[ $# -ge 1 ]] ; then
   key="$1"
+  # check for the createChannel subcommand
   if [[ "$key" == "createChannel" ]]; then
       export MODE="createChannel"
       shift
+  # check for the cc command
   elif [[ "$MODE" == "cc" ]]; then
     if [ "$1" != "-h" ]; then
       export SUBCOMMAND=$key
@@ -445,6 +535,9 @@ if [[ $# -ge 1 ]] ; then
     fi
   fi
 fi
+
+
+# parse flags
 
 while [[ $# -ge 1 ]] ; do
   key="$1"
@@ -464,7 +557,7 @@ while [[ $# -ge 1 ]] ; do
     CRYPTO="Certificate Authorities"
     ;;
   -cfssl )
-    CRYPTO="cfssl" # CFSSL-Modus bleibt, falls benötigt
+    CRYPTO="cfssl"
     ;;
   -r )
     MAX_RETRY="$2"
@@ -518,7 +611,7 @@ while [[ $# -ge 1 ]] ; do
     VERBOSE=true
     ;;
   -org )
-    ORG="$2" # Das Org-Flag muss für CLI-Befehle (list, invoke, query) angepasst werden
+    ORG="$2"
     shift
     ;;
   -i )
@@ -546,27 +639,28 @@ while [[ $# -ge 1 ]] ; do
   shift
 done
 
-# Wenn BFT aktiviert ist, wird der FABRIC_CFG_PATH und die Compose-Datei geändert.
-# Beachte: Dein 'configtx' Ordner enthält nur 'configtx.yaml'. Wenn du ein separates
-# BFT-Profil hast, muss es in 'bft-config' liegen oder 'FABRIC_CFG_PATH' angepasst werden.
 if [ $BFT -eq 1 ]; then
-  export FABRIC_CFG_PATH=${PWD}/bft-config # Annahme: 'bft-config' existiert
-  COMPOSE_FILE_BASE=compose-bft-test-net.yaml # Muss eine angepasste BFT-Compose-Datei sein
-  # Stelle sicher, dass COMPOSE_FILE_ORDERER und COMPOSE_FILE_PEERS auch für BFT-Mode korrekt sind
-  COMPOSE_FILE_ORDERER="compose-bft-orderer.yaml" # Beispiel
-  COMPOSE_FILE_PEERS="compose-bft-peers.yaml" # Beispiel
+  export FABRIC_CFG_PATH=${PWD}/bft-config
+  COMPOSE_FILE_BASE=compose-bft-test-net.yaml
 fi
 
-# Bestimme den Operationsmodus
+# Are we generating crypto material with this command?
+if [ ! -d "organizations/peerOrganizations" ]; then
+  CRYPTO_MODE="with crypto from '${CRYPTO}'"
+else
+  CRYPTO_MODE=""
+fi
+
+# Determine mode of operation and printing out what we asked for
 if [ "$MODE" == "prereq" ]; then
   infoln "Installing binaries and fabric images. Fabric Version: ${IMAGETAG}  Fabric CA Version: ${CA_IMAGETAG}"
-  installPrereqs # Funktion ist in scripts/utils.sh, muss dort existieren
+  installPrereqs
 elif [ "$MODE" == "up" ]; then
   infoln "Starting nodes with CLI timeout of '${MAX_RETRY}' tries and CLI delay of '${CLI_DELAY}' seconds and using database '${DATABASE}' ${CRYPTO_MODE}"
   networkUp
 elif [ "$MODE" == "createChannel" ]; then
   infoln "Creating channel '${CHANNEL_NAME}'."
-  infoln "If network is not up, starting nodes with CLI timeout of '${MAX_RETRY}' tries and CLI delay of '${CLI_DELAY}' seconds and using database '${DATABASE}' ${CRYPTO_MODE}"
+  infoln "If network is not up, starting nodes with CLI timeout of '${MAX_RETRY}' tries and CLI delay of '${CLI_DELAY}' seconds and using database '${DATABASE} ${CRYPTO_MODE}"
   createChannel $BFT
 elif [ "$MODE" == "down" ]; then
   infoln "Stopping network"
@@ -576,10 +670,10 @@ elif [ "$MODE" == "restart" ]; then
   networkDown
   networkUp
 elif [ "$MODE" == "deployCC" ]; then
-  infoln "Deploying chaincode on channel '${CHANNEL_NAME}'"
+  infoln "deploying chaincode on channel '${CHANNEL_NAME}'"
   deployCC
 elif [ "$MODE" == "deployCCAAS" ]; then
-  infoln "Deploying chaincode-as-a-service on channel '${CHANNEL_NAME}'"
+  infoln "deploying chaincode-as-a-service on channel '${CHANNEL_NAME}'"
   deployCCAAS
 elif [ "$MODE" == "cc" ] && [ "$SUBCOMMAND" == "package" ]; then
   packageChaincode
@@ -590,6 +684,6 @@ elif [ "$MODE" == "cc" ] && [ "$SUBCOMMAND" == "invoke" ]; then
 elif [ "$MODE" == "cc" ] && [ "$SUBCOMMAND" == "query" ]; then
   queryChaincode
 else
-  printHelp # Diese Funktion muss in scripts/utils.sh sein
+  printHelp
   exit 1
 fi
