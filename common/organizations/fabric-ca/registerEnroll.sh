@@ -48,8 +48,8 @@ function createOrg() {
   export FABRIC_CA_CLIENT_HOME="${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/"
 
   set -x
-  # ANPASSUNG: Korrekter Pfad zum CA-Zertifikat. Annahme: script läuft von test-network/
-  # und die CA-Zertifikate liegen in organizations/fabric-ca/
+  # Korrekter Pfad zum CA-Zertifikat für --tls.certfiles. Geht vom Test-Netzwerk-Root aus.
+  # Annahme: 'organizations' und 'fabric-ca' liegen auf gleicher Ebene unterhalb von 'test-network/'
   fabric-ca-client enroll -u "https://admin:adminpw@localhost:${CA_HOST_PORT}" --caname "${CA_NAME}" --tls.certfiles "organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem"
   { set +x; } 2>/dev/null
 
@@ -68,11 +68,14 @@ function createOrg() {
     Certificate: cacerts/ca.crt
     OrganizationalUnitIdentifier: orderer' > "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/msp/config.yaml"
 
+  # Kopieren des Org CA-Zertifikats in die org-level ca und tlsca Verzeichnisse
   mkdir -p "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/msp/tlscacerts"
+  # Diese Kopie ist für die Channel MSP Definition und sollte das Root CA Zertifikat der Org sein
   cp "organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem" "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/msp/tlscacerts/ca.crt"
 
-  # ANPASSUNG: Explizites Kopieren des CA-Zertifikats als ca.crt in msp/cacerts
+  # Explizites Kopieren des CA-Zertifikats als ca.crt in msp/cacerts
   mkdir -p "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/msp/cacerts"
+  # Dies behebt den Fehler "Failed loading ClientOU certificate at ... cacerts/ca.crt: no such file or directory"
   cp "organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem" "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/msp/cacerts/ca.crt"
 
 
@@ -109,10 +112,14 @@ function createOrg() {
   fabric-ca-client enroll -u "https://peer0.${ORG_DOMAIN}:peer0pw@localhost:${CA_HOST_PORT}" --caname "${CA_NAME}" -M "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/peers/peer0.${ORG_DOMAIN}/tls" --enrollment.profile tls --csr.hosts "peer0.${ORG_DOMAIN}" --csr.hosts localhost --tls.certfiles "organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem"
   { set +x; } 2>/dev/null
 
-  # Kopieren der TLS CA cert, server cert, server keystore zu bekannten Dateinamen
-  cp "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/peers/peer0.${ORG_DOMAIN}/tls/tlscacerts/"* "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/peers/peer0.${ORG_DOMAIN}/tls/ca.crt"
+  # KORREKTUR: Kopieren des TLS CA Root Certs für den Peer-TLS-Ordner
+  # Sicherstellen, dass die Datei 'ca.crt' im 'tls/' Ordner des Peers liegt,
+  # da dies der Pfad ist, der von 'ccp-generate.sh' und dem Peer erwartet wird.
+  cp "organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem" "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/peers/peer0.${ORG_DOMAIN}/tls/ca.crt" # <- DIES IST DIE KRITISCHE KORREKTUR FÜR AWK FEHLER!
+  # Die folgenden Zeilen sind für Server- und Key-Zertifikate, diese sollten schon funktionieren.
   cp "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/peers/peer0.${ORG_DOMAIN}/tls/signcerts/"* "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/peers/peer0.${ORG_DOMAIN}/tls/server.crt"
   cp "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/peers/peer0.${ORG_DOMAIN}/tls/keystore/"* "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/peers/peer0.${ORG_DOMAIN}/tls/server.key"
+
 
   infoln "Generating the user msp for ${ORG_DOMAIN}"
   set -x
@@ -165,10 +172,11 @@ function createOrdererOrg() {
     Certificate: cacerts/ca.crt
     OrganizationalUnitIdentifier: orderer" > "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/msp/config.yaml"
 
+  # Kopieren des Orderer CA-Zertifikats in die orderer org-level ca und tlsca Verzeichnisse
   mkdir -p "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/msp/tlscacerts"
   cp "organizations/fabric-ca/ordererOrg/ca-cert.pem" "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/msp/tlscacerts/tlsca.${ORDERER_ORG_DOMAIN}-cert.pem"
 
-  # === KORREKTUR FÜR MSP/CACERTS: Kopieren des CA-Zertifikats in msp/cacerts als ca.crt ===
+  # ANPASSUNG: Explizites Kopieren des CA-Zertifikats als ca.crt in msp/cacerts
   mkdir -p "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/msp/cacerts"
   cp "organizations/fabric-ca/ordererOrg/ca-cert.pem" "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/msp/cacerts/ca.crt"
 
@@ -199,14 +207,18 @@ function createOrdererOrg() {
   fabric-ca-client enroll -u "https://${ORDERER_NAME}:ordererpw@localhost:${ORDERER_CA_HOST_PORT}" --caname "${ORDERER_CA_NAME}" -M "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/tls" --enrollment.profile tls --csr.hosts "${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}" --csr.hosts localhost --tls.certfiles "organizations/fabric-ca/ordererOrg/ca-cert.pem"
   { set +x; } 2>/dev/null
 
-  # Kopieren der TLS CA cert, server cert, server keystore zu bekannten Dateinamen
-  cp "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/tls/tlscacerts/"* "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/tls/ca.crt"
+  # KORREKTUR: Kopieren des TLS CA Root Certs für den Orderer-TLS-Ordner
+  # Sicherstellen, dass die Datei 'ca.crt' im 'tls/' Ordner des Orderers liegt,
+  # da dies der Pfad ist, der vom Orderer erwartet wird.
+  cp "organizations/fabric-ca/ordererOrg/ca-cert.pem" "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/tls/ca.crt" # <- DIES IST DIE KRITISCHE KORREKTUR FÜR AWK FEHLER!
+  # Die folgenden Zeilen sind für Server- und Key-Zertifikate, diese sollten schon funktionieren.
   cp "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/tls/signcerts/"* "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/tls/server.crt"
   cp "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/tls/keystore/"* "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/tls/server.key"
 
+
   # Kopieren des Orderer Org CA-Zertifikats in das /msp/tlscacerts Verzeichnis des Orderers
   mkdir -p "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/msp/tlscacerts"
-  cp "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/tls/tlscacerts/"* "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/msp/tlscacerts/tlsca.${ORDERER_ORG_DOMAIN}-cert.pem"
+  cp "organizations/fabric-ca/ordererOrg/ca-cert.pem" "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/orderers/${ORDERER_NAME}.${ORDERER_ORG_DOMAIN}/msp/tlscacerts/tlsca.${ORDERER_ORG_DOMAIN}-cert.pem"
 
   # Registrieren und Generieren von Artefakten für den Orderer Admin
   infoln "Registering the orderer admin"
