@@ -20,6 +20,7 @@ function networkUp() {
   cp -r ./common/compose ./fabric-samples/test-network/
   cp -r ./common/configtx ./fabric-samples/test-network/
   cp ./common/network.sh ./fabric-samples/test-network/network.sh
+  cp ./common/envVar.sh ./fabric-samples/test-network/scripts/envVar.sh
 
 	cd fabric-samples
 
