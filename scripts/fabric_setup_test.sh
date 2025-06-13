@@ -4,27 +4,28 @@ SRC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )" # Wh
 FABRIC_VERSION="2.5.13"
 CA_VERSION="1.5.15"
 
-# Wichtige Verzeichnisse:
-# ./fabric-samples/test-network/organizations
-# ./fabric-samples/test-network/compose
-# ./fabric-samples/test-network/configtx
-
 function networkUp() {
 	networkDown
 	cd $SRC_DIR/..
-	curl -sSLO https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh && chmod +x install-fabric.sh
+	curl -sSLO https://raw.githubusercoy4ntent.com/hyperledger/fabric/main/scripts/install-fabric.sh && chmod +x install-fabric.sh
 	./install-fabric.sh --fabric-version ${FABRIC_VERSION} --ca-version ${CA_VERSION}
 
-  ## Meine Überschreibungen
-  cp -r ./common/organizations ./fabric-samples/test-network/
-  cp -r ./common/compose ./fabric-samples/test-network/
-  cp -r ./common/configtx ./fabric-samples/test-network/
-  cp ./common/network.sh ./fabric-samples/test-network/network.sh
-  #cp ./common/envVar.sh ./fabric-samples/test-network/scripts/envVar.sh
-  #cp ./common/createChannel.sh ./fabric-samples/test-network/scripts/createChannel.sh
-  #cp ./common/orderer.sh ./fabric-samples/test-network/scripts/orderer.sh
-  #cp ./common/setAnchorPeer.sh ./fabric-samples/test-network/scripts/setAnchorPeer.sh
-  #cp ./common/configUpdate.sh ./fabric-samples/test-network/scripts/configUpdate.sh
+  # Wichtige Verzeichnisse:
+  #
+  # ./fabric-samples/test-network/organizations
+  # ./fabric-samples/test-network/compose
+  # ./fabric-samples/test-network/configtx
+  #
+  ## Meine Überschreibungen (Work in Progress (WIP))
+  #cp -r ./common/template/organizations ./fabric-samples/test-network/
+  #cp -r ./common/template/compose ./fabric-samples/test-network/
+  #cp -r ./common/template/configtx ./fabric-samples/test-network/
+  #cp ./common/template/network.sh ./fabric-samples/test-network/network.sh
+  #cp ./common/template/envVar.sh ./fabric-samples/test-network/scripts/envVar.sh
+  #cp ./common/template/createChannel.sh ./fabric-samples/test-network/scripts/createChannel.sh
+  #cp ./common/template/orderer.sh ./fabric-samples/test-network/scripts/orderer.sh
+  #cp ./common/template/setAnchorPeer.sh ./fabric-samples/test-network/scripts/setAnchorPeer.sh
+  #cp ./common/template/configUpdate.sh ./fabric-samples/test-network/scripts/configUpdate.sh
 
 	cd fabric-samples
 
