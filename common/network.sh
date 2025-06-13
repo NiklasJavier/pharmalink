@@ -237,13 +237,12 @@ function createOrgs() {
     done
 
     # Make sure CA service is initialized and can accept requests before making register and enroll calls
-    export FABRIC_CA_CLIENT_HOME=${PWD}/organizations/peerOrganizations/org1.example.com/
     COUNTER=0
     rc=1
     while [[ $rc -ne 0 && $COUNTER -lt $MAX_RETRY ]]; do
       sleep 1
       set -x
-      fabric-ca-client getcainfo -u https://admin:adminpw@localhost:7054 --caname ca-reg-de --tls.certfiles "${PWD}/organizations/fabric-ca/de/ca-cert.pem"
+      fabric-ca-client getcainfo -u https://admin:adminpw@localhost:7054 --caname ca-reg-de --tls.certfiles "${PWD}/organizations/fabric-ca/reg-de/ca-cert.pem"
       res=$?
     { set +x; } 2>/dev/null
     rc=$res  # Update rc
