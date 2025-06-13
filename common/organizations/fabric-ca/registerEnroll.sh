@@ -57,16 +57,16 @@ function createOrg() {
   echo "NodeOUs:
   Enable: true
   ClientOUIdentifier:
-    Certificate: cacerts/localhost-${CA_HOST_PORT}-${CA_IDENTIFIER}.pem
+    Certificate: cacerts/localhost-${CA_HOST_PORT}-${CA_NAME}.pem
     OrganizationalUnitIdentifier: client
   PeerOUIdentifier:
-    Certificate: cacerts/localhost-${CA_HOST_PORT}-${CA_IDENTIFIER}.pem
+    Certificate: cacerts/localhost-${CA_HOST_PORT}-${CA_NAME}.pem
     OrganizationalUnitIdentifier: peer
   AdminOUIdentifier:
-    Certificate: cacerts/localhost-${CA_HOST_PORT}-${CA_IDENTIFIER}.pem
+    Certificate: cacerts/localhost-${CA_HOST_PORT}-${CA_NAME}.pem
     OrganizationalUnitIdentifier: admin
   OrdererOUIdentifier:
-    Certificate: cacerts/localhost-${CA_HOST_PORT}-${CA_IDENTIFIER}.pem
+    Certificate: cacerts/localhost-${CA_HOST_PORT}-${CA_NAME}.pem
     OrganizationalUnitIdentifier: orderer" > "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/msp/config.yaml"
 
   # Kopieren des Org CA-Zertifikats in die org-level ca und tlsca Verzeichnisse
