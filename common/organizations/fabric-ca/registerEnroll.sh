@@ -32,7 +32,7 @@ infoln() {
 # Parameter:
 #   $1: Kurzer Name der Org (z.B. "de", "fr", "be", "es")
 #   $2: Volle Domain der Org (z.B. "de.navine.tech")
-#   $3: MSP ID der Org (z.B. "RegDeMSP")
+#   $3: MSP ID der Org (z.g. "RegDeMSP")
 #   $4: Host-Port der CA für diese Org (z.B. "7054", "8054" etc.)
 #   $5: Name der CA (z.B. "ca-reg-de")
 function createOrg() {
@@ -50,7 +50,8 @@ function createOrg() {
 
   set -x
   # Anpassung: Pfad zu CA-Zertifikat korrigiert, da 'fabric-ca' auf gleicher Ebene wie 'organizations' liegt
-  fabric-ca-client enroll -u "https://admin:adminpw@localhost:${CA_HOST_PORT}" --caname "${CA_NAME}" --tls.certfiles "${PWD}/organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem"
+  # Dies ist der Pfad zum Root-Zertifikat der CA, das vom Docker-Volume gemappt wird.
+  fabric-ca-client enroll -u "https://admin:adminpw@localhost:${CA_HOST_PORT}" --caname "${CA_NAME}" --tls.certfiles "${PWD}/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem"
   { set +x; } 2>/dev/null
 
   # Wichtiger Hinweis: Die CA-Zertifikatsnamen im config.yaml müssen korrekt sein.
@@ -71,7 +72,14 @@ function createOrg() {
 
   # Kopieren des Org CA-Zertifikats in die org-level ca und tlsca Verzeichnisse
   mkdir -p "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/msp/tlscacerts"
+  # Korrektur: Sicherstellen, dass die CA-Zertifikate korrekt kopiert werden
   cp "${PWD}/organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem" "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/msp/tlscacerts/ca.crt"
+
+  # === KORREKTUR FÜR MSP/CACERTS: Kopieren des CA-Zertifikats in msp/cacerts als ca.crt ===
+  # Dies behebt den Fehler "Failed loading ClientOU certificate at ... cacerts/ca.crt: no such file or directory"
+  mkdir -p "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/msp/cacerts"
+  cp "${PWD}/organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem" "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/msp/cacerts/ca.crt"
+
 
   mkdir -p "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/tlsca"
   cp "${PWD}/organizations/fabric-ca/${ORG_NAME_SHORT}/ca-cert.pem" "${PWD}/organizations/peerOrganizations/${ORG_DOMAIN}/tlsca/tlsca.${ORG_DOMAIN}-cert.pem"
@@ -144,6 +152,7 @@ function createOrdererOrg() {
 
   set -x
   # Anpassung: Pfad zu CA-Zertifikat korrigiert
+  # Dies ist der Pfad zum Root-Zertifikat der CA, das vom Docker-Volume gemappt wird.
   fabric-ca-client enroll -u "https://admin:adminpw@localhost:${ORDERER_CA_HOST_PORT}" --caname "${ORDERER_CA_NAME}" --tls.certfiles "${PWD}/organizations/fabric-ca/ordererOrg/ca-cert.pem"
   { set +x; } 2>/dev/null
 
@@ -166,6 +175,12 @@ function createOrdererOrg() {
   # Kopieren des Orderer CA-Zertifikats in die orderer org-level ca und tlsca Verzeichnisse
   mkdir -p "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/msp/tlscacerts"
   cp "${PWD}/organizations/fabric-ca/ordererOrg/ca-cert.pem" "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/msp/tlscacerts/tlsca.${ORDERER_ORG_DOMAIN}-cert.pem"
+
+  # === KORREKTUR FÜR MSP/CACERTS: Kopieren des CA-Zertifikats in msp/cacerts als ca.crt ===
+  # Dies behebt den Fehler "Failed loading ClientOU certificate at ... cacerts/ca.crt: no such file or directory"
+  mkdir -p "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/msp/cacerts"
+  cp "${PWD}/organizations/fabric-ca/ordererOrg/ca-cert.pem" "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/msp/cacerts/ca.crt"
+
 
   mkdir -p "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/tlsca"
   cp "${PWD}/organizations/fabric-ca/ordererOrg/ca-cert.pem" "${PWD}/organizations/ordererOrganizations/${ORDERER_ORG_DOMAIN}/tlsca/tlsca.${ORDERER_ORG_DOMAIN}-cert.pem"
