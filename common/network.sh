@@ -139,25 +139,25 @@ function createOrgs() {
 
 
   # Wir verwenden ausschließlich Fabric CAs
-  infoln "Generating certificates using Fabric CA"
-  # Starten der CA-Dienste
-  # Hier nur die CA-Compose-Dateien hochfahren
-  ${CONTAINER_CLI_COMPOSE} -f compose/${COMPOSE_FILE_CA} up -d 2>&1
-
-    # Make sure CA files have been created
-    while :
-    do
-      if [ ! -f "organizations/peerOrganizations/es.navine.tech/ca/ca.es.navine.tech-cert.pem" ]; then
-        sleep 1
-      else
-        break
-      fi
-    done
+  # Create crypto material using Fabric CA
+  if [ "$CRYPTO" == "Certificate Authorities" ]; then
+    infoln "Generating certificates using Fabric CA"
+    ${CONTAINER_CLI_COMPOSE} -f compose/$COMPOSE_FILE_CA -f compose/$CONTAINER_CLI/${CONTAINER_CLI}-$COMPOSE_FILE_CA up -d 2>&1
 
   # Ausführen des registerEnroll.sh Skripts aus dem fabric-ca Ordner
   # Wichtig: Der Pfad muss relativ zur Ausführungsposition von network.sh sein.
   # Annahme: network.sh und fabric-ca/ liegen im selben Verzeichnis (test-network/).
   . organizations/fabric-ca/registerEnroll.sh # Angepasster Pfad
+
+    # Make sure CA files have been created
+  while :
+  do
+    if [ ! -f "organizations/peerOrganizations/es.navine.tech/ca/ca.es.navine.tech-cert.pem" ]; then
+      sleep 1
+    else
+      break
+    fi
+  done
 
   infoln "Creating Orderer Org Identities (navine.tech)..."
   # Parameter: Domain, CA-Host-Port, CA-Name
@@ -174,6 +174,8 @@ function createOrgs() {
 
   infoln "Creating Regulatory Organization Spain (es.navine.tech)..."
   createOrg "reg-es" "es.navine.tech" "RegEsMSP" "10054" "ca-reg-es"
+
+  fi
 
   infoln "Generating CCP files for all Regulatory Orgs"
   # Pfad zu ccp-generate.sh anpassen, angenommen, es liegt im 'organizations'-Ordner
