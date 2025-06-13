@@ -20,11 +20,11 @@ function networkUp() {
   cp -r ./common/compose ./fabric-samples/test-network/
   cp -r ./common/configtx ./fabric-samples/test-network/
   cp ./common/network.sh ./fabric-samples/test-network/network.sh
-  cp ./common/envVar.sh ./fabric-samples/test-network/scripts/envVar.sh
-  cp ./common/createChannel.sh ./fabric-samples/test-network/scripts/createChannel.sh
-  cp ./common/orderer.sh ./fabric-samples/test-network/scripts/orderer.sh
-  cp ./common/setAnchorPeer.sh ./fabric-samples/test-network/scripts/setAnchorPeer.sh
-  cp ./common/configUpdate.sh ./fabric-samples/test-network/scripts/configUpdate.sh
+  #cp ./common/envVar.sh ./fabric-samples/test-network/scripts/envVar.sh
+  #cp ./common/createChannel.sh ./fabric-samples/test-network/scripts/createChannel.sh
+  #cp ./common/orderer.sh ./fabric-samples/test-network/scripts/orderer.sh
+  #cp ./common/setAnchorPeer.sh ./fabric-samples/test-network/scripts/setAnchorPeer.sh
+  #cp ./common/configUpdate.sh ./fabric-samples/test-network/scripts/configUpdate.sh
 
 	cd fabric-samples
 

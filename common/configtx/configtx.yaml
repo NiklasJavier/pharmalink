@@ -1,13 +1,23 @@
 # Copyright IBM Corp. All Rights Reserved. DEMO
 #
 # SPDX-License-Identifier: Apache-2.0
+#
 
-# Sektion: Organizations
+---
+################################################################################
+#
+#   Section: Organizations
+#
+#   - This section defines the different organizational identities which will
+#   be referenced later in the configuration.
+#
+################################################################################
 Organizations:
   - &OrdererOrg
     Name: OrdererMSP
     ID: OrdererMSP
-    MSPDir: organizations/ordererOrganizations/navine.tech/msp
+    # Angepasster MSPDir-Pfad für den Orderer
+    MSPDir: ../../../fabric-org/organizations/ordererOrganizations/navine.tech/msp
     Policies:
       Readers:
         Type: Signature
@@ -19,12 +29,13 @@ Organizations:
         Type: Signature
         Rule: "OR('OrdererMSP.admin')"
     OrdererEndpoints:
-      - orderer.navine.tech:7050
+      - orderer.navine.tech:7050 # Angepasste Orderer-Domain
 
   - &RegDeOrg # Deutschland
     Name: RegDeMSP
     ID: RegDeMSP
-    MSPDir: organizations/peerOrganizations/de.navine.tech/msp
+    # Angepasster MSPDir-Pfad für Deutschland
+    MSPDir: ../../../fabric-org/organizations/peerOrganizations/de.navine.tech/msp
     Policies:
       Readers:
         Type: Signature
@@ -42,11 +53,12 @@ Organizations:
   - &RegFrOrg # Frankreich
     Name: RegFrMSP
     ID: RegFrMSP
-    MSPDir: organizations/peerOrganizations/fr.navine.tech/msp
+    # Angepasster MSPDir-Pfad für Frankreich
+    MSPDir: ../../../fabric-org/organizations/peerOrganizations/fr.navine.tech/msp
     Policies:
       Readers:
         Type: Signature
-        Rule: "OR('RegFrMSP.admin', 'RegFrMSP.peer', 'OR('RegFrMSP.client')"
+        Rule: "OR('RegFrMSP.admin', 'RegFrMSP.peer', 'RegFrMSP.client')"
       Writers:
         Type: Signature
         Rule: "OR('RegFrMSP.admin', 'RegFrMSP.client')"
@@ -60,7 +72,8 @@ Organizations:
   - &RegBeOrg # Belgien
     Name: RegBeMSP
     ID: RegBeMSP
-    MSPDir: organizations/peerOrganizations/be.navine.tech/msp
+    # Angepasster MSPDir-Pfad für Belgien
+    MSPDir: ../../../fabric-org/organizations/peerOrganizations/be.navine.tech/msp
     Policies:
       Readers:
         Type: Signature
@@ -78,7 +91,8 @@ Organizations:
   - &RegEsOrg # Spanien
     Name: RegEsMSP
     ID: RegEsMSP
-    MSPDir: organizations/peerOrganizations/es.navine.tech/msp
+    # Angepasster MSPDir-Pfad für Spanien
+    MSPDir: ../../../fabric-org/organizations/peerOrganizations/es.navine.tech/msp
     Policies:
       Readers:
         Type: Signature
@@ -93,16 +107,25 @@ Organizations:
         Type: Signature
         Rule: "OR('RegEsMSP.peer')"
 
-# SECTION: Consortiums
-Consortiums:
-  PharmaLinkConsortium: # Der Name deines Konsortiums
-    Organizations:
-      - *RegDeOrg
-      - *RegFrOrg
-      - *RegBeOrg
-      - *RegEsOrg
-
-# SECTION: Capabilities
+################################################################################
+#
+#   SECTION: Capabilities
+#
+#   - This section defines the capabilities of fabric network. This is a new
+#   concept as of v1.1.0 and should not be utilized in mixed networks with
+#   v1.0.x peers and orderers.  Capabilities define features which must be
+#   present in a fabric binary for that binary to safely participate in the
+#   fabric network.  For instance, if a new MSP type is added, newer binaries
+#   might recognize and validate the signatures from this type, while older
+#   binaries without this support would be unable to validate those
+#   transactions.  This could lead to different versions of the fabric binaries
+#   having different world states.  Instead, defining a capability for a channel
+#   informs those binaries without this capability that they must cease
+#   processing transactions until they have been upgraded.  For v1.0.x if any
+#   capabilities are defined (including a map with all capabilities turned off)
+#   then the v1.0.x peer will deliberately crash.
+#
+################################################################################
 Capabilities:
   Channel: &ChannelCapabilities
     V2_0: true
@@ -110,8 +133,14 @@ Capabilities:
     V2_0: true
   Application: &ApplicationCapabilities
     V2_5: true
-
-# SECTION: Application
+################################################################################
+#
+#   SECTION: Application
+#
+#   - This section defines the values to encode into a config transaction or
+#   genesis block for application related parameters
+#
+################################################################################
 Application: &ApplicationDefaults
   Organizations:
   Policies:
@@ -132,9 +161,16 @@ Application: &ApplicationDefaults
       Rule: "MAJORITY Endorsement"
   Capabilities:
     <<: *ApplicationCapabilities
-
-# SECTION: Orderer
+################################################################################
+#
+#   SECTION: Orderer
+#
+#   - This section defines the values to encode into a config transaction or
+#   genesis block for orderer related parameters
+#
+################################################################################
 Orderer: &OrdererDefaults
+  # Angepasste Orderer-Adresse
   Addresses:
     - orderer.navine.tech:7050
   BatchTimeout: 2s
@@ -156,8 +192,14 @@ Orderer: &OrdererDefaults
     BlockValidation:
       Type: ImplicitMeta
       Rule: "ANY Writers"
-
-# SECTION: Channel
+################################################################################
+#
+#   CHANNEL
+#
+#   This section defines the values to encode into a config transaction or
+#   genesis block for channel related parameters.
+#
+################################################################################
 Channel: &ChannelDefaults
   Policies:
     Readers:
@@ -171,29 +213,45 @@ Channel: &ChannelDefaults
       Rule: "MAJORITY Admins"
   Capabilities:
     <<: *ChannelCapabilities
-
-# SECTION: Profile
+################################################################################
+#
+#   Profile
+#
+#   - Different configuration profiles may be encoded here to be specified
+#   as parameters to the configtxgen tool
+#
+################################################################################
 Profiles:
-  ChannelUsingRaft:
+  ChannelUsingRaft: # Dies ist das Profil, das für die Kanalkreation verwendet wird
     <<: *ChannelDefaults
-    Consortium: PharmaLinkConsortium # MUSS mit dem Namen übereinstimmen, den du in der Consortiums-Sektion gewählt hast!
     Orderer:
       <<: *OrdererDefaults
       OrdererType: etcdraft
       EtcdRaft:
         Consenters:
-          - Host: orderer.navine.tech
+          - Host: orderer.navine.tech # Angepasste Orderer-Domain
             Port: 7050
-            ClientTLSCert: organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/server.crt
-            ServerTLSCert: organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/server.crt
+            # Angepasste TLS-Zertifikatspfade
+            ClientTLSCert: ../../../fabric-org/organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/server.crt
+            ServerTLSCert: ../../../fabric-org/organizations/ordererOrganizations/navine.tech/orderers/orderer.navine.tech/tls/server.crt
       Organizations:
         - *OrdererOrg
       Capabilities: *OrdererCapabilities
     Application:
       <<: *ApplicationDefaults
       Organizations:
-        - *RegDeOrg
-        - *RegFrOrg
-        - *RegBeOrg
-        - *RegEsOrg
+        - *RegDeOrg # Hinzugefügt: Deutschland
+        - *RegFrOrg # Hinzugefügt: Frankreich
+        - *RegBeOrg # Hinzugefügt: Belgien
+        - *RegEsOrg # Hinzugefügt: Spanien
       Capabilities: *ApplicationCapabilities
+
+  # Optional: Ein separates Profil für den Genesis-Block des Systems (falls nicht 'ChannelUsingRaft' verwendet wird)
+  # TwoOrgsChannel: # Beispiel für ein Channel-Profil, das Org1 und Org2 enthält
+  #   <<: *ChannelDefaults
+  #   Application:
+  #     <<: *ApplicationDefaults
+  #     Organizations:
+  #       - *Org1
+  #       - *Org2
+  #     Capabilities: *ApplicationCapabilities
