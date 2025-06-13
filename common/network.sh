@@ -226,17 +226,8 @@ function createOrgs() {
 
     . organizations/fabric-ca/registerEnroll.sh
 
-    # Make sure CA files have been created
-    while :
-    do
-      if [ ! -f "organizations/peerOrganizations/es.navine.tech/ca/ca.es.navine.tech-cert.pem" ]; then
-        sleep 1
-      else
-        break
-      fi
-    done
-
     # Make sure CA service is initialized and can accept requests before making register and enroll calls
+    export FABRIC_CA_CLIENT_HOME=${PWD}/organizations/peerOrganizations/org1.example.com/
     COUNTER=0
     rc=1
     while [[ $rc -ne 0 && $COUNTER -lt $MAX_RETRY ]]; do
