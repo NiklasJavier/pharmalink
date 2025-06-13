@@ -7,7 +7,7 @@ CA_VERSION="1.5.15"
 function networkUp() {
 	networkDown
 	cd $SRC_DIR/..
-	curl -sSLO https://raw.githubusercoy4ntent.com/hyperledger/fabric/main/scripts/install-fabric.sh && chmod +x install-fabric.sh
+	curl -sSLO https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh && chmod +x install-fabric.sh
 	./install-fabric.sh --fabric-version ${FABRIC_VERSION} --ca-version ${CA_VERSION}
 
   # Wichtige Verzeichnisse:
