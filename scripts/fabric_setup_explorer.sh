@@ -1,54 +1,120 @@
 #!/bin/bash
 
-# Konfiguration
-KEYSTORE_DIR="./fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/keystore"
-BASE_PATH="/tmp/crypto/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/keystore"
-JSON_FILE="./docker/connection-profile/test-network.json"
+# Beschreibung: Skript zum Starten/Beenden des Hyperledger Fabric Explorers und Aktualisieren des privaten Schlüssels in der Verbindungskonfiguration.
 
-# Prüfe, ob jq installiert ist
-if ! command -v jq >/dev/null 2>&1; then
-    echo "Fehler: 'jq' ist nicht installiert. Installieren Sie es mit 'sudo apt install jq' (Ubuntu) oder 'brew install jq' (macOS)."
-    exit 1
+# Globale Variablen
+declare -r SRC_DIR
+SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+declare -r KEYSTORE_DIR="${SRC_DIR}/../fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/keystore"
+declare -r BASE_PATH="/tmp/crypto/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/keystore"
+declare -r JSON_FILE="${SRC_DIR}/../docker/connection-profile/test-network.json"
+declare -r DOCKER_COMPOSE_FILE="${SRC_DIR}/../docker/docker-compose-explorer.yaml"
+
+# Funktion: Startet den Fabric Explorer und aktualisiert die JSON-Konfiguration
+explorerUp() {
+    # Prüfe, ob jq installiert ist
+    if ! command -v jq >/dev/null 2>&1; then
+        echo "Fehler: 'jq' ist nicht installiert. Installieren Sie es mit:"
+        echo "  Ubuntu: sudo apt install jq"
+        echo "  macOS: brew install jq"
+        exit 1
+    fi
+
+    # Prüfe, ob das Keystore-Verzeichnis existiert
+    if [[ ! -d "${KEYSTORE_DIR}" ]]; then
+        echo "Fehler: Keystore-Verzeichnis '${KEYSTORE_DIR}' existiert nicht."
+        exit 1
+    fi
+
+    # Prüfe, ob die JSON-Datei existiert
+    if [[ ! -f "${JSON_FILE}" ]]; then
+        echo "Fehler: JSON-Datei '${JSON_FILE}' existiert nicht."
+        exit 1
+    fi
+
+    # Finde die Schlüsseldatei (erwartet genau eine Datei)
+    local key_file
+    key_file=$(ls "${KEYSTORE_DIR}" 2>/dev/null)
+    if [[ -z "${key_file}" ]]; then
+        echo "Fehler: Keine Datei im Keystore-Verzeichnis '${KEYSTORE_DIR}' gefunden."
+        exit 1
+    fi
+    if [[ $(ls "${KEYSTORE_DIR}" | wc -l) -ne 1 ]]; then
+        echo "Fehler: Mehr als eine Datei im Keystore-Verzeichnis gefunden."
+        exit 1
+    fi
+
+    # Erstelle den vollständigen Pfad für den privaten Schlüssel
+    local key_path="${BASE_PATH}/${key_file}"
+
+    # Aktualisiere die JSON-Datei
+    jq ".organizations.Org1MSP.adminPrivateKey.path = \"${key_path}\"" "${JSON_FILE}" > "${JSON_FILE}.tmp"
+    if [[ $? -ne 0 ]]; then
+        echo "Fehler: Konnte die JSON-Datei '${JSON_FILE}' nicht aktualisieren."
+        rm -f "${JSON_FILE}.tmp"
+        exit 1
+    fi
+    mv "${JSON_FILE}.tmp" "${JSON_FILE}"
+    echo "JSON-Datei '${JSON_FILE}' wurde erfolgreich aktualisiert."
+
+    # Ausgabe zur Bestätigung
+    echo "Neuer Pfad für adminPrivateKey.path:"
+    jq -r ".organizations.Org1MSP.adminPrivateKey.path" "${JSON_FILE}"
+    echo ""
+    echo "Privater Schlüsselpfad wurde auf '${key_path}' gesetzt."
+
+    # Starte den Fabric Explorer mit Docker Compose
+    echo "Starte Fabric Explorer..."
+    docker compose -f "${DOCKER_COMPOSE_FILE}" up -d
+    if [[ $? -ne 0 ]]; then
+        echo "Fehler: Konnte den Fabric Explorer nicht starten."
+        exit 1
+    fi
+    echo "Fabric Explorer wurde erfolgreich gestartet."
+}
+
+# Funktion: Beendet den Fabric Explorer
+explorerDown() {
+    echo "Beende Fabric Explorer..."
+    docker compose -f "${DOCKER_COMPOSE_FILE}" down
+    if [[ $? -ne 0 ]]; then
+        echo "Fehler: Konnte den Fabric Explorer nicht beenden."
+        exit 1
+    fi
+    echo "Fabric Explorer wurde erfolgreich beendet."
+}
+
+# Funktion: Zeigt die Hilfe an
+printHelp() {
+    echo "Verwendung: $0 <Modus>"
+    echo "Modi:"
+    echo "  up   - Startet den Fabric Explorer und aktualisiert die Verbindungskonfiguration."
+    echo "  down - Beendet den Fabric Explorer."
+    echo "Beispiel:"
+    echo "  $0 up"
+    echo "  $0 down"
+}
+
+# Argumente parsen
+if [[ $# -lt 1 ]]; then
+    printHelp
+    exit 0
 fi
 
-# 1. Prüfe, ob das Keystore-Verzeichnis existiert
-if [ ! -d "${KEYSTORE_DIR}" ]; then
-    echo "Fehler: Keystore-Verzeichnis '${KEYSTORE_DIR}' existiert nicht."
-    exit 1
-fi
+MODE="$1"
+shift
 
-# 2. Prüfe, ob die JSON-Datei existiert
-if [ ! -f "${JSON_FILE}" ]; then
-    echo "Fehler: JSON-Datei '${JSON_FILE}' existiert nicht."
-    exit 1
-fi
-
-# 3. Finde die Schlüsseldatei (erwartet genau eine Datei)
-KEY_FILE=$(ls "${KEYSTORE_DIR}")
-if [ -z "${KEY_FILE}" ]; then
-    echo "Fehler: Keine Datei im Keystore-Verzeichnis gefunden."
-    exit 1
-fi
-if [ $(ls "${KEYSTORE_DIR}" | wc -l) -ne 1 ]; then
-    echo "Fehler: Mehr als eine Datei im Keystore-Verzeichnis gefunden."
-    exit 1
-fi
-
-# 4. Erstelle den vollständigen Pfad
-KEY_PATH="${BASE_PATH}/${KEY_FILE}"
-
-# 5. Aktualisiere die JSON-Datei
-jq ".organizations.Org1MSP.adminPrivateKey.path = \"${KEY_PATH}\"" "${JSON_FILE}" > "${JSON_FILE}.tmp"
-if [ $? -ne 0 ]; then
-    echo "Fehler beim Aktualisieren der JSON-Datei '${JSON_FILE}'."
-    rm -f "${JSON_FILE}.tmp"
-    exit 1
-fi
-mv "${JSON_FILE}.tmp" "${JSON_FILE}"
-echo "JSON-Datei '${JSON_FILE}' wurde erfolgreich aktualisiert."
-
-# 6. Ausgabe zur Bestätigung
-echo "Neuer Pfad für adminPrivateKey.path:"
-jq ".organizations.Org1MSP.adminPrivateKey.path" "${JSON_FILE}"
-echo ""
-echo "Der Pfad zum privaten Schlüssel wurde auf '${KEY_PATH}' gesetzt."
+# Modus auswerten
+case "${MODE}" in
+    up)
+        explorerUp
+        ;;
+    down)
+        explorerDown
+        ;;
+    *)
+        echo "Fehler: Unbekannter Modus '${MODE}'."
+        printHelp
+        exit 1
+        ;;
+esac
