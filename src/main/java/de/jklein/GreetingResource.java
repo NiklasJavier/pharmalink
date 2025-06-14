@@ -6,7 +6,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 
 @Path("/api/rest")
-public class GreetingResource {
+public class GreetingResource extends FabricResource {
 
     @GET
     @Produces(MediaType.TEXT_PLAIN)

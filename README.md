@@ -31,9 +31,9 @@ sudo apt-get install curl golang git gradle docker-compose zip -y
 Jetzt ist es an der Zeit, das Projekt-Repository zu klonen und in dein Home-Verzeichnis zu verschieben.
 
 ```bash
-cd ~ && git clone git@github.com:NiklasJavier/fabric-medical-supply-chain.git
+cd ~ && git clone git@github.com:NiklasJavier/pharmalink.git
 ```
-Dieser Befehl wechselt zuerst in dein Home-Verzeichnis (`~`) und klont dann das `fabric-medical-supply-chain`-Repository.
+Dieser Befehl wechselt zuerst in dein Home-Verzeichnis (`~`) und klont dann das `pharmalink`-Repository.
 
 ---
 

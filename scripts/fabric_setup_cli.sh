@@ -1,7 +1,7 @@
 #!/bin/bash
 
-FABRIC_VERSION="3.1.1"
-FABRIC_ARCH="linux-amd64"
+FABRIC_VERSION="2.5.13"
+FABRIC_ARCH="linux-arm64"
 FABRIC_TAR_GZ_URL="https://github.com/hyperledger/fabric/releases/download/v${FABRIC_VERSION}/hyperledger-fabric-${FABRIC_ARCH}-${FABRIC_VERSION}.tar.gz"
 DOWNLOAD_FILENAME="hyperledger-fabric-${FABRIC_ARCH}-${FABRIC_VERSION}.tar.gz"
 INSTALL_DIR="${HOME}/hyperledger-fabric" # Zielverzeichnis im Home-Ordner
