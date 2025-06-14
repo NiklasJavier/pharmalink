@@ -1,17 +1,20 @@
-
 # SPDX-License-Identifier: Apache-2.0
-version: '2.1'
+# Beschreibung: Docker Compose-Konfiguration für Hyperledger Fabric Explorer und dessen PostgreSQL-Datenbank.
 
+# Definiert benannte Volumes für Persistenz
 volumes:
-  pgdata:
-  walletstore:
+  pgdata: {}
+  walletstore: {}
 
+# Definiert Netzwerke
 networks:
   mynetwork.com:
     name: fabric_test
+    external: true  # Verwendet das bestehende Netzwerk 'fabric_test' vom Fabric-Testnetzwerk
 
+# Definiert Dienste
 services:
-
+  # PostgreSQL-Datenbank für Fabric Explorer
   explorerdb.mynetwork.com:
     image: ghcr.io/hyperledger-labs/explorer-db:latest
     container_name: explorerdb.mynetwork.com
@@ -21,7 +24,7 @@ services:
       - DATABASE_USERNAME=hppoc
       - DATABASE_PASSWORD=password
     healthcheck:
-      test: "pg_isready -h localhost -p 5432 -q -U postgres"
+      test: ["CMD", "pg_isready", "-h", "localhost", "-p", "5432", "-q", "-U", "postgres"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -30,6 +33,7 @@ services:
     networks:
       - mynetwork.com
 
+  # Fabric Explorer
   explorer.mynetwork.com:
     image: ghcr.io/hyperledger-labs/explorer:latest
     container_name: explorer.mynetwork.com
@@ -43,7 +47,7 @@ services:
       - LOG_LEVEL_DB=info
       - LOG_LEVEL_CONSOLE=debug
       - LOG_CONSOLE_STDOUT=true
-      - DISCOVERY_AS_LOCALHOST=false
+      - DISCOVERY_AS_LOCALHOST=true
       - PORT=8088
     volumes:
       - ./explorer/config.json:/opt/explorer/app/platform/fabric/config.json
@@ -51,7 +55,7 @@ services:
       - ../fabric-samples/test-network/organizations:/tmp/crypto
       - walletstore:/opt/explorer/wallet
     ports:
-      - 8088:8088
+      - "8088:8088"
     depends_on:
       explorerdb.mynetwork.com:
         condition: service_healthy

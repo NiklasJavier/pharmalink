@@ -5,14 +5,12 @@
 # Globale Variablen
 declare -r SRC_DIR
 SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-declare -r KEYSTORE_DIR="${SRC_DIR}/../fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/keystore"
+declare -r KEYSTORE_DIR=".${SRC_DIR}/../fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/keystore"
 declare -r BASE_PATH="/tmp/crypto/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/keystore"
-declare -r JSON_FILE="${SRC_DIR}/../docker/connection-profile/test-network.json"
-declare -r DOCKER_COMPOSE_FILE="${SRC_DIR}/../docker/docker-compose-explorer.yaml"
+declare -r JSON_FILE=".${SRC_DIR}/../docker/explorer/connection-profile/test-network.json"
+declare -r DOCKER_COMPOSE_FILE=".${SRC_DIR}/../docker/docker-compose-explorer.yaml"
 
-# Funktion: Startet den Fabric Explorer und aktualisiert die JSON-Konfiguration
 explorerUp() {
-    # Prüfe, ob jq installiert ist
     if ! command -v jq >/dev/null 2>&1; then
         echo "Fehler: 'jq' ist nicht installiert. Installieren Sie es mit:"
         echo "  Ubuntu: sudo apt install jq"
@@ -20,19 +18,16 @@ explorerUp() {
         exit 1
     fi
 
-    # Prüfe, ob das Keystore-Verzeichnis existiert
     if [[ ! -d "${KEYSTORE_DIR}" ]]; then
         echo "Fehler: Keystore-Verzeichnis '${KEYSTORE_DIR}' existiert nicht."
         exit 1
     fi
 
-    # Prüfe, ob die JSON-Datei existiert
     if [[ ! -f "${JSON_FILE}" ]]; then
         echo "Fehler: JSON-Datei '${JSON_FILE}' existiert nicht."
         exit 1
     fi
 
-    # Finde die Schlüsseldatei (erwartet genau eine Datei)
     local key_file
     key_file=$(ls "${KEYSTORE_DIR}" 2>/dev/null)
     if [[ -z "${key_file}" ]]; then
@@ -44,10 +39,8 @@ explorerUp() {
         exit 1
     fi
 
-    # Erstelle den vollständigen Pfad für den privaten Schlüssel
     local key_path="${BASE_PATH}/${key_file}"
 
-    # Aktualisiere die JSON-Datei
     jq ".organizations.Org1MSP.adminPrivateKey.path = \"${key_path}\"" "${JSON_FILE}" > "${JSON_FILE}.tmp"
     if [[ $? -ne 0 ]]; then
         echo "Fehler: Konnte die JSON-Datei '${JSON_FILE}' nicht aktualisieren."
@@ -57,13 +50,11 @@ explorerUp() {
     mv "${JSON_FILE}.tmp" "${JSON_FILE}"
     echo "JSON-Datei '${JSON_FILE}' wurde erfolgreich aktualisiert."
 
-    # Ausgabe zur Bestätigung
     echo "Neuer Pfad für adminPrivateKey.path:"
     jq -r ".organizations.Org1MSP.adminPrivateKey.path" "${JSON_FILE}"
     echo ""
     echo "Privater Schlüsselpfad wurde auf '${key_path}' gesetzt."
 
-    # Starte den Fabric Explorer mit Docker Compose
     echo "Starte Fabric Explorer..."
     docker compose -f "${DOCKER_COMPOSE_FILE}" up -d
     if [[ $? -ne 0 ]]; then
@@ -73,7 +64,6 @@ explorerUp() {
     echo "Fabric Explorer wurde erfolgreich gestartet."
 }
 
-# Funktion: Beendet den Fabric Explorer
 explorerDown() {
     echo "Beende Fabric Explorer..."
     docker compose -f "${DOCKER_COMPOSE_FILE}" down
@@ -84,7 +74,6 @@ explorerDown() {
     echo "Fabric Explorer wurde erfolgreich beendet."
 }
 
-# Funktion: Zeigt die Hilfe an
 printHelp() {
     echo "Verwendung: $0 <Modus>"
     echo "Modi:"
