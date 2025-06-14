@@ -21,7 +21,7 @@ curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh
 Installiere anschließend **curl**, **golang**, **git** und **docker-compose** über den Paketmanager von Ubuntu.
 
 ```bash
-sudo apt-get install curl golang git gradle docker-compose zip -y
+sudo apt-get install curl golang git gradle docker-compose zip jq -y
 ```
 
 ---
