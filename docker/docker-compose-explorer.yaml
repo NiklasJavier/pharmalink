@@ -1,6 +1,4 @@
-# SPDX-License-Identifier: Apache-2.0
-# Beschreibung: Docker Compose-Konfiguration für Hyperledger Fabric Explorer und dessen PostgreSQL-Datenbank.
-
+version: '3.7'
 # Definiert benannte Volumes für Persistenz
 volumes:
   pgdata: {}
@@ -8,9 +6,8 @@ volumes:
 
 # Definiert Netzwerke
 networks:
-  mynetwork.com:
-    name: fabric_test
-    external: true  # Verwendet das bestehende Netzwerk 'fabric_test' vom Fabric-Testnetzwerk
+  fabric_test:
+    external: true
 
 # Definiert Dienste
 services:
@@ -31,7 +28,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
-      - mynetwork.com
+      - fabric_test
 
   # Fabric Explorer
   explorer.mynetwork.com:
@@ -47,7 +44,7 @@ services:
       - LOG_LEVEL_DB=info
       - LOG_LEVEL_CONSOLE=debug
       - LOG_CONSOLE_STDOUT=true
-      - DISCOVERY_AS_LOCALHOST=true
+      - DISCOVERY_AS_LOCALHOST=false
       - PORT=8088
     volumes:
       - ./explorer/config.json:/opt/explorer/app/platform/fabric/config.json
@@ -60,4 +57,4 @@ services:
       explorerdb.mynetwork.com:
         condition: service_healthy
     networks:
-      - mynetwork.com
+      - fabric_test
