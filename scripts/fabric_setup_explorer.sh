@@ -66,7 +66,7 @@ explorerUp() {
 
 explorerDown() {
     echo "Beende Fabric Explorer..."
-    docker compose -f "${DOCKER_COMPOSE_FILE}" down
+    docker compose -f "${DOCKER_COMPOSE_FILE}" down -v
     if [[ $? -ne 0 ]]; then
         echo "Fehler: Konnte den Fabric Explorer nicht beenden."
         exit 1
