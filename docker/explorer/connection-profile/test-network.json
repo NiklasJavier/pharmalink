@@ -2,7 +2,7 @@
 	"name": "test-network",
 	"version": "1.0.0",
 	"client": {
-		"tlsEnable": true,
+		"tlsEnable": false,
 		"adminCredential": {
 			"id": "exploreradmin",
 			"password": "exploreradminpw"
