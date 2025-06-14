@@ -12,10 +12,10 @@ networks:
 # Definiert Dienste
 services:
   # PostgreSQL-Datenbank für Fabric Explorer
-  explorerdb.mynetwork.com:
+  explorerdb:
     image: ghcr.io/hyperledger-labs/explorer-db:latest
-    container_name: explorerdb.mynetwork.com
-    hostname: explorerdb.mynetwork.com
+    container_name: explorerdb
+    hostname: explorerdb
     environment:
       - DATABASE_DATABASE=fabricexplorer
       - DATABASE_USERNAME=hppoc
@@ -31,12 +31,11 @@ services:
       - fabric_test
 
   # Fabric Explorer
-  explorer.mynetwork.com:
+  explorer:
     image: ghcr.io/hyperledger-labs/explorer:latest
-    container_name: explorer.mynetwork.com
-    hostname: explorer.mynetwork.com
+    container_name: explorer
     environment:
-      - DATABASE_HOST=explorerdb.mynetwork.com
+      - DATABASE_HOST=explorerdb
       - DATABASE_DATABASE=fabricexplorer
       - DATABASE_USERNAME=hppoc
       - DATABASE_PASSWD=password
@@ -45,16 +44,16 @@ services:
       - LOG_LEVEL_CONSOLE=debug
       - LOG_CONSOLE_STDOUT=true
       - DISCOVERY_AS_LOCALHOST=false
-      - PORT=8088
+      - PORT=8080
     volumes:
       - ./explorer/config.json:/opt/explorer/app/platform/fabric/config.json
       - ./explorer/connection-profile:/opt/explorer/app/platform/fabric/connection-profile
       - ../fabric-samples/test-network/organizations:/tmp/crypto
       - walletstore:/opt/explorer/wallet
     ports:
-      - "8088:8088"
+      - 8088:8080
     depends_on:
-      explorerdb.mynetwork.com:
+      explorerdb:
         condition: service_healthy
     networks:
       - fabric_test
