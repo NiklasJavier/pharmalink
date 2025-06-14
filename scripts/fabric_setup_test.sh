@@ -10,6 +10,10 @@ function networkUp() {
 	curl -sSLO https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh && chmod +x install-fabric.sh
 	./install-fabric.sh --fabric-version ${FABRIC_VERSION} --ca-version ${CA_VERSION}
 
+  # Weitere Befehle welchen beim SetUp verwendet werden können
+  #
+  # echo "./startNetwork up -v 2.4.1"
+  #
   # Wichtige Verzeichnisse:
   #
   # ./fabric-samples/test-network/organizations
@@ -17,6 +21,7 @@ function networkUp() {
   # ./fabric-samples/test-network/configtx
   #
   ## Meine Überschreibungen (Work in Progress (WIP))
+  #
   #cp -r ./common/template/organizations ./fabric-samples/test-network/
   #cp -r ./common/template/compose ./fabric-samples/test-network/
   #cp -r ./common/template/configtx ./fabric-samples/test-network/
@@ -51,7 +56,6 @@ function networkDown() {
 
 function printHelp() {
  echo "./fabric_setup_test up"
-# echo "./startNetwork up -v 2.4.1"
  echo "./fabric_setup_test down"
 }
 ## Parse mode
