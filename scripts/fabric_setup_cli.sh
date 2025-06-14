@@ -1,16 +1,35 @@
 #!/bin/bash
 
+# Konfiguration
 FABRIC_VERSION="2.5.13"
-FABRIC_ARCH="linux-arm64"
+INSTALL_DIR="${HOME}/hyperledger-fabric"
+BIN_PATH="${INSTALL_DIR}/bin"
+
+# Architektur automatisch erkennen
+ARCH=$(uname -m)
+case "${ARCH}" in
+    x86_64)
+        FABRIC_ARCH="linux-amd64"
+        ;;
+    aarch64|arm64)
+        FABRIC_ARCH="linux-arm64"
+        ;;
+    *)
+        echo "Fehler: Nicht unterstützte Architektur '${ARCH}'. Unterstützt werden: x86_64 (amd64) und aarch64/arm64."
+        exit 1
+        ;;
+esac
+
 FABRIC_TAR_GZ_URL="https://github.com/hyperledger/fabric/releases/download/v${FABRIC_VERSION}/hyperledger-fabric-${FABRIC_ARCH}-${FABRIC_VERSION}.tar.gz"
 DOWNLOAD_FILENAME="hyperledger-fabric-${FABRIC_ARCH}-${FABRIC_VERSION}.tar.gz"
-INSTALL_DIR="${HOME}/hyperledger-fabric" # Zielverzeichnis im Home-Ordner
-BIN_PATH="${INSTALL_DIR}/bin"            # Der Bin-Ordner, der zum PATH hinzugefügt wird
 
+# Ausgabe der Konfiguration
 echo "Starte Einrichtung der Hyperledger Fabric Binaries..."
+echo "Architektur: ${FABRIC_ARCH}"
 echo "Download-URL: ${FABRIC_TAR_GZ_URL}"
 echo "Installationsverzeichnis: ${INSTALL_DIR}"
 
+# 1. Binaries herunterladen
 echo "1. Lade Hyperledger Fabric Binaries herunter..."
 curl -L "${FABRIC_TAR_GZ_URL}" -o "${HOME}/${DOWNLOAD_FILENAME}"
 if [ $? -ne 0 ]; then
@@ -19,11 +38,13 @@ if [ $? -ne 0 ]; then
 fi
 echo "Download abgeschlossen: ${HOME}/${DOWNLOAD_FILENAME}"
 
+# 2. Vorhandenes Installationsverzeichnis bereinigen
 if [ -d "${INSTALL_DIR}" ]; then
     echo "2. Vorhandenes Installationsverzeichnis '${INSTALL_DIR}' wird entfernt..."
     rm -rf "${INSTALL_DIR}"
 fi
 
+# 3. Binaries entpacken
 echo "3. Entpacke Fabric Binaries nach '${INSTALL_DIR}'..."
 mkdir -p "${INSTALL_DIR}"
 tar -xzf "${HOME}/${DOWNLOAD_FILENAME}" -C "${INSTALL_DIR}"
@@ -33,27 +54,43 @@ if [ $? -ne 0 ]; then
 fi
 echo "Entpacken abgeschlossen."
 
+# 4. Tar-Datei löschen
 echo "4. Lösche die heruntergeladene Tar-Datei: ${HOME}/${DOWNLOAD_FILENAME}..."
 rm "${HOME}/${DOWNLOAD_FILENAME}"
 
-echo "5. Binde den Fabric 'bin'-Pfad in ~/.bashrc ein..."
+# 5. Shell-Konfiguration aktualisieren (bash oder zsh)
+echo "5. Binde den Fabric 'bin'-Pfad in die Shell-Konfiguration ein..."
 
-if ! grep -q "export PATH=\"\$PATH:${BIN_PATH}\"" "${HOME}/.bashrc"; then
-    echo "\n# Add Hyperledger Fabric binaries to PATH" >> "${HOME}/.bashrc"
-    echo "export PATH=\"\$PATH:${BIN_PATH}\"" >> "${HOME}/.bashrc"
-    echo ".bashrc wurde aktualisiert."
+# Ermittle die aktuelle Shell
+SHELL_CONFIG_FILE=""
+if [[ "${SHELL}" == */zsh ]]; then
+    SHELL_CONFIG_FILE="${HOME}/.zshrc"
+elif [[ "${SHELL}" == */bash ]]; then
+    SHELL_CONFIG_FILE="${HOME}/.bashrc"
 else
-    echo "Der Fabric 'bin'-Pfad ist bereits in ~/.bashrc vorhanden. Keine Änderung vorgenommen."
+    echo "Warnung: Unbekannte Shell '${SHELL}'. Verwende ~/.bashrc als Fallback."
+    SHELL_CONFIG_FILE="${HOME}/.bashrc"
 fi
 
-echo "6. Lade ~/.bashrc für die aktuelle Sitzung neu..."
-source "${HOME}/.bashrc"
+# Füge den PATH-Eintrag hinzu, falls nicht vorhanden
+if ! grep -q "export PATH=\"\$PATH:${BIN_PATH}\"" "${SHELL_CONFIG_FILE}"; then
+    echo -e "\n# Add Hyperledger Fabric binaries to PATH" >> "${SHELL_CONFIG_FILE}"
+    echo "export PATH=\"\$PATH:${BIN_PATH}\"" >> "${SHELL_CONFIG_FILE}"
+    echo "${SHELL_CONFIG_FILE} wurde aktualisiert."
+else
+    echo "Der Fabric 'bin'-Pfad ist bereits in ${SHELL_CONFIG_FILE} vorhanden. Keine Änderung vorgenommen."
+fi
 
+# 6. Shell-Konfiguration für aktuelle Sitzung laden
+echo "6. Lade ${SHELL_CONFIG_FILE} für die aktuelle Sitzung neu..."
+source "${SHELL_CONFIG_FILE}"
+
+# Abschlussmeldung
 echo ""
 echo "---------------------------------------------------------"
 echo "Einrichtung der Hyperledger Fabric Binaries abgeschlossen!"
 echo "Bitte öffnen Sie ein NEUES Terminal, damit der PATH vollständig wirksam wird,"
-echo "oder führen Sie 'source ~/.bashrc' manuell aus, wenn Sie die PATH-Änderung in der aktuellen Sitzung benötigen."
+echo "oder führen Sie 'source ${SHELL_CONFIG_FILE}' manuell aus, um die PATH-Änderung sofort zu nutzen."
 echo ""
 echo "Testen Sie die Installation mit:"
 echo "peer version"
