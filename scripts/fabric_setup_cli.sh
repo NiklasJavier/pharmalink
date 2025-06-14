@@ -63,9 +63,9 @@ echo "5. Binde den Fabric 'bin'-Pfad in die Shell-Konfiguration ein..."
 
 # Ermittle die aktuelle Shell
 SHELL_CONFIG_FILE=""
-if [[ "${SHELL}" == */zsh ]]; then
+if [[ "echo $SHELL" == */zsh ]]; then
     SHELL_CONFIG_FILE="${HOME}/.zshrc"
-elif [[ "${SHELL}" == */bash ]]; then
+elif [[ "echo $SHELL" == */bash ]]; then
     SHELL_CONFIG_FILE="${HOME}/.bashrc"
 else
     echo "Warnung: Unbekannte Shell '${SHELL}'. Verwende ~/.bashrc als Fallback."
