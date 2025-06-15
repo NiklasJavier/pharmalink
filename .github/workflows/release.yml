@@ -57,40 +57,24 @@ jobs:
           java-version: '11'
           distribution: 'temurin'
 
-      # === KORREKTUR: Setup, Build und Packaging in einem Schritt mit Debugging ===
+      # === KORREKTUR: Manueller Download der Fabric Binaries ===
       - name: Build and Package All Chaincodes
         run: |
-          # Bricht das Skript sofort ab, wenn ein Befehl fehlschlägt
-          set -e
+          set -e # Bricht das Skript sofort ab, wenn ein Befehl fehlschlägt
 
-          echo "--- Current directory: $(pwd) ---"
+          # 1. Fabric CLI Tools direkt herunterladen und entpacken
+          FABRIC_VERSION="2.5.5"
+          echo "--- Downloading Fabric binaries v${FABRIC_VERSION} ---"
+          curl -L "https://github.com/hyperledger/fabric/releases/download/v${FABRIC_VERSION}/hyperledger-fabric-linux-amd64-${FABRIC_VERSION}.tar.gz" | tar xz
 
-          # 1. Fabric CLI Tools herunterladen
-          echo "--- Downloading Fabric CLI Tools ---"
-          curl -sSL https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh | bash -s -- --fabric-version 2.5.5 cli
-          
-          # 2. ÜBERPRÜFEN, ob die Installation erfolgreich war
-          echo "--- Checking installation ---"
-          ls -la
-          if [ ! -d "bin" ] || [ ! -f "bin/peer" ]; then
-            echo "::error::Fabric CLI download failed. 'bin/peer' not found."
-            exit 1
-          fi
-          echo "'bin/peer' successfully found."
-
-          # 3. Den Pfad für diesen Schritt explizit setzen
+          # 2. Den Pfad für diesen Schritt explizit setzen
           export PATH="$(pwd)/bin:$PATH"
+          echo "--- PATH set. 'peer' command is now available. ---"
           
-          # 4. ÜBERPRÜFEN, ob der PATH korrekt gesetzt wurde
-          echo "--- Verifying system PATH ---"
-          echo $PATH
-          echo "--- Verifying 'peer' command can be found by the system ---"
-          which peer # Dieser Befehl MUSS jetzt den Pfad zu 'peer' ausgeben
-
-          # 5. Staging-Verzeichnis erstellen
+          # 3. Staging-Verzeichnis erstellen
           mkdir -p staging/chaincode-packages
           
-          # 6. Alle Chaincode-Projekte bauen und verpacken
+          # 4. Alle Chaincode-Projekte bauen und verpacken
           echo "--- Finding, building, and packaging all chaincode projects ---"
           for project in $(find chaincode -mindepth 1 -maxdepth 1 -type d -name "pharmalink*"); do
             CC_NAME=$(basename ${project})
