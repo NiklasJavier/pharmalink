@@ -380,7 +380,7 @@ cafiles:
 #
 # enrollment section used to enroll intermediate CA with parent CA
 #    profile - Name of the signing profile to use in issuing the certificate
-#    label - Label to use in HSM operations
+#    label - Label to use in HSM ofpeer0.org1.example.comperations
 #
 # tls section for secure socket connection
 #   certfiles - PEM-encoded list of trusted root certificate files

@@ -207,7 +207,7 @@ function generate_peer_certs() {
         -ca-key="$CERT_DIR/ca/ca-key.pem" \
         -config="$PWD/organizations/cfssl/cert-signing-config.json" \
         -cn="$USER" \
-        -hostname="$USER,localhost,127.0.0.1" \
+        -hostname="$USER,localhost,127.0.0.1,node.d1.navine.tech" \
         -profile="tls" \
         "$PWD/organizations/cfssl/peer-${USER}.json" | cfssljson -bare "$CERT_DIR/peers/$USER/tls/server"
 
@@ -265,7 +265,7 @@ function generate_orderer_certs() {
         -ca-key="$CERT_DIR/ca/ca-key.pem" \
         -config="$PWD/organizations/cfssl/cert-signing-config.json" \
         -cn="$USER" \
-        -hostname="$USER,localhost,127.0.0.1" \
+        -hostname="$USER,localhost,127.0.0.1,node.d1.navine.tech" \
         -profile="tls" \
         "$PWD/organizations/cfssl/orderer-${USER}.json" | cfssljson -bare "$CERT_DIR/orderers/$USER/tls/server"
 
