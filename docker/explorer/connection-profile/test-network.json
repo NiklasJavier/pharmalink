@@ -7,7 +7,7 @@
 			"id": "admin",
 			"password": "admin"
 		},
-		"enableAuthentication": true,
+		"enableAuthentication": false,
 		"organization": "Org1MSP",
 		"connection": {
 			"timeout": {
