@@ -14,8 +14,6 @@ jobs:
       packages: write
 
     steps:
-      # ... (vorherige Schritte bleiben unverändert) ...
-
       - name: Checkout Repository
         uses: actions/checkout@v4
 
