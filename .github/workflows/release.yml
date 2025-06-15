@@ -57,17 +57,20 @@ jobs:
           java-version: '11'
           distribution: 'temurin'
 
-      - name: Setup Fabric CLI Tools
+      # === KORREKTUR: Setup, Build und Packaging in einem Schritt ===
+      - name: Build and Package All Chaincodes
         run: |
-          # Lädt die 'peer' Binary und andere Tools herunter
+          # 1. Fabric CLI Tools herunterladen
+          echo "--- Downloading Fabric CLI Tools ---"
           curl -sSL https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh | bash -s -- --fabric-version 2.5.5 cli
-          # === KORREKTUR: $GITHUB_PATH anstatt $GITHUB_ENV verwenden ===
-          echo "$(pwd)/bin" >> $GITHUB_PATH
-
-      - name: Build and Package Chaincodes
-        run: |
+          
+          # 2. Den Pfad für diesen Schritt explizit setzen
+          export PATH=$(pwd)/bin:$PATH
+          
+          # 3. Staging-Verzeichnis erstellen
           mkdir -p staging/chaincode-packages
           
+          # 4. Alle Chaincode-Projekte bauen und verpacken
           echo "--- Finding, building, and packaging all chaincode projects ---"
           for project in $(find chaincode -mindepth 1 -maxdepth 1 -type d -name "pharmalink*"); do
             CC_NAME=$(basename ${project})
