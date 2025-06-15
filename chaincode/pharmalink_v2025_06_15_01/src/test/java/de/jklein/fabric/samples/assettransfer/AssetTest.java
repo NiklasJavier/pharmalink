@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.hyperledger.fabric.samples.assettransfer;
+package de.jklein.fabric.samples.assettransfer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
