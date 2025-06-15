@@ -10,6 +10,8 @@ function networkUp() {
 	curl -sSLO https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh && chmod +x install-fabric.sh
 	./install-fabric.sh --fabric-version ${FABRIC_VERSION} --ca-version ${CA_VERSION}
 
+  cp -r ./common/organizations ./fabric-samples/test-network/
+
   # Weitere Befehle welchen beim SetUp verwendet werden können
   #
   # echo "./startNetwork up -v 2.4.1"
