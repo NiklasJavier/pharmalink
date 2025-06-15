@@ -51,7 +51,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      # --- NEUE SCHRITTE ZUM BAUEN & VERPACKEN DER CHAINCODES ---
       - name: Set up JDK 11 for Chaincode Build
         uses: actions/setup-java@v4
         with:
@@ -60,35 +59,35 @@ jobs:
 
       - name: Setup Fabric CLI Tools
         run: |
-          # Lädt die 'peer' Binary und andere Tools herunter, die zum Verpacken benötigt werden
+          # Lädt die 'peer' Binary und andere Tools herunter
           curl -sSL https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh | bash -s -- --fabric-version 2.5.5 cli
+          # === KORREKTUR 1: Fügt das bin-Verzeichnis zum PATH hinzu ===
+          echo "$(pwd)/bin" >> $GITHUB_ENV
 
       - name: Build and Package Chaincodes
         run: |
-          # Erstellt ein Staging-Verzeichnis für die verpackten Chaincodes
           mkdir -p staging/chaincode-packages
           
           echo "--- Finding, building, and packaging all chaincode projects ---"
           for project in $(find chaincode -mindepth 1 -maxdepth 1 -type d -name "pharmalink*"); do
             CC_NAME=$(basename ${project})
-            # Version könnte dynamisch aus dem Git-Tag extrahiert werden
             CC_VERSION=$(echo "${{ github.ref_name }}" | sed 's/v//')
           
             echo "--> Building ${project} with Gradle"
-            (cd "${project}" && ../../gradlew build)
+            # === KORREKTUR 2: Sauberer Gradle-Aufruf ohne cd ===
+            ./gradlew -p "${project}" build
             if [ $? -ne 0 ]; then
               echo "::error::Gradle build failed for ${project}"
               exit 1
             fi
 
             echo "--> Packaging ${CC_NAME} for Fabric"
-            ./bin/peer lifecycle chaincode package "staging/chaincode-packages/${CC_NAME}.tar.gz" --path "${project}" --lang java --label "${CC_NAME}_${CC_VERSION}"
+            # === KORREKTUR 3: Direkter Aufruf von 'peer' ohne relativen Pfad ===
+            peer lifecycle chaincode package "staging/chaincode-packages/${CC_NAME}.tar.gz" --path "${project}" --lang java --label "${CC_NAME}_${CC_VERSION}"
           done
-      # --- ENDE DER NEUEN SCHRITTE ---
 
       - name: Package Application and Chaincodes for Release
         run: |
-          # Verzeichnisstruktur für das finale ZIP-Archiv vorbereiten
           mkdir -p release-package/app
           mkdir -p release-package/chaincode
 
@@ -102,7 +101,6 @@ jobs:
           echo "--- Final package structure ---"
           ls -R release-package
 
-          # ZIP-Archiv aus dem Inhalt von release-package erstellen
           cd release-package
           zip -r ../pharmalink-${{ github.ref_name }}.zip .
 
