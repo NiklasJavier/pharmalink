@@ -17,7 +17,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up GraalVM for JDK 21
+      - name: Set up GraalVM for JDK 21 (Main Application)
         uses: actions/setup-java@v4
         with:
           java-version: '21'
@@ -26,7 +26,7 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Build with Gradle
+      - name: Build Main Application with Gradle
         run: ./gradlew build -PnewVersion=${{ github.ref_name }}
 
       - name: Log in to the Container registry
@@ -51,11 +51,44 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+      # --- NEUE SCHRITTE ZUM BAUEN DER CHAINCODES ---
+      - name: Set up JDK 11 for Chaincode Build
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin' # Ein Standard-JDK ist hier ausreichend
+
+      - name: Dynamically Build Chaincodes
+        run: |
+          echo "--- Finding and building all chaincode projects ---"
+          for project in $(find chaincode -mindepth 1 -maxdepth 1 -type d -name "pharmalink*"); do
+            echo "--> Building ${project}"
+            (cd "${project}" && ./gradlew build)
+            if [ $? -ne 0 ]; then
+              echo "::error::Gradle build failed for ${project}"
+              exit 1
+            fi
+          done
+      # --- ENDE DER NEUEN SCHRITTE ---
+
       - name: Package application for release
         run: |
+          # Verzeichnisstruktur für das Release vorbereiten
           mkdir -p release-package/app
+          mkdir -p release-package/chaincode
+
+          echo "--- Packaging main application ---"
           cp -r build/quarkus-app/* release-package/app/
           cp -r scripts docker common release-package/
+          
+          echo "--- Packaging chaincode JARs ---"
+          # Finde alle relevanten JARs und kopiere sie in den chaincode-Ordner des Pakets
+          find chaincode -path "*/build/libs/*.jar" -exec cp {} release-package/chaincode/ \;
+
+          echo "--- Final package structure ---"
+          ls -R release-package
+
+          # ZIP-Archiv erstellen
           cd release-package
           zip -r ../pharmalink-${{ github.ref_name }}.zip .
 
@@ -68,7 +101,8 @@ jobs:
             Das Docker-Image wurde erfolgreich in die GitHub Container Registry (GHCR) gepusht.
             - **Image-Tags:** `${{ steps.meta.outputs.tags }}`
             - **Image-Details ansehen:** [GHCR-Pakete](https://github.com/${{ github.repository }}/packages)
-  
+            
             Zusätzlich ist die `pharmalink-${{ github.ref_name }}.zip` Datei als Asset direkt an dieses Release angehängt.
+            Dieses Archiv enthält die Hauptanwendung sowie die gebauten Chaincode-JAR-Dateien im `/chaincode`-Verzeichnis.
 
           files: pharmalink-${{ github.ref_name }}.zip
