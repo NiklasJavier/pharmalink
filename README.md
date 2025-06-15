@@ -53,7 +53,7 @@ Dieser Schritt lädt die notwendigen Docker-Images und Binärdateien für Hyperl
 Dieser Schritt startet ein komplettes Hyperledger Fabric Test-Netzwerk. Führe das Skript vom Hauptverzeichnis (Root) des Projekts aus.
 
 ```bash
-./scripts/fabric_setup_test.sh
+./scripts/fabric_setup_test.sh up
 ```
 
 -----
@@ -63,7 +63,7 @@ Dieser Schritt startet ein komplettes Hyperledger Fabric Test-Netzwerk. Führe d
 Nachdem das Fabric-Netzwerk läuft, kannst du den Hyperledger Explorer starten, um eine Weboberfläche zur Visualisierung des Netzwerks zu erhalten. Führe auch dieses Skript vom Hauptverzeichnis des Projekts aus.
 
 ```bash
-./scripts/fabric_setup_test_explorer.sh
+./scripts/fabric_setup_test_explorer.sh up
 ```
 
 Nachdem das Skript erfolgreich durchgelaufen ist, ist die Weboberfläche des Explorers unter **`http://localhost:8088`** erreichbar.
