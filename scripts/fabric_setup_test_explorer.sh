@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Beschreibung: Skript zum Starten/Beenden des Hyperledger Fabric Explorers und Aktualisieren des privaten Schlüssels in der Verbindungskonfiguration.
-
-# Globale Variablen
 declare -r SRC_DIR
 SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 declare -r KEYSTORE_DIR=".${SRC_DIR}/../fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/keystore"
@@ -84,7 +81,6 @@ printHelp() {
     echo "  $0 down"
 }
 
-# Argumente parsen
 if [[ $# -lt 1 ]]; then
     printHelp
     exit 0
@@ -93,7 +89,6 @@ fi
 MODE="$1"
 shift
 
-# Modus auswerten
 case "${MODE}" in
     up)
         explorerUp

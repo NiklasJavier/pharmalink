@@ -58,7 +58,7 @@ function printHelp() {
  echo "./fabric_setup_test up"
  echo "./fabric_setup_test down"
 }
-## Parse mode
+
 if [[ $# -lt 1 ]] ; then
   printHelp
   exit 0
