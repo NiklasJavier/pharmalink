@@ -61,8 +61,8 @@ jobs:
         run: |
           # Lädt die 'peer' Binary und andere Tools herunter
           curl -sSL https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh | bash -s -- --fabric-version 2.5.5 cli
-          # === KORREKTUR 1: Fügt das bin-Verzeichnis zum PATH hinzu ===
-          echo "$(pwd)/bin" >> $GITHUB_ENV
+          # === KORREKTUR: $GITHUB_PATH anstatt $GITHUB_ENV verwenden ===
+          echo "$(pwd)/bin" >> $GITHUB_PATH
 
       - name: Build and Package Chaincodes
         run: |
@@ -74,7 +74,6 @@ jobs:
             CC_VERSION=$(echo "${{ github.ref_name }}" | sed 's/v//')
           
             echo "--> Building ${project} with Gradle"
-            # === KORREKTUR 2: Sauberer Gradle-Aufruf ohne cd ===
             ./gradlew -p "${project}" build
             if [ $? -ne 0 ]; then
               echo "::error::Gradle build failed for ${project}"
@@ -82,7 +81,6 @@ jobs:
             fi
 
             echo "--> Packaging ${CC_NAME} for Fabric"
-            # === KORREKTUR 3: Direkter Aufruf von 'peer' ohne relativen Pfad ===
             peer lifecycle chaincode package "staging/chaincode-packages/${CC_NAME}.tar.gz" --path "${project}" --lang java --label "${CC_NAME}_${CC_VERSION}"
           done
 
