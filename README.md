@@ -48,27 +48,7 @@ Dieser Schritt startet ein komplettes Hyperledger Fabric Test-Netzwerk. Führe d
 
 -----
 
-## 4\. Endpoint-Beschreibung des Test-Netzwerks
-
-Das gestartete Test-Netzwerk verwendet standardisierte Adressen (Endpoints), um die Kommunikation zwischen den Komponenten zu ermöglichen. Diese sind wichtig für die Konfiguration von Client-Anwendungen oder die Nutzung der Kommandozeilen-Tools.
-
-* **Orderer:**
-
-    * `orderer.example.com:7050`
-
-* **Organisation 1 (Org1):**
-
-    * **Peer 0:** `peer0.org1.example.com:7051`
-    * **Certificate Authority (CA):** `localhost:7054`
-
-* **Organisation 2 (Org2):**
-
-    * **Peer 0:** `peer0.org2.example.com:9051`
-    * **Certificate Authority (CA):** `localhost:8054`
-
------
-
-## 5\. Setup des Hyperledger Explorers
+## 4\. Setup des Hyperledger Explorers
 
 Nachdem das Fabric-Netzwerk läuft, kannst du den Hyperledger Explorer starten, um eine Weboberfläche zur Visualisierung des Netzwerks zu erhalten. Führe auch dieses Skript vom Hauptverzeichnis des Projekts aus.
 
@@ -77,6 +57,21 @@ Nachdem das Fabric-Netzwerk läuft, kannst du den Hyperledger Explorer starten, 
 ```
 
 Nachdem das Skript erfolgreich durchgelaufen ist, ist die Weboberfläche des Explorers unter **`http://localhost:8088`** erreichbar.
+
+-----
+
+## 5\. Endpoint-Beschreibung des Test-Netzwerks
+
+Das gestartete Test-Netzwerk verwendet standardisierte Adressen (Endpoints), um die Kommunikation zwischen den Komponenten zu ermöglichen. Diese sind wichtig für die Konfiguration von Client-Anwendungen oder die Nutzung der Kommandozeilen-Tools.
+
+* **Orderer:**
+    * `orderer.example.com:7050`
+* **Organisation 1 (Org1):**
+    * **Peer 0:** `peer0.org1.example.com:7051`
+    * **Certificate Authority (CA):** `localhost:7054`
+* **Organisation 2 (Org2):**
+    * **Peer 0:** `peer0.org2.example.com:9051`
+    * **Certificate Authority (CA):** `localhost:8054`
 
 -----
 
