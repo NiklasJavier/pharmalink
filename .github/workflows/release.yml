@@ -68,7 +68,6 @@ jobs:
 
           # 2. Umgebungsvariablen für die Ausführung und Konfiguration setzen
           export PATH="$(pwd)/bin:$PATH"
-          # === FINALE KORREKTUR: Pfad zur Konfigurationsdatei setzen ===
           export FABRIC_CFG_PATH="$(pwd)/config"
           echo "--- PATH and FABRIC_CFG_PATH set. ---"
           
@@ -77,7 +76,7 @@ jobs:
           
           # 4. Alle Chaincode-Projekte bauen und verpacken
           echo "--- Finding, building, and packaging all chaincode projects ---"
-          for project in $(find chaincode -mindepth 1 -maxdepth 1 -type d -name "pharmalink*"); do
+          for project in $(find chaincode -mindepth 1 -maxdepth 1 -type d -name "chaincode*"); do
             CC_NAME=$(basename ${project})
             CC_VERSION=$(echo "${{ github.ref_name }}" | sed 's/v//')
           
@@ -117,6 +116,10 @@ jobs:
             - **Image-Details ansehen:** [GHCR-Pakete](https://github.com/${{ github.repository }}/packages)
             
             Zusätzlich ist die `pharmalink-${{ github.ref_name }}.zip` Datei als Asset direkt an dieses Release angehängt.
-            Dieses Archiv enthält die Hauptanwendung sowie die für Fabric verpackten Chaincodes (`.tar.gz`) im `/chaincode`-Verzeichnis.
+            Dieses Archiv enthält die Hauptanwendung sowie die für Fabric verpackten Chaincodes.
+            Die einzelnen Chaincode-Pakete (`.tar.gz`) sind ebenfalls als separate Assets verfügbar.
 
-          files: pharmalink-${{ github.ref_name }}.zip
+          # === KORREKTUR: Hinzufügen der individuellen Chaincode-Pakete ===
+          files: |
+            pharmalink-${{ github.ref_name }}.zip
+            staging/chaincode-packages/*.tar.gz
