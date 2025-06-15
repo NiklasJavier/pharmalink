@@ -41,7 +41,7 @@ function networkUp() {
 		git checkout release-2.2
 	fi
 	cd test-network
-	./network.sh up createChannel -ca -c mychannel -s couchdb
+	./network.sh up createChannel -ca -c pharmalink -s couchdb
 
 	# Uncomment to install asset-transfer-basic or fabcar
 	# ./network.sh deployCC -ccn basicgo -ccp ../asset-transfer-basic/chaincode-go/ -ccl go

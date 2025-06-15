@@ -19,7 +19,7 @@
 		}
 	},
 	"channels": {
-		"mychannel": {
+		"pharmalink": {
 			"peers": {
 				"peer0.org1.example.com": {}
 			}
