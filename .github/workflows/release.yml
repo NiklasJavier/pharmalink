@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-release:
-    name: Build, Push Docker Image and Create Release
+    name: Build, Package, Push Docker Image and Create Release
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -51,29 +51,44 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      # --- NEUE SCHRITTE ZUM BAUEN DER CHAINCODES ---
+      # --- NEUE SCHRITTE ZUM BAUEN & VERPACKEN DER CHAINCODES ---
       - name: Set up JDK 11 for Chaincode Build
         uses: actions/setup-java@v4
         with:
           java-version: '11'
-          distribution: 'temurin' # Ein Standard-JDK ist hier ausreichend
+          distribution: 'temurin'
 
-      - name: Dynamically Build Chaincodes
+      - name: Setup Fabric CLI Tools
         run: |
-          echo "--- Finding and building all chaincode projects ---"
+          # Lädt die 'peer' Binary und andere Tools herunter, die zum Verpacken benötigt werden
+          curl -sSL https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh | bash -s -- --fabric-version 2.5.5 cli
+
+      - name: Build and Package Chaincodes
+        run: |
+          # Erstellt ein Staging-Verzeichnis für die verpackten Chaincodes
+          mkdir -p staging/chaincode-packages
+          
+          echo "--- Finding, building, and packaging all chaincode projects ---"
           for project in $(find chaincode -mindepth 1 -maxdepth 1 -type d -name "pharmalink*"); do
-            echo "--> Building ${project}"
-            (cd "${project}" && ./gradlew build)
+            CC_NAME=$(basename ${project})
+            # Version könnte dynamisch aus dem Git-Tag extrahiert werden
+            CC_VERSION=$(echo "${{ github.ref_name }}" | sed 's/v//')
+          
+            echo "--> Building ${project} with Gradle"
+            (cd "${project}" && ../../gradlew build)
             if [ $? -ne 0 ]; then
               echo "::error::Gradle build failed for ${project}"
               exit 1
             fi
+
+            echo "--> Packaging ${CC_NAME} for Fabric"
+            ./bin/peer lifecycle chaincode package "staging/chaincode-packages/${CC_NAME}.tar.gz" --path "${project}" --lang java --label "${CC_NAME}_${CC_VERSION}"
           done
       # --- ENDE DER NEUEN SCHRITTE ---
 
-      - name: Package application for release
+      - name: Package Application and Chaincodes for Release
         run: |
-          # Verzeichnisstruktur für das Release vorbereiten
+          # Verzeichnisstruktur für das finale ZIP-Archiv vorbereiten
           mkdir -p release-package/app
           mkdir -p release-package/chaincode
 
@@ -81,14 +96,13 @@ jobs:
           cp -r build/quarkus-app/* release-package/app/
           cp -r scripts docker common release-package/
           
-          echo "--- Packaging chaincode JARs ---"
-          # Finde alle relevanten JARs und kopiere sie in den chaincode-Ordner des Pakets
-          find chaincode -path "*/build/libs/*.jar" -exec cp {} release-package/chaincode/ \;
+          echo "--- Packaging Fabric chaincodes (.tar.gz) ---"
+          cp -r staging/chaincode-packages/*.tar.gz release-package/chaincode/
 
           echo "--- Final package structure ---"
           ls -R release-package
 
-          # ZIP-Archiv erstellen
+          # ZIP-Archiv aus dem Inhalt von release-package erstellen
           cd release-package
           zip -r ../pharmalink-${{ github.ref_name }}.zip .
 
@@ -103,6 +117,6 @@ jobs:
             - **Image-Details ansehen:** [GHCR-Pakete](https://github.com/${{ github.repository }}/packages)
             
             Zusätzlich ist die `pharmalink-${{ github.ref_name }}.zip` Datei als Asset direkt an dieses Release angehängt.
-            Dieses Archiv enthält die Hauptanwendung sowie die gebauten Chaincode-JAR-Dateien im `/chaincode`-Verzeichnis.
+            Dieses Archiv enthält die Hauptanwendung sowie die für Fabric verpackten Chaincodes (`.tar.gz`) im `/chaincode`-Verzeichnis.
 
           files: pharmalink-${{ github.ref_name }}.zip
