@@ -5,10 +5,10 @@ public class Medication extends TrackableAsset {
     private final String name;
     private final String dosage;
     private final String manufacturer;
-    private double appraisedValue;
+    private final double appraisedValue;
 
     public Medication(String assetId, String owner, String name, String dosage, String manufacturer, double appraisedValue) {
-        super(assetId, owner); // Ruft Konstruktor der Basisklasse auf
+        super(assetId, owner); // Ruft den Konstruktor der Basisklasse auf
         this.name = name;
         this.dosage = dosage;
         this.manufacturer = manufacturer;
@@ -17,10 +17,12 @@ public class Medication extends TrackableAsset {
 
     @Override
     public String getAssetType() {
-        return "Medication";
+        return "MEDICATION"; // Muss mit dem Namen in @JsonSubTypes übereinstimmen
     }
 
-    // Spezifische Getter/Setter für Medication
+    // Spezifische Getter für diese Klasse
     public String getName() { return name; }
-    // ... weitere Getter/Setter
+    public String getDosage() { return dosage; }
+    public String getManufacturer() { return manufacturer; }
+    public double getAppraisedValue() { return appraisedValue; }
 }
