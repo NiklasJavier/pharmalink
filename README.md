@@ -2,11 +2,9 @@
 
 Dieses Repository enthält die Anwendung und die zugehörigen Smart Contracts für die Pharmalink-Plattform, eine auf Hyperledger Fabric basierende Lösung zur Nachverfolgung von Lieferketten in der Pharmaindustrie.
 
-\<p align="center"\>
-\<img alt="GitHub release (latest by date)" src="[https://img.shields.io/github/v/release/NiklasJavier/pharmalink](https://img.shields.io/github/v/release/NiklasJavier/pharmalink)"\>
-\<img alt="GitHub" src="[https://img.shields.io/github/license/NiklasJavier/pharmalink](https://img.shields.io/github/license/NiklasJavier/pharmalink)"\>
-\<img alt="GitHub last commit" src="[https://img.shields.io/github/last-commit/NiklasJavier/pharmalink](https://img.shields.io/github/last-commit/NiklasJavier/pharmalink)"\>
-\</p\>
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/NiklasJavier/pharmalink)
+![GitHub](https://img.shields.io/github/license/NiklasJavier/pharmalink)
+![GitHub last commit](https://img.shields.io/github/last-commit/NiklasJavier/pharmalink)
 
 -----
 
