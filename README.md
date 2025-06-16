@@ -89,14 +89,15 @@ Damit Sie die `peer`-Befehle direkt ausführen können, müssen folgende Umgebun
 export CHANNEL_NAME="pharmalink"
 export CHAINCODE="pharmalink_chaincode_main"
 
+export ENDPOINT="localhost"
 export BASE_DIR="$HOME"
 export ORG_DIR="$BASE_DIR/pharmalink/fabric-samples/test-network/organizations"
 export FABRIC_CFG_PATH="$BASE_DIR/fabric-cli/config"
 
-export CORE_PEER_ADDRESS="localhost:7051"
-export ORDERER_ADDRESS="localhost:7050"
-export PEER0_ORG1_ADDRESS="localhost:7051"
-export PEER0_ORG2_ADDRESS="localhost:9051"
+export CORE_PEER_ADDRESS="$ENDPOINT:7051"
+export ORDERER_ADDRESS="$ENDPOINT:7050"
+export PEER0_ORG1_ADDRESS="$ENDPOINT:7051"
+export PEER0_ORG2_ADDRESS="$ENDPOINT:9051"
 
 export CORE_PEER_LOCALMSPID=Org1MSP
 export CORE_PEER_MSPCONFIGPATH="$ORG_DIR/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp"
@@ -105,6 +106,7 @@ export CORE_PEER_TLS_ENABLED=true
 export ORDERER_CA="$ORG_DIR/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
 export PEER0_ORG1_CA="$ORG_DIR/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt"
 export PEER0_ORG2_CA="$ORG_DIR/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt"
+
 ```
 
 > 💡 **Tipp:** Um diese Variablen dauerhaft zu speichern, fügen Sie den gesamten Block am Ende Ihrer `~/.bashrc`-Datei ein und laden Sie die Konfiguration mit `source ~/.bashrc` neu.
