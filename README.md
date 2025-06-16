@@ -42,7 +42,7 @@ source "$HOME/.sdkman/bin/sdkman-init.sh"
 # GraalVM 21 installieren und als Standard festlegen (für unsere Applikation)
 sdk install java 21-graal
 # JavaVM 11 installieren (für die Chaincodes unter /chaincode/*)
-sdk install java 11.0.27-tem
+sdk install java 11.0.27-tem # (als default setzen)
 # Gradle installieren
 sdk install gradle 8.14.2
 ```
