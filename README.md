@@ -95,7 +95,7 @@ export CORE_PEER_MSPCONFIGPATH="$HOME/pharmalink/fabric-samples/test-network/org
 export CORE_PEER_ADDRESS=localhost:7051 
 export CORE_PEER_TLS_ENABLED=true
 export CORE_PEER_TLS_ROOTCERT_FILE="$HOME/pharmalink/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt"
-export FABRIC_CFG_PATH="$HOME/fabric-cli/test-network"
+export FABRIC_CFG_PATH="$HOME/fabric-cli/config"
 ```
 
 > 💡 **Tipp:** Um diese Variablen dauerhaft zu speichern, fügen Sie sie am Ende Ihrer `~/.bashrc`-Datei ein und laden Sie die Konfiguration mit `source ~/.bashrc` neu.

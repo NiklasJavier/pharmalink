@@ -32,6 +32,7 @@ repositories {
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(11)
+        implementation = JvmImplementation.J9
     }
 }
 
