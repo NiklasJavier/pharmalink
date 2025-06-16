@@ -25,7 +25,7 @@ curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh
 Installieren Sie anschließend `curl`, `golang`, `git` und weitere Tools über den Paketmanager.
 
 ```bash
-sudo apt-get install curl golang git gradle docker-compose zip jq -y
+sudo apt-get install curl git docker-compose zip jq -y
 ```
 
 #### Zum Bauen (App + Chaincode)
