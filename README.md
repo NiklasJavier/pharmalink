@@ -28,6 +28,25 @@ Installieren Sie anschließend `curl`, `golang`, `git` und weitere Tools über d
 sudo apt-get install curl golang git gradle docker-compose zip jq -y
 ```
 
+#### Zum Bauen (App + Chaincode)
+
+Der empfohlene Weg zur Installation von Java ist **SDKMAN\!**.
+
+```bash
+# SDKMAN! installieren
+curl -s "https://get.sdkman.io" | bash
+
+# SDKMAN! für die aktuelle Terminalsitzung laden
+source "$HOME/.sdkman/bin/sdkman-init.sh"
+
+# GraalVM 21 installieren und als Standard festlegen (für unsere Applikation)
+sdk install java 21-graal
+# JavaVM 11 installieren (für die Chaincodes unter /chaincode/*)
+sdk install java 11.0.27-tem
+# Gradle installieren
+sdk install gradle 8.14.2
+```
+
 -----
 
 ### 📥 2. Projekt einrichten
@@ -149,24 +168,7 @@ peer chaincode query -C $CHANNEL_NAME -n $CHAINCODE -c '{"Args":["GetAllAssets"]
 
 ### ▶️ 5. Anwendung ausführen
 
-#### a) ☕ Java-Umgebung einrichten (Einmalig)
-
-Der empfohlene Weg zur Installation von Java ist **SDKMAN\!**.
-
-```bash
-# SDKMAN! installieren
-curl -s "https://get.sdkman.io" | bash
-
-# SDKMAN! für die aktuelle Terminalsitzung laden
-source "$HOME/.sdkman/bin/sdkman-init.sh"
-
-# GraalVM 21 installieren und als Standard festlegen (für unsere Applikation)
-sdk install java 21-graal
-# JavaVM 11 installieren (für die Chaincodes unter /chaincode/*)
-sdk install java 11.0.27-tem
-```
-
-#### b) 🔨 Anwendung bauen und starten
+#### a) 🔨 Anwendung bauen und starten
 
 Führen Sie den folgenden Befehl im Stammverzeichnis aus. Er kompiliert die Anwendung, baut das Docker-Image und startet den Container.
 
@@ -174,7 +176,7 @@ Führen Sie den folgenden Befehl im Stammverzeichnis aus. Er kompiliert die Anwe
 ./gradlew build && docker build -f src/main/docker/Dockerfile.jvm -t quarkus/pharmalink-jvm . && docker run -i --rm -p 8080:8080 quarkus/pharmalink-jvm
 ```
 
-#### c) 🌐 Auf die Anwendung zugreifen
+#### b) 🌐 Auf die Anwendung zugreifen
 
 Nachdem der Container gestartet ist, ist der Service erreichbar unter:
 
