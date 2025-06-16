@@ -18,7 +18,14 @@ repositories {
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.hyperledger.fabric:fabric-gateway:1.7.0'
+	implementation platform('com.google.protobuf:protobuf-bom:4.28.2')
+	implementation platform('io.grpc:grpc-bom:1.67.1')
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+	compileOnly 'io.grpc:grpc-api'
+	runtimeOnly 'io.grpc:grpc-netty-shaded'
+	implementation 'com.google.code.gson:gson:2.11.0'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
