@@ -1,55 +1,28 @@
 plugins {
-    id 'java'
-    // HIER IST DIE KORREKTUR: Die Version wird explizit angebunden.
-    id 'io.quarkus'
-}
-
-repositories {
-    mavenCentral()
-    mavenLocal()
-}
-
-ext {
-    quarkusVersion = '3.11.0'
-}
-
-dependencies {
-    implementation enforcedPlatform("io.quarkus.platform:quarkus-bom:${quarkusVersion}")
-    implementation 'io.quarkus:quarkus-resteasy-reactive'
-
-    implementation('org.hyperledger.fabric:fabric-gateway:1.7.1')
-    implementation("com.google.protobuf:protobuf-bom:4.31.1")
-    implementation 'io.quarkus:quarkus-grpc'
-
-    implementation 'io.quarkus:quarkus-smallrye-openapi'
-    implementation 'io.quarkus:quarkus-swagger-ui'
-
-    compileOnly 'io.grpc:grpc-api'
-    runtimeOnly 'io.grpc:grpc-netty-shaded'
-
-    implementation 'com.google.code.gson:gson:2.11.0'
-
-    testImplementation 'io.quarkus:quarkus-junit5'
-    testImplementation 'io.rest-assured:rest-assured'
+	id 'java'
+	id 'org.springframework.boot' version '3.5.0'
+	id 'io.spring.dependency-management' version '1.1.7'
 }
 
 group = 'de.jklein'
-version = project.hasProperty('newVersion') ? project.property('newVersion') : '0.0.0-SNAPSHOT'
+version = '0.0.1-SNAPSHOT'
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
 }
 
-test {
-    systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
+repositories {
+	mavenCentral()
 }
 
-compileJava {
-    options.encoding = 'UTF-8'
-    options.compilerArgs << '-parameters'
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
-compileTestJava {
-    options.encoding = 'UTF-8'
+tasks.named('test') {
+	useJUnitPlatform()
 }
