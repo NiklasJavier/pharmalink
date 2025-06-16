@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source ./fabric_setEnv.sh
+
 SRC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )" # Where the script lives
 FABRIC_VERSION="2.5.13"
 CA_VERSION="1.5.15"
