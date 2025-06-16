@@ -2,7 +2,7 @@
 FROM gradle:8.6-jdk11 AS GRADLE_BUILD
 
 # copy the build.gradle and src code to the container
-COPY src/ src/
+COPY src src/
 COPY build.gradle ./ 
 
 # Build and package our code
