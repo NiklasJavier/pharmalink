@@ -86,22 +86,20 @@ Laden Sie die Kommandozeilen-Tools für Hyperledger Fabric herunter.
 Damit Sie die `peer`-Befehle direkt ausführen können, müssen folgende Umgebungsvariablen gesetzt werden. Diese Variablen definieren die Identität (Org1 Admin), den Ziel-Peer und die notwendigen Zertifikate für eine sichere Kommunikation.
 
 ```bash
-# Basis-Konfiguration für den Peer-Client
 export CORE_PEER_LOCALMSPID=Org1MSP
 export CORE_PEER_MSPCONFIGPATH="$HOME/pharmalink/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp"
 export CORE_PEER_ADDRESS=localhost:7051 
 export CORE_PEER_TLS_ENABLED=true
 export FABRIC_CFG_PATH="$HOME/fabric-cli/config"
 
-# Pfade zu den wichtigen TLS-Zertifikaten
 export ORDERER_CA="$HOME/pharmalink/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
 export PEER0_ORG1_CA="$HOME/pharmalink/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt"
 export PEER0_ORG2_CA="$HOME/pharmalink/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt"
 
-# Variablen zur Vereinfachung der Chaincode-Befehle
 export ORDERER_ADDRESS="localhost:7050"
 export PEER0_ORG1_ADDRESS="localhost:7051"
 export PEER0_ORG2_ADDRESS="localhost:9051"
+
 export CHANNEL_NAME="pharmalink"
 export CHAINCODE="pharmalink_chaincode_main"
 ```
