@@ -1,14 +1,4 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
  */
-toolchainManagement {
-    jvm {
-        javaRepositories {
-            repository("foojay") {
-                url = uri("https://api.foojay.io/disco/v3.0")
-            }
-        }
-    }
-}
-
 rootProject.name = System.getenv('CHAINCODE_NAME') ?: 'pharmalink_chaincode_main'
