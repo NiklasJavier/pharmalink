@@ -46,7 +46,7 @@ function deployChaincode() {
 
   echo ""
   echo "## 2. Deploying chaincode to the Fabric network..."
-  $SRC_DIR/../fabric-samples/test-network/network.sh deployCC -ccn pharmalink_chaincode_main -ccp $SRC_DIR/../../chaincode/pharmalink_chaincode_main -ccl java
+  $SRC_DIR/../fabric-samples/test-network/network.sh deployCC -c pharmalink -ccn pharmalink_chaincode_main -ccp $SRC_DIR/../chaincode/pharmalink_chaincode_main -ccl java
 
   if [ $? -ne 0 ]; then
     echo "!!! ERROR: Chaincode deployment failed."
