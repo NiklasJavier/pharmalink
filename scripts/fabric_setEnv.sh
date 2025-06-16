@@ -47,4 +47,4 @@ export FABRIC_CA_CLIENT_HOME_ORG2="$BASE_DIR/fabric-samples/test-network/organiz
 export CA_ORG1_TLS_CERTFILE="$ORG_DIR/peerOrganizations/org1.example.com/ca/ca.org1.example.com-cert.pem"
 export CA_ORG2_TLS_CERTFILE="$ORG_DIR/peerOrganizations/org2.example.com/ca/ca.org2.example.com-cert.pem"
 
-echo "✅ Basis-Umgebungsvariablen für Pharmalink gesetzt."
+echo "Basis-Umgebungsvariablen für Pharmalink gesetzt."
