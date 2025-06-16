@@ -2,10 +2,6 @@
 
 Dieses Repository enthält die Anwendung und die zugehörigen Smart Contracts für die Pharmalink-Plattform, eine auf Hyperledger Fabric basierende Lösung zur Nachverfolgung von Lieferketten in der Pharmaindustrie.
 
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/NiklasJavier/pharmalink)
-![GitHub](https://img.shields.io/github/license/NiklasJavier/pharmalink)
-![GitHub last commit](https://img.shields.io/github/last-commit/NiklasJavier/pharmalink)
-
 -----
 
 > 👋 **Willkommen\!** Diese Anleitung führt Sie durch die Installation der notwendigen Abhängigkeiten, die Einrichtung des Projekts und die Konfiguration des lokalen Test-Netzwerks.
@@ -87,22 +83,68 @@ Laden Sie die Kommandozeilen-Tools für Hyperledger Fabric herunter.
 ./scripts/fabric_setup_cli.sh
 ```
 
-Damit Sie die `peer`-Befehle direkt ausführen können, müssen folgende Umgebungsvariablen gesetzt werden:
+Damit Sie die `peer`-Befehle direkt ausführen können, müssen folgende Umgebungsvariablen gesetzt werden. Diese Variablen definieren die Identität (Org1 Admin), den Ziel-Peer und die notwendigen Zertifikate für eine sichere Kommunikation.
 
 ```bash
+# Basis-Konfiguration für den Peer-Client
 export CORE_PEER_LOCALMSPID=Org1MSP
 export CORE_PEER_MSPCONFIGPATH="$HOME/pharmalink/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp"
 export CORE_PEER_ADDRESS=localhost:7051 
 export CORE_PEER_TLS_ENABLED=true
-export CORE_PEER_TLS_ROOTCERT_FILE="$HOME/pharmalink/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt"
 export FABRIC_CFG_PATH="$HOME/fabric-cli/config"
+
+# Pfade zu den wichtigen TLS-Zertifikaten
+export ORDERER_CA="$HOME/pharmalink/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
+export PEER0_ORG1_CA="$HOME/pharmalink/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt"
+export PEER0_ORG2_CA="$HOME/pharmalink/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt"
+
+# Variablen zur Vereinfachung der Chaincode-Befehle
+export ORDERER_ADDRESS="localhost:7050"
+export PEER0_ORG1_ADDRESS="localhost:7051"
+export PEER0_ORG2_ADDRESS="localhost:9051"
+export CHANNEL_NAME="pharmalink"
+export CHAINCODE="pharmalink_chaincode_main"
 ```
 
-> 💡 **Tipp:** Um diese Variablen dauerhaft zu speichern, fügen Sie sie am Ende Ihrer `~/.bashrc`-Datei ein und laden Sie die Konfiguration mit `source ~/.bashrc` neu.
+> 💡 **Tipp:** Um diese Variablen dauerhaft zu speichern, fügen Sie den gesamten Block am Ende Ihrer `~/.bashrc`-Datei ein und laden Sie die Konfiguration mit `source ~/.bashrc` neu.
 
 -----
 
-### ▶️ 4. Anwendung ausführen
+### ⛓️ 4. Mit dem Chaincode interagieren
+
+Nachdem das Netzwerk läuft und die Umgebungsvariablen gesetzt sind, können Sie mit dem `peer`-CLI direkt mit dem Smart Contract interagieren.
+
+#### a) Asset erstellen (Invoke)
+
+Der `invoke`-Befehl schreibt neue Daten in den Ledger. Wir rufen die Funktion `CreateAsset` auf, um ein neues Medikamenten-Asset zu erstellen.
+
+```bash
+peer chaincode invoke -o $ORDERER_ADDRESS --tls --cafile $ORDERER_CA -C $CHANNEL_NAME -n $CHAINCODE --peerAddresses $PEER0_ORG1_ADDRESS --tlsRootCertFiles $PEER0_ORG1_CA --peerAddresses $PEER0_ORG2_ADDRESS --tlsRootCertFiles $PEER0_ORG2_CA -c '{"Args":["CreateAsset","asset102","Rot","5","Anna","450"]}'
+```
+
+> Bei Erfolg sehen Sie die Meldung `Chaincode invoke successful. result: status:200`.
+
+#### b) Asset abfragen (Query)
+
+Der `query`-Befehl liest Daten nur aus, ohne den Ledger zu verändern.
+
+**Einzelnes Asset abfragen:**
+Wir verwenden die Funktion `ReadAsset`, um das eben erstellte Asset zu überprüfen.
+
+```bash
+peer chaincode query -C $CHANNEL_NAME -n $CHAINCODE -c '{"Args":["ReadAsset","asset102"]}'
+```
+
+**Alle Assets auflisten:**
+Die Funktion `GetAllAssets` gibt eine Liste aller vorhandenen Assets zurück.
+
+```bash
+peer chaincode query -C $CHANNEL_NAME -n $CHAINCODE -c '{"Args":["GetAllAssets"]}'
+```
+
+-----
+
+### ▶️ 5. Anwendung ausführen
 
 #### a) ☕ Java-Umgebung einrichten (Einmalig)
 
