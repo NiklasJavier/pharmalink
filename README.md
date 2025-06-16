@@ -115,8 +115,10 @@ curl -s "https://get.sdkman.io" | bash
 # SDKMAN! für die aktuelle Terminalsitzung laden
 source "$HOME/.sdkman/bin/sdkman-init.sh"
 
-# GraalVM 21 installieren und als Standard festlegen
+# GraalVM 21 installieren und als Standard festlegen (für unsere Applikation)
 sdk install java 21-graal
+# JavaVM 11 installieren (für die Chaincodes unter /chaincode/*)
+sdk install java 11.0.27-tem
 ```
 
 #### b) 🔨 Anwendung bauen und starten
