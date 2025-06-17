@@ -1,6 +1,8 @@
 #!/bin/bash
 
 echo "--> Lade Basis-Konfiguration aus fabric_setEnv.sh..."
+# Stellen Sie sicher, dass der Pfad zu fabric_setEnv.sh korrekt ist.
+# Normalerweise liegt es im selben oder einem übergeordneten Verzeichnis.
 source "$(dirname "$0")/fabric_setEnv.sh"
 
 FABRIC_CA_CLIENT_PATH="$BASE_DIR/fabric-samples/bin/fabric-ca-client"
@@ -21,6 +23,19 @@ echo "INFO: Alle Identitäten werden bei der zentralen CA unter $CA_SERVER_URL e
 
 echo -e "\n1. Einloggen als CA-Admin für Org1..."
 $FABRIC_CA_CLIENT_PATH enroll -u ${CA_SERVER_URL/https:\/\//https:\/\/admin:adminpw@} --tls.certfiles $CA_TLS_CERTFILE
+
+# ================== START DER ÄNDERUNGEN ==================
+# HINWEIS: Pfad zum Zertifikat des Admins der Organisation.
+# Dieses Zertifikat wird benötigt, um die MSP-Struktur der neuen Benutzer zu vervollständigen.
+# Es verleiht den Benutzern selbst KEINE Admin-Rechte.
+ADMIN_CERT_PATH="$ORG_DIR/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/signcerts/cert.pem"
+
+if [ ! -f "$ADMIN_CERT_PATH" ]; then
+    echo "FEHLER: Das Admin-Zertifikat für Org1 wurde nicht gefunden unter: $ADMIN_CERT_PATH"
+    echo "Stellen Sie sicher, dass die Admin-Identität für Org1 bereits erstellt wurde (z.B. durch registerEnroll.sh)."
+    exit 1
+fi
+# =================== ENDE DER ÄNDERUNGEN ===================
 
 for aff in "${AFFILIATIONS[@]}"; do
   echo -e "\n========================================================"
@@ -55,6 +70,17 @@ for aff in "${AFFILIATIONS[@]}"; do
       -u https://${USERNAME}:${PASSWORD}@${CA_SERVER_URL#https://} \
       --mspdir "$MSP_DIR" \
       --tls.certfiles $CA_TLS_CERTFILE
+
+    # ================== START DER ÄNDERUNGEN ==================
+    echo "       -> Erstelle 'admincerts' Ordner und kopiere Admin-Zertifikat..."
+    # Erstellt das 'admincerts' Verzeichnis innerhalb des MSP-Ordners des neuen Benutzers.
+    mkdir -p "$MSP_DIR/admincerts"
+
+    # Kopiert das öffentliche Zertifikat des Organisations-Admins in dieses Verzeichnis.
+    # Dies ist für die Validierung der MSP-Struktur erforderlich.
+    cp "$ADMIN_CERT_PATH" "$MSP_DIR/admincerts/org1-admin-cert.pem"
+    # =================== ENDE DER ÄNDERUNGEN ===================
+
   done
 done
 
