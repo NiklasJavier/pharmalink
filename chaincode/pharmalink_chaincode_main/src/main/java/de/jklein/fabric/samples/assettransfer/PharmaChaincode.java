@@ -1,3 +1,4 @@
+// src/main/java/de/jklein/fabric/samples/assettransfer/PharmaChaincode.java
 package de.jklein.fabric.samples.assettransfer;
 
 import de.jklein.fabric.samples.assettransfer.model.Actor;
