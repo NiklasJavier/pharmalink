@@ -9,10 +9,13 @@ public final class Actor {
     private static final Genson GENSON = new Genson();
 
     @Property()
-    private final String mspId;
+    private final String certId; // Eindeutige Zertifikats-ID des Benutzers
 
     @Property()
-    private String actorId;
+    private final String mspId; // Die MSP-ID der Organisation (z.B. Org1MSP)
+
+    @Property()
+    private String actorId; // Eindeutige, von der Behörde zugewiesene ID (z.B. HERSTELLER-001)
 
     @Property()
     private final String name;
@@ -23,12 +26,17 @@ public final class Actor {
     @Property()
     private String status;
 
-    public Actor(final String mspId, final String actorId, final String name, final String role, final String status) {
+    public Actor(final String certId, final String mspId, final String actorId, final String name, final String role, final String status) {
+        this.certId = certId;
         this.mspId = mspId;
         this.actorId = actorId;
         this.name = name;
         this.role = role;
         this.status = status;
+    }
+
+    public String getCertId() {
+        return certId;
     }
 
     public String getMspId() {

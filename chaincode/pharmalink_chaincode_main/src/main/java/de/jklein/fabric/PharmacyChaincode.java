@@ -29,7 +29,7 @@ import java.util.Map;
 
 @Contract(
         name = "PharmacyChaincode",
-        info = @Info(title = "Pharmacy Supply Chain Contract", version = "3.4.0",
+        info = @Info(title = "Pharmacy Supply Chain Contract", version = "3.5.0",
                 license = @License(name = "Apache-2.0"),
                 contact = @Contact(email = "info@jklein.de", name = "Chaincode-Support")))
 @Default
@@ -53,9 +53,10 @@ public final class PharmacyChaincode implements ContractInterface {
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public void initLedger(final Context ctx) {
         final ChaincodeStub stub = ctx.getStub();
+        final String callerId = ctx.getClientIdentity().getId();
         final String callerMspId = ctx.getClientIdentity().getMSPID();
-        final Actor behoerde = new Actor(callerMspId, "BEHOERDE-001", "Regulierungsbehörde", "behoerde", "Approved");
-        final String actorKey = ACTOR_KEY_PREFIX + callerMspId;
+        final Actor behoerde = new Actor(callerId, callerMspId, "BEHOERDE-001", "Regulierungsbehörde", "behoerde", "Approved");
+        final String actorKey = ACTOR_KEY_PREFIX + callerId;
         if (stub.getStringState(actorKey) == null || stub.getStringState(actorKey).isEmpty()) {
             stub.putStringState(actorKey, behoerde.toJSONString());
         }
@@ -67,24 +68,25 @@ public final class PharmacyChaincode implements ContractInterface {
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public void requestActorRegistration(final Context ctx, final String name) {
         final ChaincodeStub stub = ctx.getStub();
+        final String callerId = ctx.getClientIdentity().getId();
         final String callerMspId = ctx.getClientIdentity().getMSPID();
         final String callerRole = getClientRole(ctx);
         if (callerRole == null || callerRole.equals("behoerde")) {
             throw new ChaincodeException("Behörden können sich nicht registrieren.", PharmacyErrors.INVALID_ROLE.toString());
         }
-        final String key = ACTOR_KEY_PREFIX + callerMspId;
+        final String key = ACTOR_KEY_PREFIX + callerId;
         if (stub.getStringState(key) != null && !stub.getStringState(key).isEmpty()) {
-            throw new ChaincodeException("Ein Akteur mit dieser MSP-ID existiert bereits.", PharmacyErrors.ACTOR_ALREADY_EXISTS.toString());
+            throw new ChaincodeException("Ein Akteur mit diesem Zertifikat existiert bereits.", PharmacyErrors.ACTOR_ALREADY_EXISTS.toString());
         }
-        final Actor newActor = new Actor(callerMspId, null, name, callerRole, "Pending");
+        final Actor newActor = new Actor(callerId, callerMspId, null, name, callerRole, "Pending");
         stub.putStringState(key, newActor.toJSONString());
     }
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Actor approveActor(final Context ctx, final String actorMspId) {
+    public Actor approveActor(final Context ctx, final String certId) {
         assertBehoerde(ctx);
         final ChaincodeStub stub = ctx.getStub();
-        final String key = ACTOR_KEY_PREFIX + actorMspId;
+        final String key = ACTOR_KEY_PREFIX + certId;
         final Actor actor = getAsset(stub, key, Actor.class, PharmacyErrors.ACTOR_NOT_FOUND);
         if (!"Pending".equals(actor.getStatus())) {
             throw new ChaincodeException("Akteur ist nicht im Status 'Pending'.");
@@ -103,6 +105,22 @@ public final class PharmacyChaincode implements ContractInterface {
     public String queryPendingActors(final Context ctx) {
         assertBehoerde(ctx);
         return richQuery(ctx, String.format("{\"selector\":{\"status\":\"Pending\", \"_id\":{\"$regex\":\"^%s\"}}}", ACTOR_KEY_PREFIX));
+    }
+
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String queryAllActors(final Context ctx) {
+        assertBehoerde(ctx);
+        final ChaincodeStub stub = ctx.getStub();
+        final List<Actor> allActors = new ArrayList<>();
+        try (QueryResultsIterator<KeyValue> results = stub.getStateByRange(ACTOR_KEY_PREFIX, ACTOR_KEY_PREFIX + Character.MAX_VALUE)) {
+            for (final KeyValue result : results) {
+                final Actor actor = Actor.fromJSONString(result.getStringValue());
+                allActors.add(actor);
+            }
+        } catch (final Exception e) {
+            throw new ChaincodeException("Abfrage aller Akteure fehlgeschlagen: " + e.getMessage());
+        }
+        return GENSON.serialize(allActors);
     }
 
     @Transaction(intent = Transaction.TYPE.EVALUATE)
@@ -312,12 +330,12 @@ public final class PharmacyChaincode implements ContractInterface {
 
     private Actor assertApprovedActor(final Context ctx, final String expectedRole) {
         final ChaincodeStub stub = ctx.getStub();
-        final String callerMspId = ctx.getClientIdentity().getMSPID();
+        final String callerId = ctx.getClientIdentity().getId();
         final String callerRole = getClientRole(ctx);
         if (expectedRole != null && !expectedRole.equals(callerRole)) {
             throw new ChaincodeException(String.format("Erwartete Rolle '%s', aber Aufrufer hat Rolle '%s'.", expectedRole, callerRole), PharmacyErrors.INVALID_ROLE.toString());
         }
-        final Actor actor = getAsset(stub, ACTOR_KEY_PREFIX + callerMspId, Actor.class, PharmacyErrors.ACTOR_NOT_FOUND);
+        final Actor actor = getAsset(stub, ACTOR_KEY_PREFIX + callerId, Actor.class, PharmacyErrors.ACTOR_NOT_FOUND);
         if (!"Approved".equals(actor.getStatus())) {
             throw new ChaincodeException("Der aufrufende Akteur ist nicht genehmigt.", PharmacyErrors.ACTOR_NOT_APPROVED.toString());
         }
