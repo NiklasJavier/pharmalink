@@ -371,12 +371,24 @@ public final class PharmacyChaincode implements ContractInterface {
 
     private String richQuery(final Context ctx, final String query) {
         final ChaincodeStub stub = ctx.getStub();
-        final List<String> assets = new ArrayList<>();
+        final StringBuilder sb = new StringBuilder("[");
+
         try (QueryResultsIterator<KeyValue> results = stub.getQueryResult(query)) {
-            results.forEach(kv -> assets.add(kv.getStringValue()));
-            return GENSON.serialize(assets);
+
+            boolean first = true;
+            for (final KeyValue result : results) {
+                if (!first) {
+                    sb.append(",");
+                }
+                sb.append(result.getStringValue());
+                first = false;
+            }
+
         } catch (final Exception e) {
             throw new ChaincodeException("Rich Query fehlgeschlagen: " + e.getMessage());
         }
+
+        sb.append("]");
+        return sb.toString();
     }
 }
