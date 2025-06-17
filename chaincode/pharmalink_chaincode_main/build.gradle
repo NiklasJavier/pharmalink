@@ -9,7 +9,7 @@ plugins {
     id 'jacoco'
 }
 
-group 'de.jklein.fabric.samples'
+group 'de.jklein.fabric'
 version = project.hasProperty('newVersion') ? project.property('newVersion') : '1.0-SNAPSHOT'
 
 dependencies {
