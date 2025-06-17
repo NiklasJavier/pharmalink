@@ -3,19 +3,20 @@ package de.jklein.fabric.assets;
 import com.owlike.genson.Genson;
 import org.hyperledger.fabric.contract.annotation.DataType;
 import org.hyperledger.fabric.contract.annotation.Property;
+import java.util.Objects;
 
 @DataType()
 public final class Actor {
     private static final Genson GENSON = new Genson();
 
     @Property()
-    private final String certId; // Eindeutige Zertifikats-ID des Benutzers
+    private final String certId;
 
     @Property()
-    private final String mspId; // Die MSP-ID der Organisation (z.B. Org1MSP)
+    private final String mspId;
 
     @Property()
-    private String actorId; // Eindeutige, von der Behörde zugewiesene ID (z.B. HERSTELLER-001)
+    private final String actorId;
 
     @Property()
     private final String name;
@@ -24,7 +25,7 @@ public final class Actor {
     private final String role;
 
     @Property()
-    private String status;
+    private final String status;
 
     public Actor(final String certId, final String mspId, final String actorId, final String name, final String role, final String status) {
         this.certId = certId;
@@ -35,43 +36,26 @@ public final class Actor {
         this.status = status;
     }
 
-    public String getCertId() {
-        return certId;
+    public String getCertId() { return certId; }
+    public String getMspId() { return mspId; }
+    public String getActorId() { return actorId; }
+    public String getName() { return name; }
+    public String getRole() { return role; }
+    public String getStatus() { return status; }
+
+    public String toJSONString() { return GENSON.serialize(this); }
+    public static Actor fromJSONString(final String json) { return GENSON.deserialize(json, Actor.class); }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) { return true; }
+        if (o == null || getClass() != o.getClass()) { return false; }
+        Actor actor = (Actor) o;
+        return Objects.equals(getCertId(), actor.getCertId());
     }
 
-    public String getMspId() {
-        return mspId;
-    }
-
-    public String getActorId() {
-        return actorId;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(final String newStatus) {
-        this.status = newStatus;
-    }
-
-    public void setActorId(final String newActorId) {
-        this.actorId = newActorId;
-    }
-
-    public String toJSONString() {
-        return GENSON.serialize(this);
-    }
-
-    public static Actor fromJSONString(final String json) {
-        return GENSON.deserialize(json, Actor.class);
+    @Override
+    public int hashCode() {
+        return Objects.hash(getCertId(), getMspId(), getActorId(), getName(), getRole(), getStatus());
     }
 }
