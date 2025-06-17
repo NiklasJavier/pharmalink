@@ -83,14 +83,25 @@ public final class PharmacyChaincode implements ContractInterface {
     }
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Actor approveActor(final Context ctx, final String certId) {
+    public Actor approveActor(final Context ctx, final String actorName) {
         assertBehoerde(ctx);
         final ChaincodeStub stub = ctx.getStub();
-        final String key = ACTOR_KEY_PREFIX + certId;
-        final Actor actor = getAsset(stub, key, Actor.class, PharmacyErrors.ACTOR_NOT_FOUND);
-        if (!"Pending".equals(actor.getStatus())) {
-            throw new ChaincodeException("Akteur ist nicht im Status 'Pending'.");
+
+        final String actorQuery = String.format("{\"selector\":{\"name\":\"%s\", \"status\":\"Pending\", \"_id\":{\"$regex\":\"^%s\"}}}", actorName, ACTOR_KEY_PREFIX);
+        final String queryResult = richQuery(ctx, actorQuery);
+
+        if (queryResult.equals("[]")) {
+            throw new ChaincodeException("Kein wartender Akteur mit dem Namen '" + actorName + "' gefunden.", PharmacyErrors.ACTOR_NOT_FOUND.toString());
         }
+
+        final Actor[] actors = GENSON.deserialize(queryResult, Actor[].class);
+        if (actors.length > 1) {
+            throw new ChaincodeException("Mehrere wartende Akteure mit dem Namen '" + actorName + "' gefunden. Bitte bereinigen.", "DUPLICATE_PENDING_ACTOR");
+        }
+        final Actor actor = actors[0];
+
+        final String key = ACTOR_KEY_PREFIX + actor.getCertId();
+
         int currentIdNum = Integer.parseInt(stub.getStringState(ACTOR_ID_COUNTER_KEY));
         currentIdNum++;
         final String newActorId = actor.getRole().toUpperCase() + "-" + String.format("%03d", currentIdNum);
@@ -98,6 +109,7 @@ public final class PharmacyChaincode implements ContractInterface {
         actor.setStatus("Approved");
         stub.putStringState(key, actor.toJSONString());
         stub.putStringState(ACTOR_ID_COUNTER_KEY, String.valueOf(currentIdNum));
+
         return actor;
     }
 
