@@ -20,7 +20,6 @@ import java.util.Collections;
 import java.util.List; //
 import java.util.UUID;
 
-
 @Contract(
         name = "pharma",
         info = @Info(
@@ -35,6 +34,20 @@ public final class PharmaChaincode extends BaseContract {
 
     public PharmaChaincode() {
         super(); // Ruft den Konstruktor der Basisklasse auf, der die Services initialisiert
+    }
+
+    /**
+     * init ist eine Fabric-spezifische Methode, die zur Initialisierung der Chaincode-Instanz aufgerufen wird.
+     * Diese Implementation leitet zur vordefinierten InitLedger-Methode weiter.
+     * @param ctx Der Transaktionskontext.
+     * @return Ein leerer String als Erfolgsmeldung.
+     */
+    @Transaction
+    public void init(final Context ctx) {
+        // In Hyperledger Fabric 2.x ist init optional und wird nur aufgerufen, wenn explizit bei der Chaincode-Instanziierung angegeben
+        // Bei Bedarf können hier Initialisierungen durchgeführt werden, die beim Start erforderlich sind
+        // Wir delegieren an InitLedger, falls Beispieldaten erforderlich sind
+        InitLedger(ctx);
     }
 
     /**

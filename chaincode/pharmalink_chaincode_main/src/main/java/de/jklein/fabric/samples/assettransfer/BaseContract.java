@@ -7,12 +7,14 @@ import de.jklein.fabric.samples.assettransfer.service.ActorService;
 import de.jklein.fabric.samples.assettransfer.service.AssetService;
 import de.jklein.fabric.samples.assettransfer.service.EventService;
 import org.hyperledger.fabric.contract.ContractInterface; //
+import org.hyperledger.fabric.contract.annotation.Contract;
 
 /**
  * Basisklasse für alle Smart Contracts im System.
  * Stellt gemeinsame Funktionalität bereit, die von allen spezifischen Contracts verwendet wird.
  * Injiziert zentrale Service-Abhängigkeiten.
  */
+@Contract
 public abstract class BaseContract implements ContractInterface { //
 
     // Genson Instanz für JSON-Serialisierung/Deserialisierung

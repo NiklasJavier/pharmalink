@@ -11,6 +11,7 @@ import org.hyperledger.fabric.contract.Context; //
 import org.hyperledger.fabric.contract.annotation.Contract; //
 import org.hyperledger.fabric.contract.annotation.Info;
 import org.hyperledger.fabric.contract.annotation.Transaction; //
+import de.jklein.fabric.samples.assettransfer.permission.ContractPermission;
 import org.hyperledger.fabric.shim.ChaincodeException; //
 
 import java.time.Instant;
@@ -47,6 +48,7 @@ public final class BatchContract extends BaseContract {
      * @return Das neu erstellte Batch-Objekt.
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT, name = "createBatch") //
+    @ContractPermission(roles = {RoleConstants.HERSTELLER}, requireCreator = true)
     public Batch createBatch(final Context ctx, final String batchId, final String medicationId,
                              final String productionDate, final String expiryDate, final int quantity) {
 
@@ -95,8 +97,24 @@ public final class BatchContract extends BaseContract {
      * @param ctx Der Transaktionskontext.
      * @param batchId Die ID der freizugebenden Charge.
      * @return Das aktualisierte Batch-Objekt.
+     * @apiNote Erforderliche Berechtigungen:
+     *         - Der Aufrufer muss ein genehmigter Akteur sein (requireActorApproved)
+     *         - Der Aufrufer muss die Rolle HERSTELLER haben (requireAnyOfRoles)
+     *         - Der Aufrufer muss der Ersteller des zugehörigen Medikaments sein (requireCallerIsCreator)
+     *         - Die Charge muss im Status ERSTELLT sein (requireAssetStatus)
+     *         - Die Charge darf nicht regulatorisch gesperrt sein (requireAssetNotBlockedByRegulator)
+      * @apiNote Erforderliche Berechtigungen:
+      *         - Der Aufrufer muss ein genehmigter Akteur sein (requireActorApproved)
+      *         - Der Aufrufer muss die Rolle HERSTELLER haben (requireAnyOfRoles)
+      *         - Der Aufrufer muss der Ersteller des zugehörigen Medikaments sein (requireCallerIsCreator)
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT, name = "releaseBatch") //
+    @ContractPermission(
+        roles = {RoleConstants.HERSTELLER},
+        requireCreator = true,
+        expectedStatus = RoleConstants.ERSTELLT,
+        description = "Die Charge darf nicht regulatorisch gesperrt sein"
+    )
     public Batch releaseBatch(final Context ctx, final String batchId) {
         // 1. Berechtigungsprüfungen: Akteur muss APPROVED Hersteller sein
         authService.requireActorApproved(ctx);
@@ -143,8 +161,11 @@ public final class BatchContract extends BaseContract {
      * @param ctx Der Transaktionskontext.
      * @param batchId Die ID der Charge.
      * @return Das Batch-Objekt.
+     * @apiNote Diese Funktion erfordert keine spezifischen Berechtigungen, da es sich um eine reine Leseoperation handelt.
+     *         Daher wird auf requireActorApproved() verzichtet.
      */
     @Transaction(intent = Transaction.TYPE.EVALUATE, name = "getBatch") //
+    @ContractPermission(requireApproved = false)
     public Batch getBatch(final Context ctx, final String batchId) {
         // Evaluate-Transaktionen brauchen keine requireActorApproved()
         String batchKey = "BATCH_" + batchId; //

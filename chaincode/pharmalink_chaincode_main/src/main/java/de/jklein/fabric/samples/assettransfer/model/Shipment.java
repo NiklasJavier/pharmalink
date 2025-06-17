@@ -216,10 +216,10 @@ public final class Shipment implements IAsset { //
         @Property()
         private final String expectedDeliveryDate;
 
-                                   public ShipmentInfo(@JsonProperty("shipmentId") final String shipmentId, 
-                           @JsonProperty("shipperActorId") final String shipperActorId, 
+                                   public ShipmentInfo(@JsonProperty("shipmentId") final String shipmentId,
+                           @JsonProperty("shipperActorId") final String shipperActorId,
                            @JsonProperty("receiverActorId") final String receiverActorId,
-                           @JsonProperty("medicationUnitKeys") final List<String> medicationUnitKeys, 
+                           @JsonProperty("medicationUnitKeys") final List<String> medicationUnitKeys,
                            @JsonProperty("expectedDeliveryDate") final String expectedDeliveryDate) {
             this.shipmentId = shipmentId;
             this.shipperActorId = shipperActorId;
