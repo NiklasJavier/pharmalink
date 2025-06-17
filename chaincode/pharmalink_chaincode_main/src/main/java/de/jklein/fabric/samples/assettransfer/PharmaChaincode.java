@@ -26,7 +26,7 @@ import java.util.UUID;
         info = @Info(
                 title = "Pharma Supply Chain",
                 description = "Manages medications, batches, shipments, and regulatory actions",
-                version = "0.0.1",
+                version = "1.0.0",
                 license = @License(
                         name = "Apache 2.0 License",
                         url = "http://www.apache.org/licenses/LICENSE-2.0.html"))) //
@@ -42,7 +42,7 @@ public final class PharmaChaincode extends BaseContract {
      * Nur für Demo-Zwecke. In einer Produktionsumgebung wird dies meist entfernt.
      * @param ctx Der Transaktionskontext.
      */
-    @Transaction(intent = Transaction.TYPE.SUBMIT) //
+    @Transaction(intent = Transaction.TYPE.SUBMIT, name = "InitLedger") //
     public void InitLedger(final Context ctx) { //
         // Beispielhafte Initialisierung von Akteuren
         String adminActorId = ctx.getClientIdentity().getId(); // Annahme: InitLedger wird von einem Admin aufgerufen
@@ -113,7 +113,7 @@ public final class PharmaChaincode extends BaseContract {
      * @param publicKey Der öffentliche Schlüssel des Akteurs-Zertifikats.
      * @return Das neu erstellte Actor-Objekt.
      */
-    @Transaction(intent = Transaction.TYPE.SUBMIT) //
+    @Transaction(intent = Transaction.TYPE.SUBMIT, name = "registerActor") //
     public Actor registerActor(final Context ctx, final String actorId, final String actorName, final String roleType, final String publicKey) {
         // Keine requireActorApproved() hier, da dies die Registrierungstransaktion ist.
         // Hier könnte man prüfen, ob der actorId des Aufrufers (aus dem Zertifikat) mit dem actorId übereinstimmt,
@@ -130,7 +130,7 @@ public final class PharmaChaincode extends BaseContract {
      * @param actorId Die ID des zu genehmigenden Akteurs.
      * @return Das aktualisierte Actor-Objekt.
      */
-    @Transaction(intent = Transaction.TYPE.SUBMIT) //
+    @Transaction(intent = Transaction.TYPE.SUBMIT, name = "approveActor") //
     public Actor approveActor(final Context ctx, final String actorId) {
         // Prüfen, ob der Aufrufer eine Behörde ist und selbst approved.
         // Behörden sind direkt bei Registrierung approved.

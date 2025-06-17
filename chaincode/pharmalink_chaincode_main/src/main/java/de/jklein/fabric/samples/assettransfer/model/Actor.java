@@ -4,16 +4,28 @@ package de.jklein.fabric.samples.assettransfer.model;
 import com.owlike.genson.annotation.JsonProperty;
 import de.jklein.fabric.samples.assettransfer.permission.RoleConstants;
 import java.util.Objects; //
+import org.hyperledger.fabric.contract.annotation.DataType;
+import org.hyperledger.fabric.contract.annotation.Property;
 
 /**
  * Repräsentiert einen registrierten Akteur in der Lieferkette (Hersteller, Großhändler, Apotheke, Behörde).
  */
+@DataType()
 public final class Actor implements IAsset { //
 
+    @Property()
     private final String actorId;
+
+    @Property()
     private final String actorName;
+
+    @Property()
     private final String roleType; // Entspricht RoleConstants.HERSTELLER etc.
+
+    @Property()
     private final String status; // Entspricht RoleConstants.PENDING_APPROVAL, APPROVED etc.
+
+    @Property()
     private final String publicKey; // Base64-kodierter öffentlicher Schlüssel des Akteurs-Zertifikats
 
     public Actor(@JsonProperty("actorId") final String actorId,

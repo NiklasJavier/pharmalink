@@ -12,6 +12,7 @@ import de.jklein.fabric.samples.assettransfer.model.TransferRecord;
 import de.jklein.fabric.samples.assettransfer.permission.RoleConstants; //
 import org.hyperledger.fabric.contract.Context; //
 import org.hyperledger.fabric.contract.annotation.Contract; //
+import org.hyperledger.fabric.contract.annotation.Info;
 import org.hyperledger.fabric.contract.annotation.Transaction; //
 import org.hyperledger.fabric.shim.ChaincodeException; //
 
@@ -24,7 +25,14 @@ import java.util.UUID; //
 /**
  * Smart Contract zur Verwaltung von Medikamenten (Produktdefinitionen) und Medikamenteneinheiten in der Lieferkette.
  */
-@Contract(name = "MedicationContract") //
+@Contract(
+    name = "MedicationContract",
+    info = @Info(
+        title = "Medication Management Contract",
+        description = "Verwaltet Medikament-Assets und deren Einheiten in der Pharma-Lieferkette",
+        version = "1.0.0"
+    )
+) //
 public final class MedicationContract extends BaseContract {
 
     public MedicationContract() {

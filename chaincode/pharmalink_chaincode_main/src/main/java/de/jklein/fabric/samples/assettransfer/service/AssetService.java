@@ -33,8 +33,18 @@ public class AssetService {
      * @throws ChaincodeException wenn die Serialisierung fehlschlägt.
      */
     public void putAsset(final Context ctx, final IAsset asset) {
-        String json = genson.serialize(asset); //
-        ctx.getStub().putStringState(asset.getKey(), json); //
+        if (asset == null) {
+            throw new ChaincodeException("Asset kann nicht null sein", "ASSET_NULL_ERROR");
+        }
+        if (asset.getKey() == null || asset.getKey().isEmpty()) {
+            throw new ChaincodeException("Asset-Schlüssel kann nicht null oder leer sein", "ASSET_KEY_ERROR");
+        }
+        try {
+            String json = genson.serialize(asset); //
+            ctx.getStub().putStringState(asset.getKey(), json); //
+        } catch (Exception e) {
+            throw new ChaincodeException(String.format("Fehler beim Serialisieren von Asset mit Schlüssel '%s': %s", asset.getKey(), e.getMessage()), "ASSET_SERIALIZATION_ERROR");
+        }
     }
 
     /**
@@ -53,7 +63,11 @@ public class AssetService {
             throw new ChaincodeException(String.format("Asset mit Schlüssel '%s' vom Typ '%s' existiert nicht.", key, assetType.getSimpleName()), "ASSET_NOT_FOUND"); //
         }
         try {
-            return genson.deserialize(json, assetType); //
+            T asset = genson.deserialize(json, assetType); //
+            if (asset == null) {
+                throw new ChaincodeException(String.format("Deserialisiertes Asset '%s' ist null", key), "ASSET_DESERIALIZATION_ERROR");
+            }
+            return asset;
         } catch (Exception e) {
             throw new ChaincodeException(String.format("Fehler beim Deserialisieren von Asset '%s' als Typ '%s': %s", key, assetType.getSimpleName(), e.getMessage()), "ASSET_DESERIALIZATION_ERROR");
         }

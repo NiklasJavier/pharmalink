@@ -6,18 +6,34 @@ import de.jklein.fabric.samples.assettransfer.permission.RoleConstants;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects; //
+import org.hyperledger.fabric.contract.annotation.DataType;
+import org.hyperledger.fabric.contract.annotation.Property;
 
 /**
  * Repräsentiert ein Medikament in der Lieferkette (Produktdefinition).
  */
+@DataType()
 public final class Medication implements IAsset { //
 
+    @Property()
     private final String medicationId; //
+
+    @Property()
     private final String gtin; //
+
+    @Property()
     private final String productName; // Umbenannt von 'name' zu 'productName' für Klarheit
+
+    @Property()
     private final String productManufacturerOrgId; // MSP ID des Herstellers der Organisation
+
+    @Property()
     private final String creatorActorId; // NEU: Die Akteur-ID des erstellenden Herstellers
+
+    @Property()
     private final String status; //
+
+    @Property()
     private final List<Tag> classificationTags; // NEU: Liste von Klassifizierungstags (verwende 'Tag' statt 'AssetTag')
 
     public Medication(

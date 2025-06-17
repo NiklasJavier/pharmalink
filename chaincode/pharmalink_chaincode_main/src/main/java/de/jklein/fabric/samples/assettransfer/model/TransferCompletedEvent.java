@@ -3,17 +3,26 @@ package de.jklein.fabric.samples.assettransfer.model;
 
 import com.owlike.genson.annotation.JsonProperty;
 import java.util.Objects; //
+import org.hyperledger.fabric.contract.annotation.DataType;
+import org.hyperledger.fabric.contract.annotation.Property;
 
 /**
  * Repräsentiert ein Event, das geloggt wird, wenn ein Transfer einer Einheit erfolgreich abgeschlossen wurde.
  */
+@DataType()
 public final class TransferCompletedEvent implements IEvent {
 
+    @Property()
     private final String eventId; // Eindeutige ID für dieses Event
+    @Property()
     private final String unitKey; // Schlüssel der betroffenen MedicationUnit
+    @Property()
     private final String fromOwnerActorId; // Akteur-ID des vorherigen Besitzers (der den Transfer initiiert hat)
+    @Property()
     private final String toOwnerActorId; // Akteur-ID des neuen Besitzers (der den Transfer bestätigt hat)
+    @Property()
     private final String eventTimestamp; // Zeitstempel des Events
+    @Property()
     private final String transactionId; // ID der Fabric Transaktion, die das Event ausgelöst hat (Bestätigungstransaktion)
 
     public TransferCompletedEvent(

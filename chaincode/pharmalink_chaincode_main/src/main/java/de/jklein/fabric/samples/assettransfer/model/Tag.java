@@ -3,17 +3,25 @@ package de.jklein.fabric.samples.assettransfer.model;
 
 import com.owlike.genson.annotation.JsonProperty;
 import java.util.Objects; //
+import org.hyperledger.fabric.contract.annotation.DataType;
+import org.hyperledger.fabric.contract.annotation.Property;
 
 /**
  * Repräsentiert ein allgemeines Tag, das Assets zugeordnet werden kann.
  * Kann als Klassifizierungstag oder regulatorischer Tag verwendet werden.
  */
+@DataType()
 public final class Tag {
 
+    @Property()
     private final String tagName; // Name des Tags (z.B. "OTC", "Rueckruf")
+    @Property()
     private final String tagValue; // Optionaler Wert des Tags (z.B. "true", "GrundXYZ")
+    @Property()
     private final String actorId; // Akteur-ID des Setzers des Tags
+    @Property()
     private final String timestamp; // Zeitstempel, wann der Tag gesetzt wurde
+    @Property()
     private final boolean isBlocking; // Gibt an, ob dieser Tag eine Funktion blockiert (speziell für Regulatorische Tags)
 
     public Tag(@JsonProperty("tagName") final String tagName,

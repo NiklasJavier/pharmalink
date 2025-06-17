@@ -9,6 +9,7 @@ import de.jklein.fabric.samples.assettransfer.model.TransferInitiatedEvent;
 import de.jklein.fabric.samples.assettransfer.permission.RoleConstants; //
 import org.hyperledger.fabric.contract.Context; //
 import org.hyperledger.fabric.contract.annotation.Contract; //
+import org.hyperledger.fabric.contract.annotation.Info;
 import org.hyperledger.fabric.contract.annotation.Transaction; //
 import org.hyperledger.fabric.shim.ChaincodeException; //
 
@@ -19,7 +20,14 @@ import java.util.UUID;
 /**
  * Smart Contract zur Verwaltung von Batch-Assets (Chargen) in der Lieferkette.
  */
-@Contract(name = "BatchContract") //
+@Contract(
+    name = "BatchContract",
+    info = @Info(
+        title = "Batch Management Contract",
+        description = "Verwaltet Chargen-Assets in der Pharma-Lieferkette",
+        version = "1.0.0"
+    )
+) //
 public final class BatchContract extends BaseContract {
 
     public BatchContract() {
@@ -38,7 +46,7 @@ public final class BatchContract extends BaseContract {
      * @param quantity Die initiale Menge der Einheiten in dieser Charge.
      * @return Das neu erstellte Batch-Objekt.
      */
-    @Transaction(intent = Transaction.TYPE.SUBMIT) //
+    @Transaction(intent = Transaction.TYPE.SUBMIT, name = "createBatch") //
     public Batch createBatch(final Context ctx, final String batchId, final String medicationId,
                              final String productionDate, final String expiryDate, final int quantity) {
 
@@ -88,7 +96,7 @@ public final class BatchContract extends BaseContract {
      * @param batchId Die ID der freizugebenden Charge.
      * @return Das aktualisierte Batch-Objekt.
      */
-    @Transaction(intent = Transaction.TYPE.SUBMIT) //
+    @Transaction(intent = Transaction.TYPE.SUBMIT, name = "releaseBatch") //
     public Batch releaseBatch(final Context ctx, final String batchId) {
         // 1. Berechtigungsprüfungen: Akteur muss APPROVED Hersteller sein
         authService.requireActorApproved(ctx);
@@ -136,7 +144,7 @@ public final class BatchContract extends BaseContract {
      * @param batchId Die ID der Charge.
      * @return Das Batch-Objekt.
      */
-    @Transaction(intent = Transaction.TYPE.EVALUATE) //
+    @Transaction(intent = Transaction.TYPE.EVALUATE, name = "getBatch") //
     public Batch getBatch(final Context ctx, final String batchId) {
         // Evaluate-Transaktionen brauchen keine requireActorApproved()
         String batchKey = "BATCH_" + batchId; //

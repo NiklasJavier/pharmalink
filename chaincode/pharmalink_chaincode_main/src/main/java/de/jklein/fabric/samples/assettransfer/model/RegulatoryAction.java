@@ -3,18 +3,27 @@ package de.jklein.fabric.samples.assettransfer.model;
 
 import com.owlike.genson.annotation.JsonProperty;
 import java.util.Objects;
+import org.hyperledger.fabric.contract.annotation.DataType;
+import org.hyperledger.fabric.contract.annotation.Property;
 
 /**
  * Repräsentiert eine regulatorische Maßnahme, die von einer Behörde durchgeführt wird.
  * Dient auch als Event-Objekt, das im Ledger geloggt wird.
  */
+@DataType()
 public final class RegulatoryAction implements IAsset, IEvent { // Implementiert jetzt IEvent
 
+    @Property()
     private final String actionId; // Eindeutige ID der Aktion
+    @Property()
     private final String targetAssetKey; // Schlüssel des betroffenen Assets (Medication, Batch, Unit)
+    @Property()
     private final String actionType; // Art der Aktion (z.B. "PRODUKT_FREIGABE", "PRODUKT_SPERRUNG")
+    @Property()
     private final String actionDescription; // Beschreibung des Grundes/der Details der Aktion
+    @Property()
     private final String issuingRegulatorActorId; // Akteur-ID der ausstellenden Behörde
+    @Property()
     private final String actionTimestamp; // Zeitstempel der Aktion
 
     public RegulatoryAction(

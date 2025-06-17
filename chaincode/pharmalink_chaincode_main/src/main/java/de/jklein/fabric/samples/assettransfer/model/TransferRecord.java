@@ -3,19 +3,29 @@ package de.jklein.fabric.samples.assettransfer.model;
 
 import com.owlike.genson.annotation.JsonProperty;
 import java.util.Objects; //
+import org.hyperledger.fabric.contract.annotation.DataType;
+import org.hyperledger.fabric.contract.annotation.Property;
 
 /**
  * Repräsentiert einen einzelnen Eintrag im TransferLog einer MedicationUnit.
  * Dokumentiert einen Besitzwechsel.
  */
+@DataType()
 public final class TransferRecord implements IEvent {
 
+    @Property()
     private final String transferRecordId; // Eindeutige ID für diesen Log-Eintrag
+    @Property()
     private final String unitKey; // Schlüssel der betroffenen MedicationUnit
+    @Property()
     private final String fromOwnerActorId; // Akteur-ID des vorherigen Besitzers
+    @Property()
     private final String toOwnerActorId; // Akteur-ID des neuen Besitzers (nach Bestätigung)
+    @Property()
     private final String transferTimestamp; // Zeitstempel des Transfers
+    @Property()
     private final String transactionId; // ID der Fabric Transaktion, die diesen Transfer ausgelöst hat
+    @Property()
     private final String transferPhase; // Phase des Transfers (z.B. "INITIATED", "COMPLETED")
 
     public TransferRecord(@JsonProperty("transferRecordId") final String transferRecordId,

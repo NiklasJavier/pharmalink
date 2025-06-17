@@ -5,18 +5,32 @@ import com.owlike.genson.annotation.JsonProperty;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects; //
+import org.hyperledger.fabric.contract.annotation.DataType;
+import org.hyperledger.fabric.contract.annotation.Property;
 
 /**
  * Repräsentiert eine einzelne Medikamenteneinheit mit eindeutiger ID.
  * Dies ist die kleinste nachverfolgbare Einheit in der Lieferkette.
  */
+@DataType()
 public final class MedicationUnit implements IAsset { //
 
+    @Property()
     private final String unitId; //
+
+    @Property()
     private final String medicationKey; // Verweis auf das übergeordnete Medikament
+
+    @Property()
     private final String batchKey; // Verweis auf die übergeordnete Charge
+
+    @Property()
     private final String currentOwnerActorId; // Die Akteur-ID des aktuellen Besitzers der Einheit
+
+    @Property()
     private final String unitStatus; // Aktueller Status der Einheit (z.B. FREIGEGEBEN, PENDING_TRANSFER)
+
+    @Property()
     private final List<TransferRecord> transferLog; // Chronologisches Log aller Besitzwechsel
 
     public MedicationUnit(

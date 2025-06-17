@@ -8,6 +8,7 @@ import de.jklein.fabric.samples.assettransfer.model.TransferInitiatedEvent;
 import de.jklein.fabric.samples.assettransfer.permission.RoleConstants;
 import org.hyperledger.fabric.contract.Context; //
 import org.hyperledger.fabric.contract.annotation.Contract;
+import org.hyperledger.fabric.contract.annotation.Info;
 import org.hyperledger.fabric.contract.annotation.Transaction;
 import org.hyperledger.fabric.shim.ChaincodeException; //
 
@@ -18,7 +19,14 @@ import java.util.UUID;
 /**
  * Smart Contract zur Verwaltung von Sendungen in der Lieferkette.
  */
-@Contract(name = "ShipmentContract")
+@Contract(
+    name = "ShipmentContract",
+    info = @Info(
+        title = "Shipment Management Contract",
+        description = "Verwaltet Lieferungen und Sendungen in der Pharma-Lieferkette",
+        version = "1.0.0"
+    )
+)
 public final class ShipmentContract extends BaseContract {
 
     public ShipmentContract() {

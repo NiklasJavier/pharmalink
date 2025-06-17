@@ -5,19 +5,30 @@ import com.owlike.genson.annotation.JsonProperty;
 import java.util.Collections;
 import java.util.List; //
 import java.util.Objects; //
+import org.hyperledger.fabric.contract.annotation.DataType;
+import org.hyperledger.fabric.contract.annotation.Property;
 
 /**
  * Repräsentiert eine Sendung von Medikamenteneinheiten.
  */
+@DataType()
 public final class Shipment implements IAsset { //
 
+    @Property()
     private final String shipmentId; //
+    @Property()
     private final String shipperActorId; // Akteur-ID des Absenders
+    @Property()
     private final String receiverActorId; // Akteur-ID des Empfängers
+    @Property()
     private final List<String> medicationUnitKeys; // Liste der Keys der versendeten MedicationUnits
+    @Property()
     private final String shipmentInitiationDate; // Zeitstempel der Initiierung der Sendung
+    @Property()
     private final String currentShipmentStatus; // Status der Sendung (z.B. "IN_TRANSIT", "DELIVERED")
+    @Property()
     private final String expectedDeliveryDate; // Erwartetes Lieferdatum (optional)
+    @Property()
     private final String actualDeliveryDate; // Tatsächliches Lieferdatum (optional)
 
     // Konstruktor mit reduzierter Parameteranzahl, nutzt ShipmentData-Objekt
@@ -33,21 +44,30 @@ public final class Shipment implements IAsset { //
     }
 
     // Hilfsklasse für die JSON-Deserialisierung
+    @DataType()
     public static final class ShipmentData {
+        @Property()
         @JsonProperty("shipmentId")
         private String shipmentId;
+        @Property()
         @JsonProperty("shipperActorId")
         private String shipperActorId;
+        @Property()
         @JsonProperty("receiverActorId")
         private String receiverActorId;
+        @Property()
         @JsonProperty("medicationUnitKeys")
         private List<String> medicationUnitKeys;
+        @Property()
         @JsonProperty("shipmentInitiationDate")
         private String shipmentInitiationDate;
+        @Property()
         @JsonProperty("currentShipmentStatus")
         private String currentShipmentStatus;
+        @Property()
         @JsonProperty("expectedDeliveryDate")
         private String expectedDeliveryDate;
+        @Property()
         @JsonProperty("actualDeliveryDate")
         private String actualDeliveryDate;
 
@@ -183,15 +203,24 @@ public final class Shipment implements IAsset { //
     /**
      * Hilfsklasse zur Gruppierung von Shipment-Informationen und Reduzierung der Parameteranzahl
      */
+    @DataType()
     public static final class ShipmentInfo {
+        @Property()
         private final String shipmentId;
+        @Property()
         private final String shipperActorId;
+        @Property()
         private final String receiverActorId;
+        @Property()
         private final List<String> medicationUnitKeys;
+        @Property()
         private final String expectedDeliveryDate;
 
-        public ShipmentInfo(final String shipmentId, final String shipperActorId, final String receiverActorId,
-                           final List<String> medicationUnitKeys, final String expectedDeliveryDate) {
+                                   public ShipmentInfo(@JsonProperty("shipmentId") final String shipmentId, 
+                           @JsonProperty("shipperActorId") final String shipperActorId, 
+                           @JsonProperty("receiverActorId") final String receiverActorId,
+                           @JsonProperty("medicationUnitKeys") final List<String> medicationUnitKeys, 
+                           @JsonProperty("expectedDeliveryDate") final String expectedDeliveryDate) {
             this.shipmentId = shipmentId;
             this.shipperActorId = shipperActorId;
             this.receiverActorId = receiverActorId;

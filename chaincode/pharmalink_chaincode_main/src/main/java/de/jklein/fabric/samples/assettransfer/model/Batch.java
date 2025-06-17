@@ -6,18 +6,34 @@ import de.jklein.fabric.samples.assettransfer.permission.RoleConstants;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects; //
+import org.hyperledger.fabric.contract.annotation.DataType;
+import org.hyperledger.fabric.contract.annotation.Property;
 
 /**
  * Repräsentiert eine einzelne Charge (Produktionslos) eines Medikaments.
  */
+@DataType()
 public final class Batch implements IAsset { //
 
+    @Property()
     private final String batchId; //
+
+    @Property()
     private final String medicationKey; // Verweis auf das übergeordnete Medikament
+
+    @Property()
     private final String productionDate; //
+
+    @Property()
     private final String expiryDate; //
+
+    @Property()
     private final int quantity; // Aktuelle Menge in dieser Charge
+
+    @Property()
     private final String currentBatchStatus; // Interner Status der Charge (z.B. ERSTELLT, FREIGEGEBEN)
+
+    @Property()
     private final List<Tag> regulatoryTags; // NEU: Liste von regulatorischen Tags (verwende 'Tag' statt 'AssetTag')
 
     public Batch(
