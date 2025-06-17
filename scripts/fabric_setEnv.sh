@@ -11,7 +11,7 @@ export CHAINCODE="pharmalink_chaincode_main"
 # --- Basis-Pfade und Endpunkte ---
 export BASE_DIR="$HOME/pharmalink"
 export ORG_DIR="$BASE_DIR/fabric-samples/test-network/organizations"
-export FABRIC_CFG_PATH="$BASE_DIR/fabric-cli/config"
+export FABRIC_CFG_PATH="$BASE_DIR/../fabric-cli/config"
 
 ENDPOINT="localhost"
 
