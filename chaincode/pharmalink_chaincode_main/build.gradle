@@ -75,8 +75,6 @@ test {
     }
 }
 
-mainClassName = 'org.hyperledger.fabric.contract.ContractRouter'
-
 shadowJar {
     archiveBaseName = 'chaincode'
     archiveVersion = ''
