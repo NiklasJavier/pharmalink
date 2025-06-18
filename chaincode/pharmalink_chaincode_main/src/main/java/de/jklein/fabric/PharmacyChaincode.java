@@ -82,26 +82,29 @@ public final class PharmacyChaincode implements ContractInterface {
         // Der behördeAdmin wird weiterhin mit einer festen ID erstellt,
         // da er der "System"-Akteur ist, der andere Akteure genehmigt.
         // Seine certId sollte später mit der tatsächlichen Admin-Zertifikat-ID übereinstimmen.
-        String behordeCertId = "CN=behoerdeAdmin::" + ctx.getClientIdentity().getMSPID(); // Anpassung für init, falls keine echte CertId im Simulator
+        String behordeCertId = "CN=behoerdeAdmin::" + ctx.getClientIdentity().getMSPID(); // Beispiel CertId für Admin
         Actor behorde = new Actor.Builder()
                 .actorId("behoerdeAdmin") // Feste ID für den System-Admin
-                .description("Zentrale Arzneimittelbehörde")
+                .enrollmentId("behoerdeAdmin") // Feste Enrollment ID für den System-Admin
+                .name("Zentrale Arzneimittelbehörde")
                 .mspId("BehoerdeMSP") // Annahme: MSPID für Behörde
                 .role("behoerde")
                 .status("approved")
                 .approvedBy("system")
-                .certId(behordeCertId) // Muss mit der tatsächlichen CA-Registrierungs-ID des Behörden-Admins übereinstimmen
+                .certId(behordeCertId)
                 .build();
         stub.putState(behorde.getActorId(), behorde.toJSONString().getBytes(StandardCharsets.UTF_8));
 
         // Hersteller
         // Für reale Akteure wird die actorId nun als UUID generiert.
         // Die CertId sollte dem Common Name des registrierten Benutzers entsprechen (z.B. "CN=hersteller-user1::Org1MSP")
-        String hersteller1CertId = "CN=hersteller-user1::HerstellerMSP"; // Beispiel CertId
-        String hersteller1ActorId = generateDeterministicUUID(hersteller1CertId, txId + "hersteller1Seed");
+        String hersteller1EnrollmentId = "hersteller-user1"; // Dies ist die EnrollmentID
+        String hersteller1CertId = "CN=" + hersteller1EnrollmentId + "::HerstellerMSP"; // Beispiel CertId
+        String hersteller1ActorId = generateDeterministicUUID(hersteller1EnrollmentId, txId + "hersteller1Seed");
         Actor hersteller1 = new Actor.Builder()
                 .actorId(hersteller1ActorId)
-                .description("PharmaCorp GmbH")
+                .enrollmentId(hersteller1EnrollmentId)
+                .name("PharmaCorp GmbH")
                 .mspId("HerstellerMSP") // Annahme: MSPID für Hersteller
                 .role("hersteller")
                 .status("approved")
@@ -111,11 +114,13 @@ public final class PharmacyChaincode implements ContractInterface {
         stub.putState(hersteller1.getActorId(), hersteller1.toJSONString().getBytes(StandardCharsets.UTF_8));
 
         // Großhändler
-        String grosshaendler1CertId = "CN=grosshaendler-user1::GrosshaendlerMSP"; // Beispiel CertId
-        String grosshaendler1ActorId = generateDeterministicUUID(grosshaendler1CertId, txId + "grosshaendler1Seed");
+        String grosshaendler1EnrollmentId = "grosshaendler-user1";
+        String grosshaendler1CertId = "CN=" + grosshaendler1EnrollmentId + "::GrosshaendlerMSP"; // Beispiel CertId
+        String grosshaendler1ActorId = generateDeterministicUUID(grosshaendler1EnrollmentId, txId + "grosshaendler1Seed");
         Actor grosshaendler1 = new Actor.Builder()
                 .actorId(grosshaendler1ActorId)
-                .description("MediDistributor AG")
+                .enrollmentId(grosshaendler1EnrollmentId)
+                .name("MediDistributor AG")
                 .mspId("GrosshaendlerMSP") // Annahme: MSPID für Großhändler
                 .role("grosshaendler")
                 .status("approved")
@@ -125,11 +130,13 @@ public final class PharmacyChaincode implements ContractInterface {
         stub.putState(grosshaendler1.getActorId(), grosshaendler1.toJSONString().getBytes(StandardCharsets.UTF_8));
 
         // Apotheke
-        String apotheke1CertId = "CN=apotheke-user1::ApothekeMSP"; // Beispiel CertId
-        String apotheke1ActorId = generateDeterministicUUID(apotheke1CertId, txId + "apotheke1Seed");
+        String apotheke1EnrollmentId = "apotheke-user1";
+        String apotheke1CertId = "CN=" + apotheke1EnrollmentId + "::ApothekeMSP"; // Beispiel CertId
+        String apotheke1ActorId = generateDeterministicUUID(apotheke1EnrollmentId, txId + "apotheke1Seed");
         Actor apotheke1 = new Actor.Builder()
                 .actorId(apotheke1ActorId)
-                .description("Stadt Apotheke")
+                .enrollmentId(apotheke1EnrollmentId)
+                .name("Stadt Apotheke")
                 .mspId("ApothekeMSP") // Annahme: MSPID für Apotheke
                 .role("apotheke")
                 .status("approved")
@@ -190,11 +197,11 @@ public final class PharmacyChaincode implements ContractInterface {
 
     /**
      * Registriert einen neuen Akteur im Ledger.
-     * Der Status des neuen Akteurs ist initial 'pending', es sei denn, die Rolle ist 'behoerde', dann 'approved'.
-     * Die actorId wird automatisch generiert.
+     * Die actorId wird automatisch generiert. Der Status ist initial 'pending', es sei denn, die Rolle ist 'behoerde', dann 'approved'.
+     * Die weiteren Informationen wie mspId, certId und approvedBy werden automatisch gesetzt.
      *
      * @param ctx Der Transaktionskontext.
-     * @param description Der Alias/die Beschreibung des Akteurs.
+     * @param name Der Alias/Name des Akteurs.
      * @param role Die Rolle des Akteurs (z.B. "hersteller", "grosshaendler", "apotheke", "behoerde").
      * @return Der neu erstellte Akteur als JSON-String.
      */
@@ -203,23 +210,29 @@ public final class PharmacyChaincode implements ContractInterface {
     // Beispielausführung (für eine neue Behörde):
     // {"function":"registerActor","Args":["Bundesamt für Arzneimittelsicherheit", "behoerde"]}
     @Transaction()
-    public String registerActor(final Context ctx, final String description, final String role) { // Parameter reduziert
+    public String registerActor(final Context ctx, final String name, final String role) { // Parameter angepasst
         ChaincodeStub stub = ctx.getStub();
         String currentMspId = ctx.getClientIdentity().getMSPID(); // MSPID des aufrufenden Clients
         String certId = ctx.getClientIdentity().getId(); // Zertifikat-ID des aufrufenden Clients
+        String enrollmentId = getEnrollmentIdFromCertId(certId); // EnrollmentID aus der CertId ableiten
         String txId = stub.getTxId();
 
-        // Überprüfen, ob bereits ein Akteur mit dieser certId existiert, um Doppelregistrierung zu vermeiden
-        // Dies ist wichtig, da die actorId deterministisch aus der certId abgeleitet wird.
-        String existingActorId = generateDeterministicUUID(certId, txId); // Simulieren der zukünftigen ActorId
-        if (actorExists(ctx, existingActorId)) {
-            // Optional: Wenn der Akteur bereits existiert, könnte man hier den vorhandenen Akteur zurückgeben
-            // oder einen Fehler werfen, falls eine erneute Registrierung nicht erlaubt ist.
-            // Für diesen Fall werfen wir einen Fehler, da "registrieren" impliziert, dass es neu ist.
-            throw new ChaincodeException(String.format("Ein Akteur mit dieser Identität (%s) ist bereits registriert (ID: %s).", certId, existingActorId), PharmacyErrors.ACTOR_ALREADY_EXISTS.toString());
+        // Prüfen, ob Akteur mit dieser Enrollment-ID bereits existiert
+        String query = String.format("{\"selector\":{\"enrollmentId\":\"%s\"}}", enrollmentId);
+        try (QueryResultsIterator<KeyValue> results = stub.getQueryResult(query)) {
+            Iterator<KeyValue> iterator = results.iterator();
+            if (iterator.hasNext()) {
+                // Ein Akteur mit dieser Enrollment-ID ist bereits registriert.
+                // Wir können hier den existierenden Akteur zurückgeben oder einen Fehler werfen.
+                // Da "registrieren" einen neuen Vorgang impliziert, werfen wir einen Fehler.
+                throw new ChaincodeException(String.format("Ein Akteur mit der Identität '%s' (Enrollment-ID) ist bereits registriert.", enrollmentId), PharmacyErrors.ACTOR_ALREADY_EXISTS.toString());
+            }
+        } catch (Exception e) {
+            throw new ChaincodeException("Fehler bei der Abfrage der bestehenden Akteure: " + e.getMessage(), PharmacyErrors.RICH_QUERY_FAILED.toString());
         }
 
-        String actorId = generateDeterministicUUID(certId, txId + description); // Generiere die definitive ActorId
+        String actorId = generateDeterministicUUID(enrollmentId, txId); // Generiere die definitive ActorId
+
         String status;
         String approvedBy = ""; // Standardmäßig leer, muss von Behörde gesetzt werden
 
@@ -235,7 +248,8 @@ public final class PharmacyChaincode implements ContractInterface {
 
         Actor newActor = new Actor.Builder()
                 .actorId(actorId)
-                .description(description)
+                .enrollmentId(enrollmentId) // Speichere die abgeleitete Enrollment ID
+                .name(name)
                 .mspId(currentMspId)
                 .role(role)
                 .status(status)
@@ -278,7 +292,8 @@ public final class PharmacyChaincode implements ContractInterface {
 
         Actor approvedActor = new Actor.Builder()
                 .actorId(actorToApprove.getActorId())
-                .description(actorToApprove.getDescription())
+                .enrollmentId(actorToApprove.getEnrollmentId()) // enrollmentId beibehalten
+                .name(actorToApprove.getName())
                 .mspId(actorToApprove.getMspId())
                 .role(actorToApprove.getRole())
                 .status("approved")
@@ -816,7 +831,6 @@ public final class PharmacyChaincode implements ContractInterface {
         return sb.toString();
     }
 
-
     /**
      * Hilfsfunktion zum Abrufen des aktuellen Akteurs basierend auf der Client-Identität.
      * Überprüft, ob der Akteur im Ledger existiert und den Status 'approved' hat.
@@ -827,57 +841,77 @@ public final class PharmacyChaincode implements ContractInterface {
      */
     private Actor getCurrentActor(final Context ctx) {
         ChaincodeStub stub = ctx.getStub();
-        String invokerCertId = ctx.getClientIdentity().getId(); // Beispiel: "CN=hersteller-user1::" oder "CN=behoerdeAdmin::"
+        String invokerCertId = ctx.getClientIdentity().getId(); // Beispiel: "CN=hersteller-user1::Org1MSP"
+        String invokerMspId = ctx.getClientIdentity().getMSPID(); // MSPID des aufrufenden Clients
 
-        // Extrahieren des Common Name (CN) als invokerActorId
-        String invokerActorId = extractCnFromCertId(invokerCertId);
+        // Wir versuchen zuerst die EnrollmentID direkt aus dem Zertifikat zu bekommen,
+        // da dies der stabilste Bezeichner ist, der bei der CA-Registrierung vergeben wird.
+        String enrollmentId = ctx.getClientIdentity().getAttributeValue("hf.EnrollmentID");
 
-        // Sonderbehandlung für den initialen Admin, falls dessen CertId nicht dem typischen CN-Muster folgt
-        if ("".equals(invokerActorId) && invokerCertId.contains("admin")) {
-            // Dies ist ein Fallback und sollte idealerweise vermieden werden,
-            // indem der Admin mit einer klaren CN-Struktur registriert wird.
-            // Die "behoerdeAdmin"-ID ist ein fest definierter Akteur im Ledger.
-            invokerActorId = "behoerdeAdmin"; // Muss mit der in initLedger verwendeten ID übereinstimmen
+        // Fallback: Wenn hf.EnrollmentID nicht im Zertifikat, versuchen wir es aus dem CN zu parsen.
+        if (enrollmentId == null || enrollmentId.isEmpty()) {
+            enrollmentId = getEnrollmentIdFromCertId(invokerCertId); // FIX: Korrekter Methodenname
         }
 
-        if ("".equals(invokerActorId)) {
-            throw new ChaincodeException("Konnte Akteur-ID aus Client-Zertifikat nicht ableiten. Stellen Sie sicher, dass das Zertifikat einen Common Name (CN) enthält.", PharmacyErrors.INVALID_ARGUMENT.toString());
+        // Sonderbehandlung für den initialen Admin ("behoerdeAdmin"), dessen enrollmentId vielleicht nicht direkt vom Cert kommt
+        // oder wenn die initLedger-Methode keine dynamische EnrollmentID gesetzt hat.
+        if ("".equals(enrollmentId) && invokerCertId.contains("admin")) {
+            enrollmentId = "behoerdeAdmin"; // Dies muss mit der in initLedger verwendeten EnrollmentID übereinstimmen
         }
 
-        byte[] actorState = stub.getState(invokerActorId);
-
-        if (actorState == null || actorState.length == 0) {
-            throw new ChaincodeException(String.format("Aufrufender Akteur mit ID %s nicht im Ledger gefunden. Registrierung und Genehmigung erforderlich.", invokerActorId), PharmacyErrors.ACTOR_NOT_FOUND.toString());
+        if ("".equals(enrollmentId)) {
+            throw new ChaincodeException("Konnte Enrollment-ID aus Client-Zertifikat nicht ableiten. Stellen Sie sicher, dass 'hf.EnrollmentID' oder ein Common Name (CN) im Zertifikat enthalten ist.", PharmacyErrors.INVALID_ARGUMENT.toString());
         }
 
-        Actor invoker = genson.deserialize(new String(actorState, StandardCharsets.UTF_8), Actor.class);
+        // Finde den Akteur im Ledger über seine Enrollment-ID
+        // Es ist besser, die Suche über die EnrollmentID zu machen, wenn wir sie haben,
+        // da die ActorId eine generierte UUID ist.
+        String query = String.format("{\"selector\":{\"enrollmentId\":\"%s\"}}", enrollmentId);
+        Actor invokerActor = null;
+        try (QueryResultsIterator<KeyValue> results = stub.getQueryResult(query)) {
+            Iterator<KeyValue> iterator = results.iterator();
+            if (iterator.hasNext()) {
+                KeyValue result = iterator.next();
+                invokerActor = genson.deserialize(result.getStringValue(), Actor.class); // FIX: Direkte Übergabe des Strings
+            }
+        } catch (Exception e) {
+            throw new ChaincodeException("Fehler bei der Abfrage des aufrufenden Akteurs: " + e.getMessage(), PharmacyErrors.RICH_QUERY_FAILED.toString());
+        }
+
+
+        if (invokerActor == null) {
+            throw new ChaincodeException(String.format("Aufrufender Akteur mit Enrollment-ID '%s' nicht im Ledger gefunden. Registrierung und Genehmigung erforderlich.", enrollmentId), PharmacyErrors.ACTOR_NOT_FOUND.toString());
+        }
 
         // Zusätzliche Prüfung: Stellen Sie sicher, dass die certId im Ledger mit der aktuellen übereinstimmt,
-        // um Spoofing zu verhindern, falls actorId nicht direkt von der CertId abgeleitet wird,
-        // oder wenn mehrere CertIds zur gleichen ActorId führen könnten (was vermieden werden sollte).
-        if (!invokerCertId.equals(invoker.getCertId())) {
-            // Dies ist eine starke Sicherheitsmaßnahme.
-            // Sie stellt sicher, dass der Akteur, der die Transaktion aufruft,
-            // tatsächlich derjenige ist, der im Ledger mit dieser ActorId und CertId verknüpft ist.
-            throw new ChaincodeException(String.format("Zertifikat-ID des Aufrufers stimmt nicht mit der für Akteur %s registrierten CertId überein.", invokerActorId), PharmacyErrors.PERMISSION_DENIED.toString());
+        // um Spoofing zu verhindern.
+        if (!invokerCertId.equals(invokerActor.getCertId())) {
+            throw new ChaincodeException(String.format("Zertifikat-ID des Aufrufers stimmt nicht mit der für Akteur '%s' registrierten CertId überein. Potenzieller Identitätsdiebstahl.", invokerActor.getName()), PharmacyErrors.PERMISSION_DENIED.toString());
         }
 
-        if (!"approved".equals(invoker.getStatus())) {
-            throw new ChaincodeException(String.format("Akteur mit ID %s ist nicht genehmigt und darf keine Transaktionen ausführen. Status: %s", invokerActorId, invoker.getStatus()), PharmacyErrors.PERMISSION_DENIED.toString());
+        // Prüfe auch die MSPID zur Sicherheit
+        if (!invokerMspId.equals(invokerActor.getMspId())) {
+            throw new ChaincodeException(String.format("MSPID des Aufrufers ('%s') stimmt nicht mit der für Akteur '%s' registrierten MSPID ('%s') überein.", invokerMspId, invokerActor.getName(), invokerActor.getMspId()), PharmacyErrors.PERMISSION_DENIED.toString());
         }
-        return invoker;
+
+        if (!"approved".equals(invokerActor.getStatus())) {
+            throw new ChaincodeException(String.format("Akteur '%s' (ID: %s) ist nicht genehmigt und darf keine Transaktionen ausführen. Status: %s", invokerActor.getName(), invokerActor.getActorId(), invokerActor.getStatus()), PharmacyErrors.PERMISSION_DENIED.toString());
+        }
+        return invokerActor;
     }
 
     /**
-     * Extrahiert den Common Name (CN) aus einer Zertifikats-ID.
-     * Beispiel: "CN=hersteller-user1::" -> "hersteller-user1"
+     * Extrahiert die Enrollment-ID (Common Name oder hf.EnrollmentID) aus einer Zertifikats-ID.
+     * Versucht zuerst, das "hf.EnrollmentID"-Attribut zu extrahieren.
+     * Wenn nicht vorhanden, parst es den Common Name (CN) aus der CertId.
      *
-     * @param certId Die Zertifikats-ID.
-     * @return Der extrahierte Common Name oder ein leerer String, wenn nicht gefunden.
+     * @param certId Die Zertifikats-ID (z.B. "x509::/CN=hersteller-user1::Org1MSP").
+     * @return Die extrahierte Enrollment-ID oder ein leerer String, wenn nicht gefunden.
      */
-    private String extractCnFromCertId(final String certId) {
-        // Regex für "CN=beliebiger_text::"
-        Pattern pattern = Pattern.compile("CN=([^:]+)::");
+    private String getEnrollmentIdFromCertId(final String certId) {
+        // Zuerst versuchen, hf.EnrollmentID-Attribut aus der CertId zu parsen, falls es direkt kodiert ist.
+        // Fabric-Client-Identitäten geben oft CN=name::IssuerDN zurück.
+        Pattern pattern = Pattern.compile("CN=([^,]+)(?:,|::)"); // Matcht CN=VALUE, oder CN=VALUE::
         Matcher matcher = pattern.matcher(certId);
         if (matcher.find()) {
             return matcher.group(1);
@@ -888,9 +922,9 @@ public final class PharmacyChaincode implements ContractInterface {
     /**
      * Erzeugt eine deterministische UUID basierend auf einer Seed-Zeichenkette und der Transaktions-ID.
      * Dies stellt sicher, dass dieselbe Eingabe immer dieselbe UUID erzeugt.
-     * Die Seed-Zeichenkette sollte eindeutig sein (z.B. Akteur-ID + relevante Daten des Assets).
+     * Die Seed-Zeichenkette sollte eindeutig sein (z.B. Enrollment-ID + TxId).
      *
-     * @param seedString Eine Zeichenkette, die zur Generierung der UUID verwendet wird (z.B. Akteur-ID + TxId + weitere eindeutige Daten).
+     * @param seedString Eine Zeichenkette, die zur Generierung der UUID verwendet wird (z.B. Enrollment-ID oder ActorId).
      * @param txId Die Transaktions-ID, um weitere Eindeutigkeit hinzuzufügen.
      * @return Eine deterministische UUID als String.
      * @throws ChaincodeException Wenn ein Fehler bei der UUID-Generierung auftritt.

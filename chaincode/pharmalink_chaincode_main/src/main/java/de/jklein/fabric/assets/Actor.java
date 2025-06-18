@@ -10,10 +10,13 @@ public final class Actor {
     private static final Genson GENSON = new Genson();
 
     @Property()
-    private final String actorId;
+    private final String actorId; // Eindeutige ID im Ledger (UUID)
 
     @Property()
-    private final String description; // Alias für den Akteur (ehemals 'name')
+    private final String enrollmentId; // Die Enrollment ID aus dem Client-Zertifikat (z.B. user1, hersteller-user1)
+
+    @Property()
+    private final String name; // Der beschreibende Name / Alias des Akteurs
 
     @Property()
     private final String mspId;
@@ -22,18 +25,19 @@ public final class Actor {
     private final String role;
 
     @Property()
-    private final String status;
+    private final String status; // z.B. "Pending", "Approved"
 
     @Property()
-    private final String approvedBy;
+    private final String approvedBy; // actorId des Akteurs, der genehmigt hat
 
     @Property()
-    private final String certId; // Beibehalten für Authentifizierungszwecke
+    private final String certId; // Die volle Zertifikat-ID (z.B. "x509::CN=...")
 
     // Parameterloser Konstruktor für die Deserialisierung
     private Actor() {
         this.actorId = "";
-        this.description = "";
+        this.enrollmentId = "";
+        this.name = "";
         this.mspId = "";
         this.role = "";
         this.status = "";
@@ -41,10 +45,11 @@ public final class Actor {
         this.certId = "";
     }
 
-    // Privater Konstruktor, der nur vom Builder aufgerufen wird (6 Parameter)
+    // Privater Konstruktor, der nur vom Builder aufgerufen wird (7 Parameter)
     private Actor(final Builder builder) {
         this.actorId = builder.bActorId;
-        this.description = builder.bDescription;
+        this.enrollmentId = builder.bEnrollmentId;
+        this.name = builder.bName;
         this.mspId = builder.bMspId;
         this.role = builder.bRole;
         this.status = builder.bStatus;
@@ -56,8 +61,12 @@ public final class Actor {
         return actorId;
     }
 
-    public String getDescription() {
-        return description;
+    public String getEnrollmentId() {
+        return enrollmentId;
+    }
+
+    public String getName() {
+        return name;
     }
 
     public String getMspId() {
@@ -102,14 +111,15 @@ public final class Actor {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getActorId(), description, mspId, role, status, approvedBy, certId);
+        return Objects.hash(getActorId(), getEnrollmentId(), getName(), getMspId(), getRole(), getStatus(), getApprovedBy(), getCertId());
     }
 
     @Override
     public String toString() {
         return "Actor{"
                 + "actorId='" + actorId + '\''
-                + ", description='" + description + '\''
+                + ", enrollmentId='" + enrollmentId + '\''
+                + ", name='" + name + '\''
                 + ", mspId='" + mspId + '\''
                 + ", role='" + role + '\''
                 + ", status='" + status + '\''
@@ -120,20 +130,27 @@ public final class Actor {
 
     public static final class Builder {
         private String bActorId;
-        private String bDescription;
+        private String bEnrollmentId;
+        private String bName;
         private String bMspId;
         private String bRole;
         private String bStatus;
         private String bApprovedBy;
         private String bCertId;
 
+        // Optional: Ein Konstruktor für den Builder, um die primären Identifikatoren zu setzen
         public Builder actorId(final String actorId) {
             this.bActorId = actorId;
             return this;
         }
 
-        public Builder description(final String description) {
-            this.bDescription = description;
+        public Builder enrollmentId(final String enrollmentId) {
+            this.bEnrollmentId = enrollmentId;
+            return this;
+        }
+
+        public Builder name(final String name) {
+            this.bName = name;
             return this;
         }
 
