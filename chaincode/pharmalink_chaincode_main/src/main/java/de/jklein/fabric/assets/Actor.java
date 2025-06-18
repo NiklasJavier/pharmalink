@@ -11,19 +11,14 @@ public final class Actor {
 
     @Property()
     private final String certId;
-
     @Property()
     private final String mspId;
-
     @Property()
     private final String actorId;
-
     @Property()
     private final String name;
-
     @Property()
     private final String role;
-
     @Property()
     private final String status;
 
@@ -36,21 +31,41 @@ public final class Actor {
         this.status = status;
     }
 
-    public String getCertId() { return certId; }
-    public String getMspId() { return mspId; }
-    public String getActorId() { return actorId; }
-    public String getName() { return name; }
-    public String getRole() { return role; }
-    public String getStatus() { return status; }
+    public String getCertId() {
+        return certId;
+    }
+    public String getMspId() {
+        return mspId;
+    }
+    public String getActorId() {
+        return actorId;
+    }
+    public String getName() {
+        return name;
+    }
+    public String getRole() {
+        return role;
+    }
+    public String getStatus() {
+        return status;
+    }
 
-    public String toJSONString() { return GENSON.serialize(this); }
-    public static Actor fromJSONString(final String json) { return GENSON.deserialize(json, Actor.class); }
+    public String toJSONString() {
+        return GENSON.serialize(this);
+    }
+    public static Actor fromJSONString(final String json) {
+        return GENSON.deserialize(json, Actor.class);
+    }
 
     @Override
     public boolean equals(final Object o) {
-        if (this == o) { return true; }
-        if (o == null || getClass() != o.getClass()) { return false; }
-        Actor actor = (Actor) o;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        final Actor actor = (Actor) o;
         return Objects.equals(getCertId(), actor.getCertId());
     }
 

@@ -29,12 +29,11 @@ import java.util.Map;
 
 @Contract(
         name = "PharmacyChaincode",
-        info = @Info(title = "Pharmacy Supply Chain Contract", version = "4.0.0",
+        info = @Info(title = "Pharmacy Supply Chain Contract", version = "4.2.0",
                 license = @License(name = "Apache-2.0"),
                 contact = @Contact(email = "info@jklein.de", name = "Chaincode-Support")))
 @Default
 public final class PharmacyChaincode implements ContractInterface {
-
     private final Genson GENSON = new Genson();
     private static final String ACTOR_KEY_PREFIX = "actor~";
     private static final String DRUGINFO_KEY_PREFIX = "druginfo~";
@@ -108,6 +107,34 @@ public final class PharmacyChaincode implements ContractInterface {
         return approvedActor;
     }
 
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String queryPendingActors(final Context ctx) {
+        assertBehoerde(ctx);
+        return richQuery(ctx, String.format("{\"selector\":{\"status\":\"Pending\", \"_id\":{\"$regex\":\"^%s\"}}}", ACTOR_KEY_PREFIX));
+    }
+
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String queryAllActors(final Context ctx) {
+        assertBehoerde(ctx);
+        final ChaincodeStub stub = ctx.getStub();
+        final List<Actor> allActors = new ArrayList<>();
+        try (QueryResultsIterator<KeyValue> results = stub.getStateByRange(ACTOR_KEY_PREFIX, ACTOR_KEY_PREFIX + Character.MAX_VALUE)) {
+            for (final KeyValue result : results) {
+                final Actor actor = Actor.fromJSONString(result.getStringValue());
+                allActors.add(actor);
+            }
+        } catch (final Exception e) {
+            throw new ChaincodeException("Abfrage aller Akteure fehlgeschlagen: " + e.getMessage());
+        }
+        return GENSON.serialize(allActors);
+    }
+
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String queryActorsByRole(final Context ctx, final String role) {
+        assertBehoerde(ctx);
+        return richQuery(ctx, String.format("{\"selector\":{\"role\":\"%s\", \"status\":\"Approved\", \"_id\":{\"$regex\":\"^%s\"}}}", role, ACTOR_KEY_PREFIX));
+    }
+
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public DrugInfo createDrugInfo(final Context ctx, final String name, final String description, final String gtin) {
         final Actor manufacturer = assertApprovedActor(ctx, "hersteller");
@@ -133,6 +160,46 @@ public final class PharmacyChaincode implements ContractInterface {
         return approvedDrugInfo;
     }
 
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String queryDrugByGTIN(final Context ctx, final String gtin) {
+        final String drugInfoQuery = String.format("{\"selector\":{\"gtin\":\"%s\", \"_id\":{\"$regex\":\"^%s\"}}}", gtin, DRUGINFO_KEY_PREFIX);
+        final String drugInfoResult = richQuery(ctx, drugInfoQuery);
+        if (drugInfoResult.equals("[]")) {
+            throw new ChaincodeException("Kein Medikament mit GTIN " + gtin + " gefunden.", PharmacyErrors.DRUGINFO_NOT_FOUND.toString());
+        }
+
+        final DrugInfo[] drugInfosArray = GENSON.deserialize(drugInfoResult, DrugInfo[].class);
+        final List<DrugInfo> drugInfos = Arrays.asList(drugInfosArray);
+        final DrugInfo drugInfo = drugInfos.get(0);
+
+        final String batchQuery = String.format("{\"selector\":{\"drugId\":\"%s\", \"_id\":{\"$regex\":\"^%s\"}}}", drugInfo.getId(), BATCH_KEY_PREFIX);
+        final String batchesResult = richQuery(ctx, batchQuery);
+        final Map<String, Object> response = new HashMap<>();
+        response.put("medikament", drugInfo);
+        response.put("chargenSummary", GENSON.deserialize(batchesResult, List.class));
+        return GENSON.serialize(response);
+    }
+
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public long balanceOf(final Context ctx, final String ownerActorId) {
+        final String query = String.format("{\"selector\":{\"owner\":\"%s\", \"_id\":{\"$regex\":\"^%s\"}}}", ownerActorId, UNIT_KEY_PREFIX);
+        long count = 0;
+        try (QueryResultsIterator<KeyValue> results = ctx.getStub().getQueryResult(query)) {
+            for (final KeyValue ignored : results) {
+                count++;
+            }
+        } catch (final Exception e) {
+            throw new ChaincodeException("Fehler beim Zählen der Einheiten: " + e.getMessage());
+        }
+        return count;
+    }
+
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String ownerOf(final Context ctx, final String unitId) {
+        final DrugUnit unit = getAsset(ctx.getStub(), UNIT_KEY_PREFIX + unitId, DrugUnit.class, PharmacyErrors.DRUGUNIT_NOT_FOUND);
+        return unit.getOwner();
+    }
+
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public Batch mintBatch(final Context ctx, final String drugId, final long quantity, final String beschreibung) {
         final Actor manufacturer = assertApprovedActor(ctx, "hersteller");
@@ -149,7 +216,16 @@ public final class PharmacyChaincode implements ContractInterface {
         stub.putStringState(BATCH_KEY_PREFIX + batchId, batch.toJSONString());
         for (int i = 1; i <= quantity; i++) {
             final String unitId = batchId + "-" + String.format("%05d", i);
-            final DrugUnit unit = new DrugUnit(unitId, batchId, drugId, manufacturer.getActorId(), manufacturer.getActorId(), beschreibung, new ArrayList<>(), "Created", null, null, null);
+            final DrugUnit unit = new DrugUnit.Builder()
+                    .id(unitId)
+                    .batchId(batchId)
+                    .drugId(drugId)
+                    .owner(manufacturer.getActorId())
+                    .manufacturerId(manufacturer.getActorId())
+                    .description(beschreibung)
+                    .tags(new ArrayList<>())
+                    .currentState("Created")
+                    .build();
             stub.putStringState(UNIT_KEY_PREFIX + unitId, unit.toJSONString());
         }
         stub.setEvent("BatchMinted", batch.toJSONString().getBytes(StandardCharsets.UTF_8));
@@ -169,10 +245,27 @@ public final class PharmacyChaincode implements ContractInterface {
         }
         assertActorIsApprovedById(ctx, toActorId);
 
-        final DrugUnit newUnit = new DrugUnit(unit.getId(), unit.getBatchId(), unit.getDrugId(), toActorId, unit.getManufacturerId(), unit.getDescription(), unit.getTags(), newState, unit.getDispensedBy(), unit.getDispensedTo(), unit.getDispensingTimestamp());
+        final DrugUnit newUnit = new DrugUnit.Builder()
+                .id(unit.getId())
+                .batchId(unit.getBatchId())
+                .drugId(unit.getDrugId())
+                .owner(toActorId)
+                .manufacturerId(unit.getManufacturerId())
+                .description(unit.getDescription())
+                .tags(unit.getTags())
+                .currentState(newState)
+                .dispensedBy(unit.getDispensedBy())
+                .dispensedTo(unit.getDispensedTo())
+                .dispensingTimestamp(unit.getDispensingTimestamp())
+                .build();
         stub.putStringState(UNIT_KEY_PREFIX + unitId, newUnit.toJSONString());
         stub.setEvent("Transfer", GENSON.serialize(new String[]{fromActorId, toActorId, unitId}).getBytes(StandardCharsets.UTF_8));
         return newUnit;
+    }
+
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String queryBatchUnits(final Context ctx, final String batchId) {
+        return richQuery(ctx, String.format("{\"selector\":{\"batchId\":\"%s\", \"_id\":{\"$regex\":\"^%s\"}}}", batchId, UNIT_KEY_PREFIX));
     }
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
@@ -196,13 +289,24 @@ public final class PharmacyChaincode implements ContractInterface {
                 if (!unitTags.contains(tag)) {
                     unitTags.add(tag);
                 }
-                final DrugUnit newUnit = new DrugUnit(oldUnit.getId(), oldUnit.getBatchId(), oldUnit.getDrugId(), oldUnit.getOwner(), oldUnit.getManufacturerId(), oldUnit.getDescription(), unitTags, oldUnit.getCurrentState(), oldUnit.getDispensedBy(), oldUnit.getDispensedTo(), oldUnit.getDispensingTimestamp());
+                final DrugUnit newUnit = new DrugUnit.Builder()
+                        .id(oldUnit.getId()).batchId(oldUnit.getBatchId()).drugId(oldUnit.getDrugId())
+                        .owner(oldUnit.getOwner()).manufacturerId(oldUnit.getManufacturerId())
+                        .description(oldUnit.getDescription()).tags(unitTags)
+                        .currentState(oldUnit.getCurrentState()).dispensedBy(oldUnit.getDispensedBy())
+                        .dispensedTo(oldUnit.getDispensedTo()).dispensingTimestamp(oldUnit.getDispensingTimestamp())
+                        .build();
                 stub.putStringState(UNIT_KEY_PREFIX + oldUnit.getId(), newUnit.toJSONString());
             }
         } catch (final Exception e) {
             throw new ChaincodeException("Fehler bei der Übertragung des Tags auf die Units: " + e.getMessage());
         }
         stub.setEvent("BatchTagged", newBatch.toJSONString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String queryUnitsByTag(final Context ctx, final String tag) {
+        return richQuery(ctx, String.format("{\"selector\":{\"tags\":{\"$elemMatch\":{\"$eq\":\"%s\"}}, \"_id\":{\"$regex\":\"^%s\"}}}", tag, UNIT_KEY_PREFIX));
     }
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
@@ -221,65 +325,17 @@ public final class PharmacyChaincode implements ContractInterface {
         }
 
         final String timestamp = ctx.getStub().getTxTimestamp().toString();
-        final DrugUnit dispensedUnit = new DrugUnit(unit.getId(), unit.getBatchId(), unit.getDrugId(), "Dispensed", unit.getManufacturerId(), unit.getDescription(), unit.getTags(), "Dispensed", pharmacy.getActorId(), recipientId, timestamp);
+        final DrugUnit dispensedUnit = new DrugUnit.Builder()
+                .id(unit.getId()).batchId(unit.getBatchId()).drugId(unit.getDrugId())
+                .owner("Dispensed").manufacturerId(unit.getManufacturerId())
+                .description(unit.getDescription()).tags(unit.getTags())
+                .currentState("Dispensed").dispensedBy(pharmacy.getActorId())
+                .dispensedTo(recipientId).dispensingTimestamp(timestamp)
+                .build();
 
         stub.putStringState(UNIT_KEY_PREFIX + unitId, dispensedUnit.toJSONString());
         stub.setEvent("DrugDispensed", dispensedUnit.toJSONString().getBytes(StandardCharsets.UTF_8));
         return dispensedUnit;
-    }
-
-    @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public String queryActorsByRole(final Context ctx, final String role) {
-        assertBehoerde(ctx);
-        return richQuery(ctx, String.format("{\"selector\":{\"role\":\"%s\", \"status\":\"Approved\", \"_id\":{\"$regex\":\"^%s\"}}}", role, ACTOR_KEY_PREFIX));
-    }
-
-    @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public String queryDrugByGTIN(final Context ctx, final String gtin) {
-        final String drugInfoQuery = String.format("{\"selector\":{\"gtin\":\"%s\", \"_id\":{\"$regex\":\"^%s\"}}}", gtin, DRUGINFO_KEY_PREFIX);
-        final String drugInfoResult = richQuery(ctx, drugInfoQuery);
-        if (drugInfoResult.equals("[]")) {
-            throw new ChaincodeException("Kein Medikament mit GTIN " + gtin + " gefunden.", PharmacyErrors.DRUGINFO_NOT_FOUND.toString());
-        }
-        final DrugInfo[] drugInfosArray = GENSON.deserialize(drugInfoResult, DrugInfo[].class);
-        final List<DrugInfo> drugInfos = Arrays.asList(drugInfosArray);
-        final DrugInfo drugInfo = drugInfos.get(0);
-        final String batchQuery = String.format("{\"selector\":{\"drugId\":\"%s\", \"_id\":{\"$regex\":\"^%s\"}}}", drugInfo.getId(), BATCH_KEY_PREFIX);
-        final String batchesResult = richQuery(ctx, batchQuery);
-        final Map<String, Object> response = new HashMap<>();
-        response.put("medikament", drugInfo);
-        response.put("chargenSummary", GENSON.deserialize(batchesResult, List.class));
-        return GENSON.serialize(response);
-    }
-
-    @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public long balanceOf(final Context ctx, final String ownerActorId) {
-        final String query = String.format("{\"selector\":{\"owner\":\"%s\", \"_id\":{\"$regex\":\"^%s\"}}}", ownerActorId, UNIT_KEY_PREFIX);
-        long count = 0;
-        try (QueryResultsIterator<KeyValue> results = ctx.getStub().getQueryResult(query)) {
-            for (KeyValue ignored : results) {
-                count++;
-            }
-        } catch (final Exception e) {
-            throw new ChaincodeException("Fehler beim Zählen der Einheiten: " + e.getMessage());
-        }
-        return count;
-    }
-
-    @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public String ownerOf(final Context ctx, final String unitId) {
-        final DrugUnit unit = getAsset(ctx.getStub(), UNIT_KEY_PREFIX + unitId, DrugUnit.class, PharmacyErrors.DRUGUNIT_NOT_FOUND);
-        return unit.getOwner();
-    }
-
-    @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public String queryBatchUnits(final Context ctx, final String batchId) {
-        return richQuery(ctx, String.format("{\"selector\":{\"batchId\":\"%s\", \"_id\":{\"$regex\":\"^%s\"}}}", batchId, UNIT_KEY_PREFIX));
-    }
-
-    @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public String queryUnitsByTag(final Context ctx, final String tag) {
-        return richQuery(ctx, String.format("{\"selector\":{\"tags\":{\"$elemMatch\":{\"$eq\":\"%s\"}}, \"_id\":{\"$regex\":\"^%s\"}}}", tag, UNIT_KEY_PREFIX));
     }
 
     @Transaction(intent = Transaction.TYPE.EVALUATE)
@@ -367,9 +423,7 @@ public final class PharmacyChaincode implements ContractInterface {
         } catch (final Exception e) {
             throw new ChaincodeException("Rich Query fehlgeschlagen: " + e.getMessage());
         }
-
         sb.append("]");
         return sb.toString();
     }
 }
-
