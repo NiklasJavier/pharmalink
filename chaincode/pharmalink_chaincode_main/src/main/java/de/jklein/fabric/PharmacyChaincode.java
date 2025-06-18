@@ -82,25 +82,27 @@ public final class PharmacyChaincode implements ContractInterface {
         // Der behördeAdmin wird weiterhin mit einer festen ID erstellt,
         // da er der "System"-Akteur ist, der andere Akteure genehmigt.
         // Seine certId sollte später mit der tatsächlichen Admin-Zertifikat-ID übereinstimmen.
+        String behordeCertId = "CN=behoerdeAdmin::" + ctx.getClientIdentity().getMSPID(); // Anpassung für init, falls keine echte CertId im Simulator
         Actor behorde = new Actor.Builder()
-                .actorId("behoerdeAdmin")
+                .actorId("behoerdeAdmin") // Feste ID für den System-Admin
                 .description("Zentrale Arzneimittelbehörde")
-                .mspId("BehoerdeMSP")
+                .mspId("BehoerdeMSP") // Annahme: MSPID für Behörde
                 .role("behoerde")
                 .status("approved")
                 .approvedBy("system")
-                .certId("certBehoerde1") // Muss mit der tatsächlichen CA-Registrierungs-ID des Behörden-Admins übereinstimmen
+                .certId(behordeCertId) // Muss mit der tatsächlichen CA-Registrierungs-ID des Behörden-Admins übereinstimmen
                 .build();
         stub.putState(behorde.getActorId(), behorde.toJSONString().getBytes(StandardCharsets.UTF_8));
 
         // Hersteller
         // Für reale Akteure wird die actorId nun als UUID generiert.
-        String hersteller1CertId = "hersteller001Identity"; // Dies muss der CN des Zertifikats entsprechen
+        // Die CertId sollte dem Common Name des registrierten Benutzers entsprechen (z.B. "CN=hersteller-user1::Org1MSP")
+        String hersteller1CertId = "CN=hersteller-user1::HerstellerMSP"; // Beispiel CertId
         String hersteller1ActorId = generateDeterministicUUID(hersteller1CertId, txId + "hersteller1Seed");
         Actor hersteller1 = new Actor.Builder()
                 .actorId(hersteller1ActorId)
                 .description("PharmaCorp GmbH")
-                .mspId("HerstellerMSP")
+                .mspId("HerstellerMSP") // Annahme: MSPID für Hersteller
                 .role("hersteller")
                 .status("approved")
                 .approvedBy(behorde.getActorId())
@@ -109,12 +111,12 @@ public final class PharmacyChaincode implements ContractInterface {
         stub.putState(hersteller1.getActorId(), hersteller1.toJSONString().getBytes(StandardCharsets.UTF_8));
 
         // Großhändler
-        String grosshaendler1CertId = "grosshaendler001Identity";
+        String grosshaendler1CertId = "CN=grosshaendler-user1::GrosshaendlerMSP"; // Beispiel CertId
         String grosshaendler1ActorId = generateDeterministicUUID(grosshaendler1CertId, txId + "grosshaendler1Seed");
         Actor grosshaendler1 = new Actor.Builder()
                 .actorId(grosshaendler1ActorId)
                 .description("MediDistributor AG")
-                .mspId("GrosshaendlerMSP")
+                .mspId("GrosshaendlerMSP") // Annahme: MSPID für Großhändler
                 .role("grosshaendler")
                 .status("approved")
                 .approvedBy(behorde.getActorId())
@@ -123,12 +125,12 @@ public final class PharmacyChaincode implements ContractInterface {
         stub.putState(grosshaendler1.getActorId(), grosshaendler1.toJSONString().getBytes(StandardCharsets.UTF_8));
 
         // Apotheke
-        String apotheke1CertId = "apotheke001Identity";
+        String apotheke1CertId = "CN=apotheke-user1::ApothekeMSP"; // Beispiel CertId
         String apotheke1ActorId = generateDeterministicUUID(apotheke1CertId, txId + "apotheke1Seed");
         Actor apotheke1 = new Actor.Builder()
                 .actorId(apotheke1ActorId)
                 .description("Stadt Apotheke")
-                .mspId("ApothekeMSP")
+                .mspId("ApothekeMSP") // Annahme: MSPID für Apotheke
                 .role("apotheke")
                 .status("approved")
                 .approvedBy(behorde.getActorId())
@@ -187,45 +189,58 @@ public final class PharmacyChaincode implements ContractInterface {
     }
 
     /**
-     * Erstellt einen neuen Akteur im Ledger.
-     * Nur ein Akteur mit der Rolle 'behoerde' kann einen neuen Akteur erstellen.
-     * Der Status des neuen Akteurs ist initial 'pending'. Die Genehmigung muss separat erfolgen.
+     * Registriert einen neuen Akteur im Ledger.
+     * Der Status des neuen Akteurs ist initial 'pending', es sei denn, die Rolle ist 'behoerde', dann 'approved'.
      * Die actorId wird automatisch generiert.
      *
      * @param ctx Der Transaktionskontext.
      * @param description Der Alias/die Beschreibung des Akteurs.
      * @param role Die Rolle des Akteurs (z.B. "hersteller", "grosshaendler", "apotheke", "behoerde").
-     * @param certId Die Zertifikat-ID des Akteurs (vom Client Identity des Aufrufers abgeleitet). Dies dient als primäre Verknüpfung zur Fabric-Identität.
-     * @param approvedBy Die ID des Akteurs, der die Erstellung genehmigt.
      * @return Der neu erstellte Akteur als JSON-String.
      */
-    // Beispielausführung (als Behörde, vorausgesetzt behördeAdmin ist bereits genehmigt):
-    // {"function":"createActor","Args":["Neue Apotheke Süd", "apotheke", "CN=apothekeUser1::", "behoerdeAdmin"]}
+    // Beispielausführung (für einen neuen Hersteller):
+    // {"function":"registerActor","Args":["Neue Pharma GmbH", "hersteller"]}
+    // Beispielausführung (für eine neue Behörde):
+    // {"function":"registerActor","Args":["Bundesamt für Arzneimittelsicherheit", "behoerde"]}
     @Transaction()
-    public String createActor(final Context ctx, final String description, final String role, final String certId, final String approvedBy) {
+    public String registerActor(final Context ctx, final String description, final String role) { // Parameter reduziert
         ChaincodeStub stub = ctx.getStub();
-        Actor invoker = getCurrentActor(ctx);
+        String currentMspId = ctx.getClientIdentity().getMSPID(); // MSPID des aufrufenden Clients
+        String certId = ctx.getClientIdentity().getId(); // Zertifikat-ID des aufrufenden Clients
+        String txId = stub.getTxId();
 
-        if (!"behoerde".equals(invoker.getRole())) {
-            throw new ChaincodeException("Nur die Behörde kann neue Akteure registrieren.", PharmacyErrors.PERMISSION_DENIED.toString());
+        // Überprüfen, ob bereits ein Akteur mit dieser certId existiert, um Doppelregistrierung zu vermeiden
+        // Dies ist wichtig, da die actorId deterministisch aus der certId abgeleitet wird.
+        String existingActorId = generateDeterministicUUID(certId, txId); // Simulieren der zukünftigen ActorId
+        if (actorExists(ctx, existingActorId)) {
+            // Optional: Wenn der Akteur bereits existiert, könnte man hier den vorhandenen Akteur zurückgeben
+            // oder einen Fehler werfen, falls eine erneute Registrierung nicht erlaubt ist.
+            // Für diesen Fall werfen wir einen Fehler, da "registrieren" impliziert, dass es neu ist.
+            throw new ChaincodeException(String.format("Ein Akteur mit dieser Identität (%s) ist bereits registriert (ID: %s).", certId, existingActorId), PharmacyErrors.ACTOR_ALREADY_EXISTS.toString());
         }
 
-        // Eine eindeutige ID für den Akteur generieren, basierend auf der certId und der TxId
-        String actorId = generateDeterministicUUID(certId, stub.getTxId() + description);
+        String actorId = generateDeterministicUUID(certId, txId + description); // Generiere die definitive ActorId
+        String status;
+        String approvedBy = ""; // Standardmäßig leer, muss von Behörde gesetzt werden
 
-        // Prüfen, ob Akteur mit dieser generierten ID bereits existiert (sehr unwahrscheinlich bei UUID)
-        if (actorExists(ctx, actorId)) {
-            throw new ChaincodeException(String.format("Akteur mit generierter ID %s existiert bereits. Dies sollte nicht passieren.", actorId), PharmacyErrors.ACTOR_ALREADY_EXISTS.toString());
+        // Setze Status und approvedBy basierend auf der Rolle
+        if ("behoerde".equals(role)) {
+            status = "approved";
+            // Eine Behörde genehmigt sich selbst bei der Registrierung
+            approvedBy = actorId; // Selbstgenehmigung
+        } else {
+            status = "pending";
+            // Ein normaler Akteur muss von einer Behörde genehmigt werden, initial leer
         }
 
         Actor newActor = new Actor.Builder()
                 .actorId(actorId)
                 .description(description)
-                .mspId(ctx.getClientIdentity().getMSPID()) // MSPID des aufrufenden Akteurs
+                .mspId(currentMspId)
                 .role(role)
-                .status("pending") // Standardmäßig 'pending'
+                .status(status)
                 .approvedBy(approvedBy)
-                .certId(certId) // Die Zertifikat-ID bleibt hier, um die Identität zu verknüpfen
+                .certId(certId) // Die CertId des aufrufenden Clients wird gespeichert
                 .build();
 
         stub.putState(actorId, newActor.toJSONString().getBytes(StandardCharsets.UTF_8));
@@ -244,7 +259,7 @@ public final class PharmacyChaincode implements ContractInterface {
     @Transaction()
     public String approveActor(final Context ctx, final String actorId) {
         ChaincodeStub stub = ctx.getStub();
-        Actor invoker = getCurrentActor(ctx);
+        Actor invoker = getCurrentActor(ctx); // Der Aufrufer muss eine genehmigte Behörde sein
 
         if (!"behoerde".equals(invoker.getRole())) {
             throw new ChaincodeException("Nur die Behörde kann Akteure genehmigen.", PharmacyErrors.PERMISSION_DENIED.toString());
@@ -258,7 +273,7 @@ public final class PharmacyChaincode implements ContractInterface {
         Actor actorToApprove = genson.deserialize(new String(actorState, StandardCharsets.UTF_8), Actor.class);
 
         if (!"pending".equals(actorToApprove.getStatus())) {
-            throw new ChaincodeException(String.format("Akteur mit ID %s hat nicht den Status 'pending'.", actorId), PharmacyErrors.INVALID_ARGUMENT.toString());
+            throw new ChaincodeException(String.format("Akteur mit ID %s hat nicht den Status 'pending'. Genehmigung nicht möglich.", actorId), PharmacyErrors.INVALID_ARGUMENT.toString());
         }
 
         Actor approvedActor = new Actor.Builder()
@@ -267,7 +282,7 @@ public final class PharmacyChaincode implements ContractInterface {
                 .mspId(actorToApprove.getMspId())
                 .role(actorToApprove.getRole())
                 .status("approved")
-                .approvedBy(invoker.getActorId())
+                .approvedBy(invoker.getActorId()) // Genehmigt durch den aufrufenden Behörden-Akteur
                 .certId(actorToApprove.getCertId())
                 .build();
 
