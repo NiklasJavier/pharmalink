@@ -22,6 +22,16 @@ public final class Actor {
     @Property()
     private final String status;
 
+    // Parameterloser Konstruktor für Genson-Deserialisierung
+    public Actor() {
+        this.certId = "";
+        this.mspId = "";
+        this.actorId = null;
+        this.name = "";
+        this.role = "";
+        this.status = "";
+    }
+
     public Actor(final String certId, final String mspId, final String actorId, final String name, final String role, final String status) {
         this.certId = certId;
         this.mspId = mspId;

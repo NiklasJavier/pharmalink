@@ -22,6 +22,16 @@ public final class DrugInfo {
     @Property()
     private final String status;
 
+    // Parameterloser Konstruktor für Genson-Deserialisierung
+    public DrugInfo() {
+        this.id = "";
+        this.gtin = "";
+        this.name = "";
+        this.manufacturerId = "";
+        this.description = "";
+        this.status = "";
+    }
+
     public DrugInfo(final String id, final String gtin, final String name, final String manufacturerId, final String description, final String status) {
         this.id = id;
         this.gtin = gtin;

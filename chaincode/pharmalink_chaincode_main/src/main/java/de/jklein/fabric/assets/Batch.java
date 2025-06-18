@@ -3,6 +3,7 @@ package de.jklein.fabric.assets;
 import com.owlike.genson.Genson;
 import org.hyperledger.fabric.contract.annotation.DataType;
 import org.hyperledger.fabric.contract.annotation.Property;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -16,6 +17,16 @@ public final class Batch {
     @Property() private final String manufacturerId;
     @Property() private final String description;
     @Property() private final List<String> tags;
+
+    // Parameterloser Konstruktor für Genson-Deserialisierung
+    public Batch() {
+        this.id = "";
+        this.drugId = "";
+        this.quantity = 0;
+        this.manufacturerId = "";
+        this.description = "";
+        this.tags = new ArrayList<>();
+    }
 
     public Batch(final String id, final String drugId, final long quantity, final String manufacturerId, final String description, final List<String> tags) {
         this.id = id;
