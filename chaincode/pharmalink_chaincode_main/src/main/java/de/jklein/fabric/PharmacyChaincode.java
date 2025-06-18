@@ -18,6 +18,10 @@ import org.hyperledger.fabric.shim.ChaincodeStub;
 import org.hyperledger.fabric.shim.ledger.KeyModification;
 import org.hyperledger.fabric.shim.ledger.KeyValue;
 import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -59,7 +63,8 @@ public final class PharmacyChaincode implements ContractInterface {
         WRONG_OWNER,
         HISTORY_QUERY_FAILED,
         RICH_QUERY_FAILED,
-        ASSET_DESERIALIZATION_FAILED
+        ASSET_DESERIALIZATION_FAILED,
+        UUID_GENERATION_FAILED
     }
 
     private final String ACTOR_KEY_PREFIX = "actor~";
@@ -79,6 +84,7 @@ public final class PharmacyChaincode implements ContractInterface {
         String certId = ctx.getClientIdentity().getId();
         String role = getRoleFromCertificate(ctx);
         String enrollmentId = getEnrollmentIdFromCertificate(ctx);
+        String txId = stub.getTxId(); // Holen der Transaktions-ID
 
         String query = String.format("{\"selector\":{\"enrollmentId\":\"%s\"}}", enrollmentId);
         try (QueryResultsIterator<KeyValue> results = stub.getQueryResult(query)) {
@@ -90,7 +96,8 @@ public final class PharmacyChaincode implements ContractInterface {
             throw new ChaincodeException("Datenbankabfrage zur Existenzprüfung fehlgeschlagen: " + e.getMessage(), PharmacyErrors.RICH_QUERY_FAILED.toString());
         }
 
-        String actorId = UUID.randomUUID().toString();
+        // ANPASSUNG: UUID wird jetzt deterministisch erzeugt statt zufällig.
+        String actorId = generateDeterministicUUID(enrollmentId, txId);
         String key = ACTOR_KEY_PREFIX + actorId;
         String status;
         String approvedBy;
@@ -354,6 +361,30 @@ public final class PharmacyChaincode implements ContractInterface {
             return GENSON.deserialize(json, clazz);
         } catch (Exception e) {
             throw new ChaincodeException("Fehler beim Deserialisieren von Asset " + key, PharmacyErrors.ASSET_DESERIALIZATION_FAILED.toString());
+        }
+    }
+
+    /**
+     * Erzeugt eine deterministische, zeitbasierte UUID (Version 5)
+     * aus der Enrollment-ID und der Transaktions-ID, um sicherzustellen,
+     * dass alle Peers zum selben Ergebnis kommen.
+     */
+    private String generateDeterministicUUID(final String enrollmentId, final String txId) {
+        try {
+            String name = enrollmentId + txId;
+            byte[] nameBytes = name.getBytes(StandardCharsets.UTF_8);
+            MessageDigest md = MessageDigest.getInstance("SHA-1");
+            byte[] hash = md.digest(nameBytes);
+
+            hash[6] &= 0x0f;
+            hash[6] |= 0x50;
+            hash[8] &= 0x3f;
+            hash[8] |= 0x80;
+
+            return UUID.nameUUIDFromBytes(hash).toString();
+        } catch (NoSuchAlgorithmException e) {
+            // Dieser Fehler sollte in einer Standard-Java-Umgebung nie auftreten.
+            throw new ChaincodeException("Fehler bei der UUID-Generierung: SHA-1 nicht verfügbar.", PharmacyErrors.UUID_GENERATION_FAILED.toString());
         }
     }
 
