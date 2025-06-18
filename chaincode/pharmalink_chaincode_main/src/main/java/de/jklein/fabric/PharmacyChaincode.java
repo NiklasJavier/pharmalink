@@ -100,25 +100,40 @@ public final class PharmacyChaincode implements ContractInterface {
         final ChaincodeStub stub = ctx.getStub();
         final String enrollmentId = ctx.getClientIdentity().getId();
 
+        // Sicherheitsprüfung: Stimmt die angeforderte Rolle mit der im Zertifikat überein?
+        final String certRole = getRoleFromCertificate(ctx);
+        if (!certRole.equals(role)) {
+            throw new ChaincodeException("Die angeforderte Rolle '" + role + "' stimmt nicht mit der Rolle im Zertifikat ('" + certRole + "') überein.", PharmacyErrors.PERMISSION_DENIED.toString());
+        }
+
+        // Prüfen, ob der Akteur bereits existiert
         final String query = String.format("{\"selector\":{\"enrollmentId\":\"%s\"}}", enrollmentId);
         final String existingActors = richQuery(ctx, query);
         if (!existingActors.equals("[]")) {
             throw new ChaincodeException("Ein Akteur mit der Enrollment ID '" + enrollmentId + "' existiert bereits.", PharmacyErrors.ACTOR_ALREADY_EXISTS.toString());
         }
 
-        // KORREKTUR: Erzeuge eine deterministische ID aus der Transaktions-ID und der Enrollment-ID.
         final String actorId = generateDeterministicUUID(enrollmentId, ctx.getStub().getTxId());
 
-        final Actor actor = new Actor.Builder()
-                .actorId(actorId) // <-- Verwendet die deterministische ID
+        final Actor.Builder builder = new Actor.Builder()
+                .actorId(actorId)
                 .enrollmentId(enrollmentId)
                 .description(description)
                 .mspId(ctx.getClientIdentity().getMSPID())
                 .role(role)
-                .status("Pending")
-                .certId(ctx.getClientIdentity().getId())
-                .build();
+                .certId(ctx.getClientIdentity().getId());
 
+        // === HIER IST DIE NEUE LOGIK ===
+        // Wenn die Rolle 'behoerde' ist, automatisch genehmigen.
+        if (role.equals("behoerde")) {
+            builder.status("Approved");
+            builder.approvedBy("self"); // Sich selbst genehmigt
+        } else {
+            builder.status("Pending");
+        }
+        // === ENDE DER NEUEN LOGIK ===
+
+        final Actor actor = builder.build();
         stub.putStringState(actor.getActorId(), actor.toJSONString());
         return actor;
     }
