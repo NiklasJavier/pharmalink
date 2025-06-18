@@ -1,1 +1,44 @@
-hier kommt mein Projekt hinein
+version: '3.8'
+
+services:
+  pharmalink-app:
+    # Mein Registry
+    #image: ghcr.io/niklasjavier/pharmalink:latest
+    build:
+      context: ../.
+      dockerfile: Dockerfile
+    
+    container_name: pharmalink
+
+    ports:
+      - "8080:8080"
+
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      
+      # Beispiel: Datenbank-URL (ersetze mit deinen tatsächlichen Werten)
+      # DATABASE_URL: jdbc:postgresql://your-db-host:5432/your_database
+      
+      # Beispiel: Benutzername für die Datenbank
+      # DATABASE_USERNAME: youruser
+      
+      # Beispiel: Passwort für die Datenbank
+      # DATABASE_PASSWORD: yourpassword
+      
+      # Beispiel: Logging Level anpassen (z.B. auf DEBUG für ein bestimmtes Paket)
+      # LOGGING_LEVEL_DE_JKLEIN_PHARMALINK: DEBUG
+      
+      # Beispiel: Eine spezifische Konfiguration für deine FabricClient Klasse
+      # FABRIC_PEER_URL: grpc://peer0.org1.example.com:7051
+      # FABRIC_CHANNEL_NAME: mychannel
+      # FABRIC_CHAINCODE_NAME: pharmalink_chaincode_main
+
+    # Optional: Startet den Container neu, wenn er unerwartet beendet wird
+    restart: unless-stopped
+    
+    # Optional: Wenn deine Anwendung andere Services (wie Datenbanken oder andere Fabric-Komponenten) benötigt,
+    # die ebenfalls in diesem Compose File definiert sind, kannst du hier Abhängigkeiten festlegen.
+    # Dadurch stellt Docker Compose sicher, dass diese Services zuerst gestartet werden.
+    # depends_on:
+    #   - your-database-service
+    #   - your-fabric-peer-service
