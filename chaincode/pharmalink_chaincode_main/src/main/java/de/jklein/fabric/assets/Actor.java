@@ -13,10 +13,7 @@ public final class Actor {
     private final String actorId;
 
     @Property()
-    private final String enrollmentId;
-
-    @Property()
-    private final String name;
+    private final String description; // Alias für den Akteur (ehemals 'name')
 
     @Property()
     private final String mspId;
@@ -31,13 +28,12 @@ public final class Actor {
     private final String approvedBy;
 
     @Property()
-    private final String certId;
+    private final String certId; // Beibehalten für Authentifizierungszwecke
 
     // Parameterloser Konstruktor für die Deserialisierung
     private Actor() {
         this.actorId = "";
-        this.enrollmentId = "";
-        this.name = "";
+        this.description = "";
         this.mspId = "";
         this.role = "";
         this.status = "";
@@ -45,11 +41,10 @@ public final class Actor {
         this.certId = "";
     }
 
-    // Privater Konstruktor, der nur vom Builder aufgerufen wird
+    // Privater Konstruktor, der nur vom Builder aufgerufen wird (6 Parameter)
     private Actor(final Builder builder) {
         this.actorId = builder.bActorId;
-        this.enrollmentId = builder.bEnrollmentId;
-        this.name = builder.bName;
+        this.description = builder.bDescription;
         this.mspId = builder.bMspId;
         this.role = builder.bRole;
         this.status = builder.bStatus;
@@ -57,17 +52,12 @@ public final class Actor {
         this.certId = builder.bCertId;
     }
 
-    // --- GETTERS ---
     public String getActorId() {
         return actorId;
     }
 
-    public String getEnrollmentId() {
-        return enrollmentId;
-    }
-
-    public String getName() {
-        return name;
+    public String getDescription() {
+        return description;
     }
 
     public String getMspId() {
@@ -90,7 +80,6 @@ public final class Actor {
         return certId;
     }
 
-    // --- Hilfsmethoden ---
     public String toJSONString() {
         return GENSON.serialize(this);
     }
@@ -113,91 +102,66 @@ public final class Actor {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getActorId());
+        return Objects.hash(getActorId(), description, mspId, role, status, approvedBy, certId);
     }
 
-    // --- Builder-Klasse ---
+    @Override
+    public String toString() {
+        return "Actor{"
+                + "actorId='" + actorId + '\''
+                + ", description='" + description + '\''
+                + ", mspId='" + mspId + '\''
+                + ", role='" + role + '\''
+                + ", status='" + status + '\''
+                + ", approvedBy='" + approvedBy + '\''
+                + ", certId='" + certId + '\''
+                + '}';
+    }
+
     public static final class Builder {
-        private final String bActorId;
-        private final String bEnrollmentId;
-        private String bName;
+        private String bActorId;
+        private String bDescription;
         private String bMspId;
         private String bRole;
         private String bStatus;
         private String bApprovedBy;
         private String bCertId;
 
-        public Builder(final String actorId, final String enrollmentId) {
+        public Builder actorId(final String actorId) {
             this.bActorId = actorId;
-            this.bEnrollmentId = enrollmentId;
-        }
-
-        /**
-         * Setzt den Namen des Akteurs.
-         *
-         * @param name Der Name des Akteurs
-         * @return Die Builder-Instanz für Method-Chaining
-         */
-        public Builder name(final String name) {
-            this.bName = name;
             return this;
         }
-        /**
-         * Setzt die MSP-ID des Akteurs.
-         *
-         * @param mspId Die MSP-ID des Akteurs
-         * @return Die Builder-Instanz für Method-Chaining
-         */
+
+        public Builder description(final String description) {
+            this.bDescription = description;
+            return this;
+        }
+
         public Builder mspId(final String mspId) {
             this.bMspId = mspId;
             return this;
         }
-        /**
-         * Setzt die Rolle des Akteurs.
-         *
-         * @param role Die Rolle des Akteurs
-         * @return Die Builder-Instanz für Method-Chaining
-         */
+
         public Builder role(final String role) {
             this.bRole = role;
             return this;
         }
-        /**
-         * Setzt den Status des Akteurs.
-         *
-         * @param status Der Status des Akteurs
-         * @return Die Builder-Instanz für Method-Chaining
-         */
+
         public Builder status(final String status) {
             this.bStatus = status;
             return this;
         }
-        /**
-         * Setzt die ID des genehmigenden Akteurs.
-         *
-         * @param approvedBy Die ID des genehmigenden Akteurs
-         * @return Die Builder-Instanz für Method-Chaining
-         */
+
         public Builder approvedBy(final String approvedBy) {
             this.bApprovedBy = approvedBy;
             return this;
         }
-        /**
-         * Setzt die Zertifikat-ID des Akteurs.
-         *
-         * @param certId Die Zertifikat-ID des Akteurs
-         * @return Die Builder-Instanz für Method-Chaining
-         */
+
         public Builder certId(final String certId) {
             this.bCertId = certId;
             return this;
         }
 
-        /**
-         * Erstellt eine neue Actor-Instanz mit den konfigurierten Werten.
-         *
-         * @return Die erstellte Actor-Instanz
-         */
         public Actor build() {
             return new Actor(this);
         }

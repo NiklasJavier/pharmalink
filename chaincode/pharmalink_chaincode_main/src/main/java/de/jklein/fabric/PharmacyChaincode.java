@@ -18,368 +18,882 @@ import org.hyperledger.fabric.shim.ChaincodeStub;
 import org.hyperledger.fabric.shim.ledger.KeyModification;
 import org.hyperledger.fabric.shim.ledger.KeyValue;
 import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-
-
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 
 @Contract(
         name = "PharmacyChaincode",
         info = @Info(
                 title = "Pharmacy Supply Chain Contract",
-                description = "Ein Prototyp für eine pharmazeutische Lieferkette mit UUIDs",
-                version = "2.5.0",
+                description = "Ein Prototyp für eine pharmazeutische Lieferkette auf Hyperledger Fabric.",
+                version = "1.0.0",
                 license = @License(
-                        name = "Apache-2.0"
-                ),
+                        name = "Apache 2.0 License",
+                        url = "http://www.apache.org/licenses/LICENSE-2.0.html"),
                 contact = @Contact(
-                        email = "info@jklein.de",
-                        name = "JKlein"
-                )
-        )
-)
+                        email = "j.klein@example.com",
+                        name = "Jonas Klein",
+                        url = "https://example.com")))
 @Default
 public final class PharmacyChaincode implements ContractInterface {
 
-    private static final Genson GENSON = new Genson();
+    private final Genson genson = new Genson();
 
     private enum PharmacyErrors {
         ACTOR_NOT_FOUND,
         ACTOR_ALREADY_EXISTS,
-        ACTOR_ALREADY_APPROVED,
-        ACTOR_NOT_APPROVED,
-        DRUGINFO_NOT_FOUND,
-        DRUGINFO_ALREADY_EXISTS,
+        DRUG_INFO_NOT_FOUND,
+        DRUG_INFO_ALREADY_EXISTS,
         BATCH_NOT_FOUND,
         BATCH_ALREADY_EXISTS,
-        DRUGUNIT_NOT_FOUND,
-        DRUGUNIT_ALREADY_EXISTS,
-        INSUFFICIENT_PERMISSIONS,
-        WRONG_OWNER,
-        HISTORY_QUERY_FAILED,
+        DRUG_UNIT_NOT_FOUND,
+        DRUG_UNIT_ALREADY_EXISTS,
+        PERMISSION_DENIED,
+        INVALID_ARGUMENT,
+        UUID_GENERATION_FAILED,
         RICH_QUERY_FAILED,
-        ASSET_DESERIALIZATION_FAILED,
-        UUID_GENERATION_FAILED
-    }
-
-    private final String ACTOR_KEY_PREFIX = "actor~";
-    private final String DRUGINFO_KEY_PREFIX = "druginfo~";
-    private final String BATCH_KEY_PREFIX = "batch~";
-    private final String DRUGUNIT_KEY_PREFIX = "drugunit~";
-
-
-    @Transaction()
-    public void initLedger(final Context ctx) {
-    }
-
-    @Transaction()
-    public Actor registerActor(final Context ctx, final String name) {
-        ChaincodeStub stub = ctx.getStub();
-        String mspId = ctx.getClientIdentity().getMSPID();
-        String certId = ctx.getClientIdentity().getId();
-        String role = getRoleFromCertificate(ctx);
-        String enrollmentId = getEnrollmentIdFromCertificate(ctx);
-        String txId = stub.getTxId(); // Holen der Transaktions-ID
-
-        String query = String.format("{\"selector\":{\"enrollmentId\":\"%s\"}}", enrollmentId);
-        try (QueryResultsIterator<KeyValue> results = stub.getQueryResult(query)) {
-            Iterator<KeyValue> iterator = results.iterator();
-            if (iterator.hasNext()) {
-                throw new ChaincodeException("Ein Akteur mit der Enrollment-ID " + enrollmentId + " existiert bereits.", PharmacyErrors.ACTOR_ALREADY_EXISTS.toString());
-            }
-        } catch (Exception e) {
-            throw new ChaincodeException("Datenbankabfrage zur Existenzprüfung fehlgeschlagen: " + e.getMessage(), PharmacyErrors.RICH_QUERY_FAILED.toString());
-        }
-
-        // ANPASSUNG: UUID wird jetzt deterministisch erzeugt statt zufällig.
-        String actorId = generateDeterministicUUID(enrollmentId, txId);
-        String key = ACTOR_KEY_PREFIX + actorId;
-        String status;
-        String approvedBy;
-
-        if ("behoerde".equals(role)) {
-            status = "Approved";
-            approvedBy = actorId;
-        } else {
-            status = "Pending";
-            approvedBy = "";
-        }
-
-        Actor actor = new Actor.Builder(actorId, enrollmentId)
-                .name(name)
-                .mspId(mspId)
-                .role(role)
-                .status(status)
-                .approvedBy(approvedBy)
-                .certId(certId)
-                .build();
-
-        stub.putStringState(key, actor.toJSONString());
-
-        return actor;
-    }
-
-    @Transaction()
-    public Actor approveActor(final Context ctx, final String actorIdToApprove) {
-        ChaincodeStub stub = ctx.getStub();
-
-        Actor approver = requireApprovedBehoerde(ctx);
-
-        String keyToApprove = ACTOR_KEY_PREFIX + actorIdToApprove;
-        Actor actorToApprove = getAsset(stub, keyToApprove, Actor.class, PharmacyErrors.ACTOR_NOT_FOUND);
-
-        if ("Approved".equals(actorToApprove.getStatus())) {
-            throw new ChaincodeException("Akteur mit UUID " + actorIdToApprove + " ist bereits genehmigt.", PharmacyErrors.ACTOR_ALREADY_APPROVED.toString());
-        }
-
-        Actor approvedActor = new Actor.Builder(actorToApprove.getActorId(), actorToApprove.getEnrollmentId())
-                .name(actorToApprove.getName())
-                .mspId(actorToApprove.getMspId())
-                .role(actorToApprove.getRole())
-                .certId(actorToApprove.getCertId())
-                .status("Approved")
-                .approvedBy(approver.getActorId())
-                .build();
-
-        stub.putStringState(keyToApprove, approvedActor.toJSONString());
-        return approvedActor;
-    }
-
-    @Transaction()
-    public String getActorByUUID(final Context ctx, final String actorId) {
-        String assetJSON = ctx.getStub().getStringState(ACTOR_KEY_PREFIX + actorId);
-        if (assetJSON == null || assetJSON.isEmpty()) {
-            throw new ChaincodeException("Akteur mit UUID " + actorId + " nicht gefunden.", PharmacyErrors.ACTOR_NOT_FOUND.toString());
-        }
-        return assetJSON;
-    }
-
-    @Transaction()
-    public String queryPendingActors(final Context ctx) {
-        requireApprovedBehoerde(ctx);
-        String query = String.format("{\"selector\":{\"status\":\"Pending\", \"_id\":{\"$regex\": \"^%s\"}}}", ACTOR_KEY_PREFIX);
-        return richQuery(ctx, query);
-    }
-
-    @Transaction()
-    public String queryAllActors(final Context ctx) {
-        requireApprovedBehoerde(ctx);
-        String query = String.format("{\"selector\":{\"_id\":{\"$regex\": \"^%s\"}}}", ACTOR_KEY_PREFIX);
-        return richQuery(ctx, query);
-    }
-
-    @Transaction()
-    public DrugInfo createDrugInfo(final Context ctx, final String gtin, final String name, final String description) {
-        Actor manufacturer = requireApprovedActorByRole(ctx, "hersteller");
-
-        ChaincodeStub stub = ctx.getStub();
-        String drugId = "DRUG-" + gtin;
-        String key = DRUGINFO_KEY_PREFIX + drugId;
-
-        String existingDrugInfo = stub.getStringState(key);
-        if (existingDrugInfo != null && !existingDrugInfo.isEmpty()) {
-            throw new ChaincodeException("DrugInfo mit der ID " + drugId + " existiert bereits.", PharmacyErrors.DRUGINFO_ALREADY_EXISTS.toString());
-        }
-
-        DrugInfo drugInfo = new DrugInfo(drugId, gtin, name, manufacturer.getActorId(), description, "Active");
-        stub.putStringState(key, drugInfo.toJSONString());
-        return drugInfo;
-    }
-
-    @Transaction()
-    public Batch createBatch(final Context ctx, final String batchId, final String drugId, final long quantity, final String description) {
-        Actor manufacturer = requireApprovedActorByRole(ctx, "hersteller");
-        String manufacturerId = manufacturer.getActorId();
-
-        ChaincodeStub stub = ctx.getStub();
-
-        DrugInfo drugInfo = getAsset(stub, DRUGINFO_KEY_PREFIX + drugId, DrugInfo.class, PharmacyErrors.DRUGINFO_NOT_FOUND);
-        if (!drugInfo.getManufacturerId().equals(manufacturerId)) {
-            throw new ChaincodeException("Sie sind nicht der Hersteller dieses Medikaments.", PharmacyErrors.INSUFFICIENT_PERMISSIONS.toString());
-        }
-
-        String key = BATCH_KEY_PREFIX + batchId;
-        String existingBatch = stub.getStringState(key);
-        if (existingBatch != null && !existingBatch.isEmpty()) {
-            throw new ChaincodeException("Batch mit der ID " + batchId + " existiert bereits.", PharmacyErrors.BATCH_ALREADY_EXISTS.toString());
-        }
-
-        Batch batch = new Batch(batchId, drugId, quantity, manufacturerId, description, new ArrayList<>());
-        stub.putStringState(key, batch.toJSONString());
-
-        for (int i = 1; i <= quantity; i++) {
-            String unitId = batchId + "-" + i;
-            String unitKey = DRUGUNIT_KEY_PREFIX + unitId;
-
-            DrugUnit drugUnit = new DrugUnit.Builder(unitId, batchId, drugId)
-                    .owner(manufacturerId)
-                    .manufacturerId(manufacturerId)
-                    .currentState("Created")
-                    .build();
-            stub.putStringState(unitKey, drugUnit.toJSONString());
-        }
-
-        return batch;
-    }
-
-    @Transaction()
-    public DrugUnit transferDrugUnit(final Context ctx, final String drugUnitId, final String newOwnerId, final String temperature) {
-        ChaincodeStub stub = ctx.getStub();
-        Actor currentOwner = findActorByEnrollmentId(ctx, getEnrollmentIdFromCertificate(ctx));
-
-        String key = DRUGUNIT_KEY_PREFIX + drugUnitId;
-        DrugUnit drugUnit = getAsset(stub, key, DrugUnit.class, PharmacyErrors.DRUGUNIT_NOT_FOUND);
-
-        if (!drugUnit.getOwner().equals(currentOwner.getActorId())) {
-            throw new ChaincodeException("Nur der aktuelle Besitzer kann die Einheit transferieren.", PharmacyErrors.WRONG_OWNER.toString());
-        }
-
-        Actor newOwner = getAsset(stub, ACTOR_KEY_PREFIX + newOwnerId, Actor.class, PharmacyErrors.ACTOR_NOT_FOUND);
-        if (!"Approved".equals(newOwner.getStatus())) {
-            throw new ChaincodeException("Der neue Besitzer mit UUID " + newOwnerId + " ist nicht genehmigt.", PharmacyErrors.ACTOR_NOT_APPROVED.toString());
-        }
-
-        DrugUnit.Builder builder = new DrugUnit.Builder(drugUnit.getId(), drugUnit.getBatchId(), drugUnit.getDrugId())
-                .owner(newOwnerId)
-                .manufacturerId(drugUnit.getManufacturerId())
-                .description(drugUnit.getDescription())
-                .tags(drugUnit.getTags())
-                .dispensedBy(drugUnit.getDispensedBy())
-                .dispensedTo(drugUnit.getDispensedTo())
-                .dispensingTimestamp(drugUnit.getDispensingTimestamp())
-                .temperatureReadings(new ArrayList<>(drugUnit.getTemperatureReadings()));
-
-        String currentState = drugUnit.getCurrentState();
-        String newOwnerRole = newOwner.getRole();
-        if (currentState.equals("Created") && newOwnerRole.equals("grosshaendler")) {
-            builder.currentState("InTransit_ToWholesaler");
-        } else if (currentState.equals("InTransit_ToWholesaler") && newOwnerRole.equals("apotheke")) {
-            builder.currentState("InTransit_ToPharmacy");
-        } else if (currentState.equals("InStock_Wholesaler") && newOwnerRole.equals("apotheke")) {
-            builder.currentState("InTransit_ToPharmacy");
-        } else {
-            throw new ChaincodeException("Ungültiger Transfer von " + currentOwner.getEnrollmentId() + " an " + newOwner.getEnrollmentId(), PharmacyErrors.INSUFFICIENT_PERMISSIONS.toString());
-        }
-
-        if (temperature != null && !temperature.isEmpty()) {
-            String reading = String.format("{\"timestamp\": \"%s\", \"temp\": \"%s\", \"by\": \"%s\"}",
-                    stub.getTxTimestamp().toString(), temperature, currentOwner.getActorId());
-            builder.addTemperatureReading(reading);
-        }
-
-        DrugUnit updatedDrugUnit = builder.build();
-        stub.putStringState(key, updatedDrugUnit.toJSONString());
-        return updatedDrugUnit;
-    }
-
-    @Transaction()
-    public String getDrugUnitHistory(final Context ctx, final String drugUnitId) {
-        ChaincodeStub stub = ctx.getStub();
-        String key = DRUGUNIT_KEY_PREFIX + drugUnitId;
-
-        final List<String> history = new ArrayList<>();
-        try (QueryResultsIterator<KeyModification> results = stub.getHistoryForKey(key)) {
-            for (final KeyModification result : results) {
-                history.add(result.getStringValue());
-            }
-        } catch (Exception e) {
-            throw new ChaincodeException("Fehler beim Abrufen der Historie: " + e.getMessage(), PharmacyErrors.HISTORY_QUERY_FAILED.toString());
-        }
-        return GENSON.serialize(history);
-    }
-
-    private Actor requireApprovedBehoerde(final Context ctx) {
-        String role = getRoleFromCertificate(ctx);
-        if (!"behoerde".equals(role)) {
-            throw new ChaincodeException("Benutzer hat nicht die erforderliche Rolle 'behoerde'.", PharmacyErrors.INSUFFICIENT_PERMISSIONS.toString());
-        }
-        return findAndCheckApprovedActor(ctx);
-    }
-
-    private Actor requireApprovedActorByRole(final Context ctx, final String requiredRole) {
-        String role = getRoleFromCertificate(ctx);
-        if (!requiredRole.equals(role)) {
-            throw new ChaincodeException("Benutzer hat nicht die erforderliche Rolle '" + requiredRole + "'.", PharmacyErrors.INSUFFICIENT_PERMISSIONS.toString());
-        }
-        return findAndCheckApprovedActor(ctx);
-    }
-
-    private Actor findAndCheckApprovedActor(final Context ctx) {
-        String enrollmentId = getEnrollmentIdFromCertificate(ctx);
-        Actor actor = findActorByEnrollmentId(ctx, enrollmentId);
-        if (!"Approved".equals(actor.getStatus())) {
-            throw new ChaincodeException("Der aufrufende Akteur '" + enrollmentId + "' ist nicht genehmigt.", PharmacyErrors.ACTOR_NOT_APPROVED.toString());
-        }
-        return actor;
-    }
-
-    private Actor findActorByEnrollmentId(final Context ctx, final String enrollmentId) {
-        String query = String.format("{\"selector\":{\"enrollmentId\":\"%s\"}}", enrollmentId);
-        try (QueryResultsIterator<KeyValue> results = ctx.getStub().getQueryResult(query)) {
-            Iterator<KeyValue> iterator = results.iterator();
-            if (!iterator.hasNext()) {
-                throw new ChaincodeException("Akteur mit Enrollment-ID '" + enrollmentId + "' ist nicht im System registriert.", PharmacyErrors.ACTOR_NOT_FOUND.toString());
-            }
-            KeyValue result = iterator.next();
-            try {
-                return GENSON.deserialize(result.getStringValue(), Actor.class);
-            } catch (Exception e) {
-                throw new ChaincodeException("Fehler beim Deserialisieren von Akteur mit Enrollment-ID " + enrollmentId, PharmacyErrors.ASSET_DESERIALIZATION_FAILED.toString());
-            }
-        } catch (Exception e) {
-            throw new ChaincodeException("Datenbankabfrage für Enrollment-ID '" + enrollmentId + "' fehlgeschlagen: " + e.getMessage(), PharmacyErrors.RICH_QUERY_FAILED.toString());
-        }
-    }
-
-    private String getEnrollmentIdFromCertificate(final Context ctx) {
-        String enrollmentId = ctx.getClientIdentity().getAttributeValue("hf.EnrollmentID");
-        if (enrollmentId == null || enrollmentId.isEmpty()) {
-            throw new ChaincodeException("Attribut 'hf.EnrollmentID' konnte im Zertifikat nicht gefunden werden.");
-        }
-        return enrollmentId;
-    }
-
-    private String getRoleFromCertificate(final Context ctx) {
-        String role = ctx.getClientIdentity().getAttributeValue("role");
-        if (role == null || role.isEmpty()) {
-            throw new ChaincodeException("Die Rolle des Benutzers ist nicht im Zertifikat gesetzt.", PharmacyErrors.INSUFFICIENT_PERMISSIONS.toString());
-        }
-        return role;
-    }
-
-    private <T> T getAsset(final ChaincodeStub stub, final String key, final Class<T> clazz, final PharmacyErrors error) {
-        final String json = stub.getStringState(key);
-        if (json == null || json.isEmpty()) {
-            throw new ChaincodeException(String.format("Asset mit Schlüssel %s nicht gefunden", key), error.toString());
-        }
-        try {
-            return GENSON.deserialize(json, clazz);
-        } catch (Exception e) {
-            throw new ChaincodeException("Fehler beim Deserialisieren von Asset " + key, PharmacyErrors.ASSET_DESERIALIZATION_FAILED.toString());
-        }
+        INVALID_JSON
     }
 
     /**
-     * Erzeugt eine deterministische, zeitbasierte UUID (Version 5)
-     * aus der Enrollment-ID und der Transaktions-ID, um sicherzustellen,
-     * dass alle Peers zum selben Ergebnis kommen.
+     * Initialisiert das Ledger mit Beispiel-Akteuren, Medikamenteninformationen, Chargen und Medikamenteneinheiten.
+     * Dies ist nützlich für Entwicklungs- und Testzwecke.
+     *
+     * @param ctx Der Transaktionskontext.
      */
-    private String generateDeterministicUUID(final String enrollmentId, final String txId) {
+    // Beispielausführung: {"function":"initLedger","Args":[]}
+    @Transaction()
+    public void initLedger(final Context ctx) {
+        ChaincodeStub stub = ctx.getStub();
+        String txId = stub.getTxId();
+
+        // Beispiel-Akteure
+        // Behörde
+        // Der behördeAdmin wird weiterhin mit einer festen ID erstellt,
+        // da er der "System"-Akteur ist, der andere Akteure genehmigt.
+        // Seine certId sollte später mit der tatsächlichen Admin-Zertifikat-ID übereinstimmen.
+        Actor behorde = new Actor.Builder()
+                .actorId("behoerdeAdmin")
+                .description("Zentrale Arzneimittelbehörde")
+                .mspId("BehoerdeMSP")
+                .role("behoerde")
+                .status("approved")
+                .approvedBy("system")
+                .certId("certBehoerde1") // Muss mit der tatsächlichen CA-Registrierungs-ID des Behörden-Admins übereinstimmen
+                .build();
+        stub.putState(behorde.getActorId(), behorde.toJSONString().getBytes(StandardCharsets.UTF_8));
+
+        // Hersteller
+        // Für reale Akteure wird die actorId nun als UUID generiert.
+        String hersteller1CertId = "hersteller001Identity"; // Dies muss der CN des Zertifikats entsprechen
+        String hersteller1ActorId = generateDeterministicUUID(hersteller1CertId, txId + "hersteller1Seed");
+        Actor hersteller1 = new Actor.Builder()
+                .actorId(hersteller1ActorId)
+                .description("PharmaCorp GmbH")
+                .mspId("HerstellerMSP")
+                .role("hersteller")
+                .status("approved")
+                .approvedBy(behorde.getActorId())
+                .certId(hersteller1CertId)
+                .build();
+        stub.putState(hersteller1.getActorId(), hersteller1.toJSONString().getBytes(StandardCharsets.UTF_8));
+
+        // Großhändler
+        String grosshaendler1CertId = "grosshaendler001Identity";
+        String grosshaendler1ActorId = generateDeterministicUUID(grosshaendler1CertId, txId + "grosshaendler1Seed");
+        Actor grosshaendler1 = new Actor.Builder()
+                .actorId(grosshaendler1ActorId)
+                .description("MediDistributor AG")
+                .mspId("GrosshaendlerMSP")
+                .role("grosshaendler")
+                .status("approved")
+                .approvedBy(behorde.getActorId())
+                .certId(grosshaendler1CertId)
+                .build();
+        stub.putState(grosshaendler1.getActorId(), grosshaendler1.toJSONString().getBytes(StandardCharsets.UTF_8));
+
+        // Apotheke
+        String apotheke1CertId = "apotheke001Identity";
+        String apotheke1ActorId = generateDeterministicUUID(apotheke1CertId, txId + "apotheke1Seed");
+        Actor apotheke1 = new Actor.Builder()
+                .actorId(apotheke1ActorId)
+                .description("Stadt Apotheke")
+                .mspId("ApothekeMSP")
+                .role("apotheke")
+                .status("approved")
+                .approvedBy(behorde.getActorId())
+                .certId(apotheke1CertId)
+                .build();
+        stub.putState(apotheke1.getActorId(), apotheke1.toJSONString().getBytes(StandardCharsets.UTF_8));
+
+
+        // Beispiel-Medikamenteninformationen
+        // ID wird vom Chaincode generiert
+        String drug1Id = generateDeterministicUUID(hersteller1.getActorId(), txId + "Paracetamol500mg");
+        DrugInfo drug1 = new DrugInfo(drug1Id, "01234567890128", "Paracetamol 500mg", hersteller1.getActorId(), "Ein klassisches Schmerzmittel", "active");
+        stub.putState(drug1.getId(), drug1.toJSONString().getBytes(StandardCharsets.UTF_8));
+
+        String drug2Id = generateDeterministicUUID(hersteller1.getActorId(), txId + "Ibuprofen400mg");
+        DrugInfo drug2 = new DrugInfo(drug2Id, "01234567890135", "Ibuprofen 400mg", hersteller1.getActorId(), "Entzündungshemmendes Medikament", "active");
+        stub.putState(drug2.getId(), drug2.toJSONString().getBytes(StandardCharsets.UTF_8));
+
+        // Beispiel-Chargen
+        // ID wird vom Chaincode generiert
+        String batch1Id = generateDeterministicUUID(hersteller1.getActorId(), txId + drug1.getId() + "Q12023");
+        Batch batch1 = new Batch(batch1Id, drug1.getId(), 1000, hersteller1.getActorId(), "Produktionscharge Q1 2023 Paracetamol", List.of("analgetisch", "rezeptfrei"));
+        stub.putState(batch1.getId(), batch1.toJSONString().getBytes(StandardCharsets.UTF_8));
+
+        String batch2Id = generateDeterministicUUID(hersteller1.getActorId(), txId + drug2.getId() + "Q22023");
+        Batch batch2 = new Batch(batch2Id, drug2.getId(), 500, hersteller1.getActorId(), "Produktionscharge Q2 2023 Ibuprofen", List.of("entzündungshemmend"));
+        stub.putState(batch2.getId(), batch2.toJSONString().getBytes(StandardCharsets.UTF_8));
+
+        // Beispiel-Medikamenteneinheiten
+        // ID wird vom Chaincode generiert
+        String drugUnit1Id = generateDeterministicUUID(hersteller1.getActorId(), txId + batch1.getId() + "Unit_A");
+        DrugUnit drugUnit1 = new DrugUnit.Builder()
+                .id(drugUnit1Id)
+                .batchId(batch1.getId())
+                .drugId(drug1.getId())
+                .owner(hersteller1.getActorId())
+                .manufacturerId(hersteller1.getActorId())
+                .description("Einzelpackung Paracetamol - Box A")
+                .tags(List.of("klein", "originalverpackt"))
+                .currentState("manufactured")
+                .build();
+        stub.putState(drugUnit1.getId(), drugUnit1.toJSONString().getBytes(StandardCharsets.UTF_8));
+
+        String drugUnit2Id = generateDeterministicUUID(hersteller1.getActorId(), txId + batch1.getId() + "Unit_B");
+        DrugUnit drugUnit2 = new DrugUnit.Builder()
+                .id(drugUnit2Id)
+                .batchId(batch1.getId())
+                .drugId(drug1.getId())
+                .owner(hersteller1.getActorId())
+                .manufacturerId(hersteller1.getActorId())
+                .description("Einzelpackung Paracetamol - Box B")
+                .tags(List.of("klein", "originalverpackt"))
+                .currentState("manufactured")
+                .build();
+        stub.putState(drugUnit2.getId(), drugUnit2.toJSONString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Erstellt einen neuen Akteur im Ledger.
+     * Nur ein Akteur mit der Rolle 'behoerde' kann einen neuen Akteur erstellen.
+     * Der Status des neuen Akteurs ist initial 'pending'. Die Genehmigung muss separat erfolgen.
+     * Die actorId wird automatisch generiert.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param description Der Alias/die Beschreibung des Akteurs.
+     * @param role Die Rolle des Akteurs (z.B. "hersteller", "grosshaendler", "apotheke", "behoerde").
+     * @param certId Die Zertifikat-ID des Akteurs (vom Client Identity des Aufrufers abgeleitet). Dies dient als primäre Verknüpfung zur Fabric-Identität.
+     * @param approvedBy Die ID des Akteurs, der die Erstellung genehmigt.
+     * @return Der neu erstellte Akteur als JSON-String.
+     */
+    // Beispielausführung (als Behörde, vorausgesetzt behördeAdmin ist bereits genehmigt):
+    // {"function":"createActor","Args":["Neue Apotheke Süd", "apotheke", "CN=apothekeUser1::", "behoerdeAdmin"]}
+    @Transaction()
+    public String createActor(final Context ctx, final String description, final String role, final String certId, final String approvedBy) {
+        ChaincodeStub stub = ctx.getStub();
+        Actor invoker = getCurrentActor(ctx);
+
+        if (!"behoerde".equals(invoker.getRole())) {
+            throw new ChaincodeException("Nur die Behörde kann neue Akteure registrieren.", PharmacyErrors.PERMISSION_DENIED.toString());
+        }
+
+        // Eine eindeutige ID für den Akteur generieren, basierend auf der certId und der TxId
+        String actorId = generateDeterministicUUID(certId, stub.getTxId() + description);
+
+        // Prüfen, ob Akteur mit dieser generierten ID bereits existiert (sehr unwahrscheinlich bei UUID)
+        if (actorExists(ctx, actorId)) {
+            throw new ChaincodeException(String.format("Akteur mit generierter ID %s existiert bereits. Dies sollte nicht passieren.", actorId), PharmacyErrors.ACTOR_ALREADY_EXISTS.toString());
+        }
+
+        Actor newActor = new Actor.Builder()
+                .actorId(actorId)
+                .description(description)
+                .mspId(ctx.getClientIdentity().getMSPID()) // MSPID des aufrufenden Akteurs
+                .role(role)
+                .status("pending") // Standardmäßig 'pending'
+                .approvedBy(approvedBy)
+                .certId(certId) // Die Zertifikat-ID bleibt hier, um die Identität zu verknüpfen
+                .build();
+
+        stub.putState(actorId, newActor.toJSONString().getBytes(StandardCharsets.UTF_8));
+        return newActor.toJSONString();
+    }
+
+    /**
+     * Genehmigt einen ausstehenden Akteur.
+     * Nur ein Akteur mit der Rolle 'behoerde' kann einen Akteur genehmigen.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param actorId Die ID des zu genehmigenden Akteurs.
+     * @return Der genehmigte Akteur als JSON-String.
+     */
+    // Beispielausführung (als Behörde): {"function":"approveActor","Args":["UUID-des-neuen-Akteurs"]}
+    @Transaction()
+    public String approveActor(final Context ctx, final String actorId) {
+        ChaincodeStub stub = ctx.getStub();
+        Actor invoker = getCurrentActor(ctx);
+
+        if (!"behoerde".equals(invoker.getRole())) {
+            throw new ChaincodeException("Nur die Behörde kann Akteure genehmigen.", PharmacyErrors.PERMISSION_DENIED.toString());
+        }
+
+        byte[] actorState = stub.getState(actorId);
+        if (actorState == null || actorState.length == 0) {
+            throw new ChaincodeException(String.format("Akteur mit ID %s nicht gefunden.", actorId), PharmacyErrors.ACTOR_NOT_FOUND.toString());
+        }
+
+        Actor actorToApprove = genson.deserialize(new String(actorState, StandardCharsets.UTF_8), Actor.class);
+
+        if (!"pending".equals(actorToApprove.getStatus())) {
+            throw new ChaincodeException(String.format("Akteur mit ID %s hat nicht den Status 'pending'.", actorId), PharmacyErrors.INVALID_ARGUMENT.toString());
+        }
+
+        Actor approvedActor = new Actor.Builder()
+                .actorId(actorToApprove.getActorId())
+                .description(actorToApprove.getDescription())
+                .mspId(actorToApprove.getMspId())
+                .role(actorToApprove.getRole())
+                .status("approved")
+                .approvedBy(invoker.getActorId())
+                .certId(actorToApprove.getCertId())
+                .build();
+
+        stub.putState(actorId, approvedActor.toJSONString().getBytes(StandardCharsets.UTF_8));
+        return approvedActor.toJSONString();
+    }
+
+
+    /**
+     * Liest die Details eines Akteurs aus dem Ledger.
+     * Jeder genehmigte Akteur kann die Details anderer Akteure lesen.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param actorId Die ID des zu lesenden Akteurs.
+     * @return Der Akteur als JSON-String.
+     */
+    // Beispielausführung: {"function":"readActor","Args":["UUID-des-Herstellers"]}
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String readActor(final Context ctx, final String actorId) {
+        ChaincodeStub stub = ctx.getStub();
+        getCurrentActor(ctx); // Autorisierungsprüfung
+
+        byte[] actorState = stub.getState(actorId);
+
+        if (actorState == null || actorState.length == 0) {
+            throw new ChaincodeException(String.format("Akteur mit ID %s nicht gefunden.", actorId), PharmacyErrors.ACTOR_NOT_FOUND.toString());
+        }
+
+        return new String(actorState, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Überprüft, ob ein Akteur mit der gegebenen ID existiert.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param actorId Die ID des Akteurs.
+     * @return True, wenn der Akteur existiert, sonst False.
+     */
+    // Beispielausführung: {"function":"actorExists","Args":["UUID-des-Herstellers"]}
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public boolean actorExists(final Context ctx, final String actorId) {
+        ChaincodeStub stub = ctx.getStub();
+        return stub.getState(actorId).length > 0;
+    }
+
+    /**
+     * Erstellt eine neue Medikamenteninformation im Ledger.
+     * Nur ein Akteur mit der Rolle 'hersteller' kann Medikamenteninformationen erstellen.
+     * Die ID der DrugInfo wird automatisch generiert.
+     * Die erstellte DrugInfo erhält den Status "active".
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param gtin Die GTIN des Medikaments.
+     * @param name Der Name des Medikaments.
+     * @param description Die Beschreibung des Medikaments (Alias).
+     * @return Die neu erstellte DrugInfo als JSON-String.
+     */
+    // Beispielausführung (als Hersteller): {"function":"createDrugInfo","Args":["01234567890142", "Aspirin", "Kopfschmerztablette 500mg"]}
+    @Transaction()
+    public String createDrugInfo(final Context ctx, final String gtin, final String name, final String description) {
+        ChaincodeStub stub = ctx.getStub();
+        Actor invoker = getCurrentActor(ctx);
+
+        if (!"hersteller".equals(invoker.getRole())) {
+            throw new ChaincodeException("Nur Hersteller können Medikamenteninformationen erstellen.", PharmacyErrors.PERMISSION_DENIED.toString());
+        }
+
+        String drugInfoId = generateDeterministicUUID(invoker.getActorId(), stub.getTxId() + gtin);
+
+        // Obwohl unwahrscheinlich mit UUIDs, ist diese Prüfung wichtig, falls die Determinismus-Quelle nicht perfekt ist.
+        if (drugInfoExists(ctx, drugInfoId)) {
+            throw new ChaincodeException(String.format("Medikamenteninformation mit generierter ID %s existiert bereits. Dies sollte nicht passieren.", drugInfoId), PharmacyErrors.DRUG_INFO_ALREADY_EXISTS.toString());
+        }
+
+        DrugInfo drugInfo = new DrugInfo(drugInfoId, gtin, name, invoker.getActorId(), description, "active");
+        stub.putState(drugInfo.getId(), drugInfo.toJSONString().getBytes(StandardCharsets.UTF_8));
+        return drugInfo.toJSONString();
+    }
+
+    /**
+     * Aktualisiert eine bestehende Medikamenteninformation im Ledger.
+     * Nur der ursprüngliche Hersteller kann seine eigenen Medikamenteninformationen aktualisieren.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param id Die ID der zu aktualisierenden Medikamenteninformation.
+     * @param gtin Die aktualisierte GTIN.
+     * @param name Der aktualisierte Name.
+     * @param description Die aktualisierte Beschreibung (Alias).
+     * @param status Der aktualisierte Status.
+     * @return Die aktualisierte DrugInfo als JSON-String.
+     */
+    // Beispielausführung (als Hersteller): {"function":"updateDrugInfo","Args":["UUID-der-DrugInfo", "01234567890143", "Aspirin Forte", "Stärkere Kopfschmerztablette", "active"]}
+    @Transaction()
+    public String updateDrugInfo(final Context ctx, final String id, final String gtin, final String name, final String description, final String status) {
+        ChaincodeStub stub = ctx.getStub();
+        Actor invoker = getCurrentActor(ctx);
+
+        byte[] drugInfoState = stub.getState(id);
+        if (drugInfoState == null || drugInfoState.length == 0) {
+            throw new ChaincodeException(String.format("Medikamenteninformation mit ID %s nicht gefunden.", id), PharmacyErrors.DRUG_INFO_NOT_FOUND.toString());
+        }
+
+        DrugInfo existingDrugInfo = genson.deserialize(new String(drugInfoState, StandardCharsets.UTF_8), DrugInfo.class);
+
+        if (!"hersteller".equals(invoker.getRole()) || !invoker.getActorId().equals(existingDrugInfo.getManufacturerId())) {
+            throw new ChaincodeException("Nur der Hersteller kann seine Medikamenteninformationen aktualisieren.", PharmacyErrors.PERMISSION_DENIED.toString());
+        }
+
+        // Konstruktor hat 6 Parameter, was konform ist.
+        DrugInfo updatedDrugInfo = new DrugInfo(id, gtin, name, existingDrugInfo.getManufacturerId(), description, status);
+        stub.putState(id, updatedDrugInfo.toJSONString().getBytes(StandardCharsets.UTF_8));
+        return updatedDrugInfo.toJSONString();
+    }
+
+    /**
+     * Liest die Details einer Medikamenteninformation aus dem Ledger.
+     * Jeder genehmigte Akteur kann Medikamenteninformationen lesen.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param id Die ID der Medikamenteninformation.
+     * @return Die DrugInfo als JSON-String.
+     */
+    // Beispielausführung: {"function":"readDrugInfo","Args":["UUID-der-DrugInfo"]}
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String readDrugInfo(final Context ctx, final String id) {
+        ChaincodeStub stub = ctx.getStub();
+        getCurrentActor(ctx); // Autorisierungsprüfung
+
+        byte[] drugInfoState = stub.getState(id);
+        if (drugInfoState == null || drugInfoState.length == 0) {
+            throw new ChaincodeException(String.format("Medikamenteninformation mit ID %s nicht gefunden.", id), PharmacyErrors.DRUG_INFO_NOT_FOUND.toString());
+        }
+        return new String(drugInfoState, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Überprüft, ob eine Medikamenteninformation mit der gegebenen ID existiert.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param id Die ID der Medikamenteninformation.
+     * @return True, wenn die Medikamenteninformation existiert, sonst False.
+     */
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public boolean drugInfoExists(final Context ctx, final String id) {
+        ChaincodeStub stub = ctx.getStub();
+        return stub.getState(id).length > 0;
+    }
+
+    /**
+     * Erstellt eine neue Charge eines Medikaments.
+     * Nur ein Akteur mit der Rolle 'hersteller' kann Chargen erstellen,
+     * und nur für Medikamenteninformationen, die sie selbst hergestellt haben.
+     * Die ID der Charge wird automatisch generiert.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param drugId Die ID der zugehörigen Medikamenteninformation.
+     * @param quantity Die Menge der Medikamente in dieser Charge.
+     * @param description Eine Beschreibung der Charge (Alias).
+     * @param tagsJson Ein JSON-String, der eine Liste von Tags darstellt (z.B. "[\"tag1\", \"tag2\"]").
+     * @return Die neu erstellte Batch als JSON-String.
+     */
+    // Beispielausführung (als Hersteller): {"function":"createBatch","Args":["UUID-der-DrugInfo", "500", "Neue Kleinpackung", "[\"schnellelieferung\"]"]}
+    @Transaction()
+    public String createBatch(final Context ctx, final String drugId, final long quantity, final String description, final String tagsJson) {
+        ChaincodeStub stub = ctx.getStub();
+        Actor invoker = getCurrentActor(ctx);
+
+        if (!"hersteller".equals(invoker.getRole())) {
+            throw new ChaincodeException("Nur Hersteller können Chargen erstellen.", PharmacyErrors.PERMISSION_DENIED.toString());
+        }
+
+        byte[] drugInfoState = stub.getState(drugId);
+        if (drugInfoState == null || drugInfoState.length == 0) {
+            throw new ChaincodeException(String.format("Medikamenteninformation mit ID %s nicht gefunden.", drugId), PharmacyErrors.DRUG_INFO_NOT_FOUND.toString());
+        }
+        DrugInfo drugInfo = genson.deserialize(new String(drugInfoState, StandardCharsets.UTF_8), DrugInfo.class);
+
+        if (!invoker.getActorId().equals(drugInfo.getManufacturerId())) {
+            throw new ChaincodeException(String.format("Hersteller %s ist nicht der Hersteller von Medikament %s.", invoker.getActorId(), drugId), PharmacyErrors.PERMISSION_DENIED.toString());
+        }
+
+        String batchId = generateDeterministicUUID(invoker.getActorId(), stub.getTxId() + drugId + quantity);
+
+        if (batchExists(ctx, batchId)) {
+            throw new ChaincodeException(String.format("Charge mit generierter ID %s existiert bereits. Dies sollte nicht passieren.", batchId), PharmacyErrors.BATCH_ALREADY_EXISTS.toString());
+        }
+
+        List<String> tags;
         try {
-            String name = enrollmentId + txId;
+            tags = genson.deserialize(tagsJson, List.class);
+        } catch (Exception e) {
+            throw new ChaincodeException("Ungültiges Tags-JSON-Format: " + e.getMessage(), PharmacyErrors.INVALID_JSON.toString());
+        }
+
+        // Konstruktor hat 6 Parameter, was konform ist.
+        Batch batch = new Batch(batchId, drugId, quantity, invoker.getActorId(), description, tags);
+        stub.putState(batch.getId(), batch.toJSONString().getBytes(StandardCharsets.UTF_8));
+        return batch.toJSONString();
+    }
+
+    /**
+     * Liest die Details einer Charge aus dem Ledger.
+     * Jeder genehmigte Akteur kann Chargen lesen.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param batchId Die ID der Charge.
+     * @return Die Batch als JSON-String.
+     */
+    // Beispielausführung: {"function":"readBatch","Args":["UUID-der-Batch"]}
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String readBatch(final Context ctx, final String batchId) {
+        ChaincodeStub stub = ctx.getStub();
+        getCurrentActor(ctx); // Autorisierungsprüfung
+
+        byte[] batchState = stub.getState(batchId);
+        if (batchState == null || batchState.length == 0) {
+            throw new ChaincodeException(String.format("Charge mit ID %s nicht gefunden.", batchId), PharmacyErrors.BATCH_NOT_FOUND.toString());
+        }
+        return new String(batchState, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Überprüft, ob eine Charge mit der gegebenen ID existiert.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param batchId Die ID der Charge.
+     * @return True, wenn die Charge existiert, sonst False.
+     */
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public boolean batchExists(final Context ctx, final String batchId) {
+        ChaincodeStub stub = ctx.getStub();
+        return stub.getState(batchId).length > 0;
+    }
+
+    /**
+     * Erstellt eine einzelne Medikamenteneinheit.
+     * Nur der Hersteller der zugehörigen Charge kann Medikamenteneinheiten erstellen.
+     * Die ID der DrugUnit wird deterministisch generiert.
+     * Der Eigentümer ist initial der Hersteller, und der Status ist 'manufactured'.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param batchId Die ID der Charge, zu der diese Einheit gehört.
+     * @param description Eine Beschreibung der Medikamenteneinheit (Alias).
+     * @param tagsJson Ein JSON-String, der eine Liste von Tags darstellt.
+     * @return Die neu erstellte DrugUnit als JSON-String.
+     */
+    // Beispielausführung (als Hersteller): {"function":"createDrugUnit","Args":["UUID-der-Batch", "Verkaufspackung", "[\"blister\",\"versiegelt\"]"]}
+    @Transaction()
+    public String createDrugUnit(final Context ctx, final String batchId, final String description, final String tagsJson) {
+        ChaincodeStub stub = ctx.getStub();
+        Actor invoker = getCurrentActor(ctx);
+
+        byte[] batchState = stub.getState(batchId);
+        if (batchState == null || batchState.length == 0) {
+            throw new ChaincodeException(String.format("Charge mit ID %s nicht gefunden.", batchId), PharmacyErrors.BATCH_NOT_FOUND.toString());
+        }
+        Batch batch = genson.deserialize(new String(batchState, StandardCharsets.UTF_8), Batch.class);
+
+        if (!"hersteller".equals(invoker.getRole()) || !invoker.getActorId().equals(batch.getManufacturerId())) {
+            throw new ChaincodeException(String.format("Akteur %s ist nicht der Hersteller der Charge %s.", invoker.getActorId(), batchId), PharmacyErrors.PERMISSION_DENIED.toString());
+        }
+
+        // Deterministic UUID based on invoker ID, batchId and transaction ID
+        String drugUnitId = generateDeterministicUUID(invoker.getActorId(), stub.getTxId() + batchId + description);
+
+        if (drugUnitExists(ctx, drugUnitId)) {
+            throw new ChaincodeException(String.format("Medikamenteneinheit mit generierter ID %s existiert bereits. Dies sollte nicht passieren.", drugUnitId), PharmacyErrors.DRUG_UNIT_ALREADY_EXISTS.toString());
+        }
+
+        List<String> tags;
+        try {
+            tags = genson.deserialize(tagsJson, List.class);
+        } catch (Exception e) {
+            throw new ChaincodeException("Ungültiges Tags-JSON-Format: " + e.getMessage(), PharmacyErrors.INVALID_JSON.toString());
+        }
+
+        // Das Builder-Pattern von DrugUnit macht die Konstruktorparameter-Anzahl irrelevant für diese Regel.
+        DrugUnit drugUnit = new DrugUnit.Builder()
+                .id(drugUnitId)
+                .batchId(batch.getId())
+                .drugId(batch.getDrugId())
+                .owner(invoker.getActorId())
+                .manufacturerId(batch.getManufacturerId())
+                .description(description)
+                .tags(tags)
+                .currentState("manufactured")
+                .build();
+
+        stub.putState(drugUnitId, drugUnit.toJSONString().getBytes(StandardCharsets.UTF_8));
+        return drugUnit.toJSONString();
+    }
+
+    /**
+     * Überträgt den Besitz einer Medikamenteneinheit an einen neuen Eigentümer.
+     * Nur der aktuelle Eigentümer kann den Besitz übertragen.
+     * Der neue Eigentümer muss ein 'grosshaendler' oder 'apotheke' sein und genehmigt sein.
+     * Der Status der Medikamenteneinheit wird auf 'in_transit' gesetzt.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param drugUnitId Die ID der Medikamenteneinheit.
+     * @param newOwnerId Die ID des neuen Eigentümers.
+     * @return Die aktualisierte DrugUnit als JSON-String.
+     */
+    // Beispielausführung (als aktueller Besitzer): {"function":"transferDrugUnit","Args":["UUID-der-DrugUnit", "UUID-des-Grosshändlers"]}
+    @Transaction()
+    public String transferDrugUnit(final Context ctx, final String drugUnitId, final String newOwnerId) {
+        ChaincodeStub stub = ctx.getStub();
+        Actor invoker = getCurrentActor(ctx);
+
+        byte[] drugUnitState = stub.getState(drugUnitId);
+        if (drugUnitState == null || drugUnitState.length == 0) {
+            throw new ChaincodeException(String.format("Medikamenteneinheit mit ID %s nicht gefunden.", drugUnitId), PharmacyErrors.DRUG_UNIT_NOT_FOUND.toString());
+        }
+        DrugUnit existingDrugUnit = genson.deserialize(new String(drugUnitState, StandardCharsets.UTF_8), DrugUnit.class);
+
+        if (!invoker.getActorId().equals(existingDrugUnit.getOwner())) {
+            throw new ChaincodeException("Nur der aktuelle Eigentümer kann eine Medikamenteneinheit übertragen.", PharmacyErrors.PERMISSION_DENIED.toString());
+        }
+
+        byte[] newOwnerState = stub.getState(newOwnerId);
+        if (newOwnerState == null || newOwnerState.length == 0) {
+            throw new ChaincodeException(String.format("Neuer Eigentümer mit ID %s nicht gefunden.", newOwnerId), PharmacyErrors.ACTOR_NOT_FOUND.toString());
+        }
+        Actor newOwner = genson.deserialize(new String(newOwnerState, StandardCharsets.UTF_8), Actor.class);
+
+        if (!"approved".equals(newOwner.getStatus())) {
+            throw new ChaincodeException(String.format("Neuer Eigentümer %s ist nicht genehmigt.", newOwnerId), PharmacyErrors.PERMISSION_DENIED.toString());
+        }
+        if (!("grosshaendler".equals(newOwner.getRole()) || "apotheke".equals(newOwner.getRole()))) {
+            throw new ChaincodeException(String.format("Neuer Eigentümer %s hat keine gültige Rolle für den Transfer (muss Grosshändler oder Apotheke sein).", newOwnerId), PharmacyErrors.PERMISSION_DENIED.toString());
+        }
+
+        DrugUnit updatedDrugUnit = new DrugUnit.Builder()
+                .fromExistingDrugUnit(existingDrugUnit) // Kopiert alle bestehenden Werte
+                .owner(newOwnerId) // Neuer Eigentümer
+                .currentState("in_transit") // Status auf 'in_transit' gesetzt
+                .dispensedBy(null) // Zurücksetzen bei Transfer
+                .dispensedTo(null) // Zurücksetzen bei Transfer
+                .dispensingTimestamp(null) // Zurücksetzen bei Transfer
+                .build();
+
+        stub.putState(drugUnitId, updatedDrugUnit.toJSONString().getBytes(StandardCharsets.UTF_8));
+        return updatedDrugUnit.toJSONString();
+    }
+
+    /**
+     * Zeichnet die Abgabe einer Medikamenteneinheit an einen Endverbraucher oder Patienten auf.
+     * Nur ein Akteur mit der Rolle 'apotheke' kann diese Transaktion ausführen.
+     * Der Status der Medikamenteneinheit wird auf 'dispensed' gesetzt.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param drugUnitId Die ID der Medikamenteneinheit.
+     * @param dispensedToId Die ID des Empfängers (Patient, Krankenhaus etc.).
+     * @return Die aktualisierte DrugUnit als JSON-String.
+     */
+    // Beispielausführung (als Apotheker): {"function":"dispenseDrugUnit","Args":["UUID-der-DrugUnit", "patient123"]}
+    @Transaction()
+    public String dispenseDrugUnit(final Context ctx, final String drugUnitId, final String dispensedToId) {
+        ChaincodeStub stub = ctx.getStub();
+        Actor invoker = getCurrentActor(ctx);
+
+        if (!"apotheke".equals(invoker.getRole())) {
+            throw new ChaincodeException("Nur Apotheken können Medikamenteneinheiten abgeben.", PharmacyErrors.PERMISSION_DENIED.toString());
+        }
+
+        byte[] drugUnitState = stub.getState(drugUnitId);
+        if (drugUnitState == null || drugUnitState.length == 0) {
+            throw new ChaincodeException(String.format("Medikamenteneinheit mit ID %s nicht gefunden.", drugUnitId), PharmacyErrors.DRUG_UNIT_NOT_FOUND.toString());
+        }
+        DrugUnit existingDrugUnit = genson.deserialize(new String(drugUnitState, StandardCharsets.UTF_8), DrugUnit.class);
+
+        if (!invoker.getActorId().equals(existingDrugUnit.getOwner())) {
+            throw new ChaincodeException("Die abgebende Apotheke muss der aktuelle Eigentümer der Medikamenteneinheit sein.", PharmacyErrors.PERMISSION_DENIED.toString());
+        }
+        // Zusätzliche Prüfungen für den Status könnten hier hinzugefügt werden, je nach Geschäftslogik.
+
+        DrugUnit dispensedDrugUnit = new DrugUnit.Builder()
+                .fromExistingDrugUnit(existingDrugUnit)
+                .currentState("dispensed")
+                .dispensedBy(invoker.getActorId())
+                .dispensedTo(dispensedToId)
+                .dispensingTimestamp(Instant.now().toString()) // Aktueller Zeitstempel
+                .build();
+
+        stub.putState(drugUnitId, dispensedDrugUnit.toJSONString().getBytes(StandardCharsets.UTF_8));
+        return dispensedDrugUnit.toJSONString();
+    }
+
+
+    /**
+     * Fügt eine Temperaturmessung zu einer Medikamenteneinheit hinzu.
+     * Jeder genehmigte Akteur kann Temperaturmessungen hinzufügen.
+     * Die Temperaturmessung sollte ein String-Format sein, das Zeitstempel und Wert enthält (z.B. "2023-10-27T10:00:00Z_22.5C").
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param drugUnitId Die ID der Medikamenteneinheit.
+     * @param temperatureReading Die neue Temperaturmessung.
+     * @return Die aktualisierte DrugUnit als JSON-String.
+     */
+    // Beispielausführung: {"function":"addTemperatureReading","Args":["UUID-der-DrugUnit", "2023-10-27T11:00:00Z_23.0C"]}
+    @Transaction()
+    public String addTemperatureReading(final Context ctx, final String drugUnitId, final String temperatureReading) {
+        ChaincodeStub stub = ctx.getStub();
+        getCurrentActor(ctx); // Autorisierungsprüfung (jeder genehmigte Akteur kann dies tun)
+
+        byte[] drugUnitState = stub.getState(drugUnitId);
+        if (drugUnitState == null || drugUnitState.length == 0) {
+            throw new ChaincodeException(String.format("Medikamenteneinheit mit ID %s nicht gefunden.", drugUnitId), PharmacyErrors.DRUG_UNIT_NOT_FOUND.toString());
+        }
+        DrugUnit existingDrugUnit = genson.deserialize(new String(drugUnitState, StandardCharsets.UTF_8), DrugUnit.class);
+
+        // Erstellen einer modifizierbaren Liste von Temperaturmessungen
+        List<String> updatedTemperatureReadings = new ArrayList<>(existingDrugUnit.getTemperatureReadings());
+        updatedTemperatureReadings.add(temperatureReading);
+
+        DrugUnit updatedDrugUnit = new DrugUnit.Builder()
+                .fromExistingDrugUnit(existingDrugUnit) // Kopiert alle bestehenden Werte
+                .temperatureReadings(updatedTemperatureReadings) // Fügt neue Messung hinzu
+                .build();
+
+        stub.putState(drugUnitId, updatedDrugUnit.toJSONString().getBytes(StandardCharsets.UTF_8));
+        return updatedDrugUnit.toJSONString();
+    }
+
+
+    /**
+     * Liest die Details einer Medikamenteneinheit aus dem Ledger.
+     * Jeder genehmigte Akteur kann die Details einer Medikamenteneinheit lesen.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param drugUnitId Die ID der Medikamenteneinheit.
+     * @return Die DrugUnit als JSON-String.
+     */
+    // Beispielausführung: {"function":"readDrugUnit","Args":["UUID-der-DrugUnit"]}
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String readDrugUnit(final Context ctx, final String drugUnitId) {
+        ChaincodeStub stub = ctx.getStub();
+        getCurrentActor(ctx); // Autorisierungsprüfung
+
+        byte[] drugUnitState = stub.getState(drugUnitId);
+        if (drugUnitState == null || drugUnitState.length == 0) {
+            throw new ChaincodeException(String.format("Medikamenteneinheit mit ID %s nicht gefunden.", drugUnitId), PharmacyErrors.DRUG_UNIT_NOT_FOUND.toString());
+        }
+        return new String(drugUnitState, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Überprüft, ob eine Medikamenteneinheit mit der gegebenen ID existiert.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param drugUnitId Die ID der Medikamenteneinheit.
+     * @return True, wenn die Medikamenteneinheit existiert, sonst False.
+     */
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public boolean drugUnitExists(final Context ctx, final String drugUnitId) {
+        ChaincodeStub stub = ctx.getStub();
+        return stub.getState(drugUnitId).length > 0;
+    }
+
+    /**
+     * Führt eine Rich Query aus, um alle Medikamenteneinheiten zu finden, die einem bestimmten Besitzer gehören.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param ownerId Die ID des Besitzers.
+     * @return Eine JSON-Zeichenkette, die eine Liste von Medikamenteneinheiten darstellt.
+     */
+    // Beispielausführung: {"function":"queryDrugUnitsByOwner","Args":["UUID-des-Grosshändlers"]}
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String queryDrugUnitsByOwner(final Context ctx, final String ownerId) {
+        getCurrentActor(ctx); // Autorisierungsprüfung
+        String query = String.format("{\"selector\":{\"owner\":\"%s\"}}", ownerId);
+        return richQuery(ctx, query);
+    }
+
+    /**
+     * Führt eine Rich Query aus, um alle Medikamenteneinheiten für eine bestimmte Medikamenten-ID zu finden.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param drugId Die ID des Medikaments (aus DrugInfo).
+     * @return Eine JSON-Zeichenkette, die eine Liste von Medikamenteneinheiten darstellt.
+     */
+    // Beispielausführung: {"function":"queryDrugUnitsByDrugId","Args":["UUID-der-DrugInfo"]}
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String queryDrugUnitsByDrugId(final Context ctx, final String drugId) {
+        getCurrentActor(ctx); // Autorisierungsprüfung
+        String query = String.format("{\"selector\":{\"drugId\":\"%s\"}}", drugId);
+        return richQuery(ctx, query);
+    }
+
+    /**
+     * Ruft den Transaktionsverlauf für eine bestimmte Medikamenteneinheit ab.
+     * Dies zeigt alle Änderungen an diesem Asset über die Zeit.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param drugUnitId Die ID der Medikamenteneinheit.
+     * @return Eine JSON-Zeichenkette, die den Verlauf der Medikamenteneinheit darstellt.
+     */
+    // Beispielausführung: {"function":"getDrugUnitHistory","Args":["UUID-der-DrugUnit"]}
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String getDrugUnitHistory(final Context ctx, final String drugUnitId) {
+        ChaincodeStub stub = ctx.getStub();
+        getCurrentActor(ctx); // Autorisierungsprüfung
+
+        if (!drugUnitExists(ctx, drugUnitId)) {
+            throw new ChaincodeException(String.format("Medikamenteneinheit mit ID %s nicht gefunden.", drugUnitId), PharmacyErrors.DRUG_UNIT_NOT_FOUND.toString());
+        }
+
+        QueryResultsIterator<KeyModification> history = stub.getHistoryForKey(drugUnitId);
+        Iterator<KeyModification> iterator = history.iterator();
+        StringBuilder sb = new StringBuilder("[");
+        boolean first = true;
+        while (iterator.hasNext()) {
+            if (!first) {
+                sb.append(",");
+            }
+            KeyModification mod = iterator.next();
+            sb.append("{");
+            sb.append("\"TxId\":\"").append(mod.getTxId()).append("\",");
+            sb.append("\"Value\":").append(mod.getStringValue()).append(",");
+            sb.append("\"Timestamp\":\"").append(mod.getTimestamp().toString()).append("\",");
+            sb.append("\"IsDelete\":").append(mod.isDeleted());
+            sb.append("}");
+            first = false;
+        }
+        sb.append("]");
+        try {
+            history.close();
+        } catch (Exception e) {
+            throw new ChaincodeException("Fehler beim Schließen des Historie-Iterators: " + e.getMessage(), "HISTORY_ITERATOR_CLOSE_FAILED");
+        }
+        return sb.toString();
+    }
+
+
+    /**
+     * Hilfsfunktion zum Abrufen des aktuellen Akteurs basierend auf der Client-Identität.
+     * Überprüft, ob der Akteur im Ledger existiert und den Status 'approved' hat.
+     * Die ActorId wird aus der CertId des Clients abgeleitet, welche den Common Name (CN) enthält.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @return Die Actor-Instanz des aufrufenden Akteurs.
+     */
+    private Actor getCurrentActor(final Context ctx) {
+        ChaincodeStub stub = ctx.getStub();
+        String invokerCertId = ctx.getClientIdentity().getId(); // Beispiel: "CN=hersteller-user1::" oder "CN=behoerdeAdmin::"
+
+        // Extrahieren des Common Name (CN) als invokerActorId
+        String invokerActorId = extractCnFromCertId(invokerCertId);
+
+        // Sonderbehandlung für den initialen Admin, falls dessen CertId nicht dem typischen CN-Muster folgt
+        if ("".equals(invokerActorId) && invokerCertId.contains("admin")) {
+            // Dies ist ein Fallback und sollte idealerweise vermieden werden,
+            // indem der Admin mit einer klaren CN-Struktur registriert wird.
+            // Die "behoerdeAdmin"-ID ist ein fest definierter Akteur im Ledger.
+            invokerActorId = "behoerdeAdmin"; // Muss mit der in initLedger verwendeten ID übereinstimmen
+        }
+
+        if ("".equals(invokerActorId)) {
+            throw new ChaincodeException("Konnte Akteur-ID aus Client-Zertifikat nicht ableiten. Stellen Sie sicher, dass das Zertifikat einen Common Name (CN) enthält.", PharmacyErrors.INVALID_ARGUMENT.toString());
+        }
+
+        byte[] actorState = stub.getState(invokerActorId);
+
+        if (actorState == null || actorState.length == 0) {
+            throw new ChaincodeException(String.format("Aufrufender Akteur mit ID %s nicht im Ledger gefunden. Registrierung und Genehmigung erforderlich.", invokerActorId), PharmacyErrors.ACTOR_NOT_FOUND.toString());
+        }
+
+        Actor invoker = genson.deserialize(new String(actorState, StandardCharsets.UTF_8), Actor.class);
+
+        // Zusätzliche Prüfung: Stellen Sie sicher, dass die certId im Ledger mit der aktuellen übereinstimmt,
+        // um Spoofing zu verhindern, falls actorId nicht direkt von der CertId abgeleitet wird,
+        // oder wenn mehrere CertIds zur gleichen ActorId führen könnten (was vermieden werden sollte).
+        if (!invokerCertId.equals(invoker.getCertId())) {
+            // Dies ist eine starke Sicherheitsmaßnahme.
+            // Sie stellt sicher, dass der Akteur, der die Transaktion aufruft,
+            // tatsächlich derjenige ist, der im Ledger mit dieser ActorId und CertId verknüpft ist.
+            throw new ChaincodeException(String.format("Zertifikat-ID des Aufrufers stimmt nicht mit der für Akteur %s registrierten CertId überein.", invokerActorId), PharmacyErrors.PERMISSION_DENIED.toString());
+        }
+
+        if (!"approved".equals(invoker.getStatus())) {
+            throw new ChaincodeException(String.format("Akteur mit ID %s ist nicht genehmigt und darf keine Transaktionen ausführen. Status: %s", invokerActorId, invoker.getStatus()), PharmacyErrors.PERMISSION_DENIED.toString());
+        }
+        return invoker;
+    }
+
+    /**
+     * Extrahiert den Common Name (CN) aus einer Zertifikats-ID.
+     * Beispiel: "CN=hersteller-user1::" -> "hersteller-user1"
+     *
+     * @param certId Die Zertifikats-ID.
+     * @return Der extrahierte Common Name oder ein leerer String, wenn nicht gefunden.
+     */
+    private String extractCnFromCertId(final String certId) {
+        // Regex für "CN=beliebiger_text::"
+        Pattern pattern = Pattern.compile("CN=([^:]+)::");
+        Matcher matcher = pattern.matcher(certId);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return "";
+    }
+
+    /**
+     * Erzeugt eine deterministische UUID basierend auf einer Seed-Zeichenkette und der Transaktions-ID.
+     * Dies stellt sicher, dass dieselbe Eingabe immer dieselbe UUID erzeugt.
+     * Die Seed-Zeichenkette sollte eindeutig sein (z.B. Akteur-ID + relevante Daten des Assets).
+     *
+     * @param seedString Eine Zeichenkette, die zur Generierung der UUID verwendet wird (z.B. Akteur-ID + TxId + weitere eindeutige Daten).
+     * @param txId Die Transaktions-ID, um weitere Eindeutigkeit hinzuzufügen.
+     * @return Eine deterministische UUID als String.
+     * @throws ChaincodeException Wenn ein Fehler bei der UUID-Generierung auftritt.
+     */
+    private String generateDeterministicUUID(final String seedString, final String txId) {
+        try {
+            String name = seedString + txId;
             byte[] nameBytes = name.getBytes(StandardCharsets.UTF_8);
             MessageDigest md = MessageDigest.getInstance("SHA-1");
             byte[] hash = md.digest(nameBytes);
 
+            // Setze die Version auf 5 (SHA-1)
             hash[6] &= 0x0f;
-            hash[6] |= 0x50;
+            hash[6] |= 0x50; // Version 5 = 0101b
+
+            // Setze die Variante auf RFC 4122
             hash[8] &= 0x3f;
-            hash[8] |= 0x80;
+            hash[8] |= 0x80; // Variant 10xx = 1000b
 
             return UUID.nameUUIDFromBytes(hash).toString();
         } catch (NoSuchAlgorithmException e) {
@@ -388,6 +902,13 @@ public final class PharmacyChaincode implements ContractInterface {
         }
     }
 
+    /**
+     * Führt eine CouchDB Rich Query auf dem Ledger aus.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param query Der CouchDB Query-String.
+     * @return Eine JSON-Array-Zeichenkette der Abfrageergebnisse.
+     */
     private String richQuery(final Context ctx, final String query) {
         final ChaincodeStub stub = ctx.getStub();
         final StringBuilder sb = new StringBuilder("[");

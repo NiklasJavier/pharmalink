@@ -10,15 +10,20 @@ public final class DrugInfo {
     private static final Genson GENSON = new Genson();
 
     @Property()
-    private final String id;
+    private final String id; // UUID
+
     @Property()
     private final String gtin;
+
     @Property()
-    private final String name;
+    private final String name; // Name des Medikaments (könnte auch als Teil der Beschreibung angesehen werden)
+
     @Property()
     private final String manufacturerId;
+
     @Property()
-    private final String description;
+    private final String description; // Zusätzliche Beschreibung / Alias
+
     @Property()
     private final String status;
 
@@ -31,6 +36,7 @@ public final class DrugInfo {
         this.status = "";
     }
 
+    // Konstruktor mit 6 Parametern (konform)
     public DrugInfo(final String id, final String gtin, final String name, final String manufacturerId, final String description, final String status) {
         this.id = id;
         this.gtin = gtin;
@@ -87,5 +93,17 @@ public final class DrugInfo {
     @Override
     public int hashCode() {
         return Objects.hash(getId(), getGtin(), getName(), getManufacturerId(), getDescription(), getStatus());
+    }
+
+    @Override
+    public String toString() {
+        return "DrugInfo{"
+                + "id='" + id + '\''
+                + ", gtin='" + gtin + '\''
+                + ", name='" + name + '\''
+                + ", manufacturerId='" + manufacturerId + '\''
+                + ", description='" + description + '\''
+                + ", status='" + status + '\''
+                + '}';
     }
 }

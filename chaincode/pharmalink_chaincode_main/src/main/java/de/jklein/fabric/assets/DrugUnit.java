@@ -13,27 +13,38 @@ public final class DrugUnit {
     private static final Genson GENSON = new Genson();
 
     @Property()
-    private final String id;
+    private final String id; // UUID
+
     @Property()
     private final String batchId;
+
     @Property()
     private final String drugId;
+
     @Property()
     private final String owner;
+
     @Property()
     private final String manufacturerId;
+
     @Property()
-    private final String description;
+    private final String description; // Beschreibung / Alias der Medikamenteneinheit
+
     @Property()
     private final List<String> tags;
+
     @Property()
     private final String currentState;
+
     @Property()
     private final String dispensedBy;
+
     @Property()
     private final String dispensedTo;
+
     @Property()
     private final String dispensingTimestamp;
+
     @Property()
     private final List<String> temperatureReadings;
 
@@ -52,6 +63,7 @@ public final class DrugUnit {
         this.temperatureReadings = new ArrayList<>();
     }
 
+    // Privater Konstruktor, der nur vom Builder aufgerufen wird (1 Parameter)
     private DrugUnit(final Builder builder) {
         this.id = builder.bId;
         this.batchId = builder.bBatchId;
@@ -131,153 +143,123 @@ public final class DrugUnit {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        DrugUnit drugUnit = (DrugUnit) o;
-        return Objects.equals(id, drugUnit.id);
+        final DrugUnit drugUnit = (DrugUnit) o;
+        return Objects.equals(getId(), drugUnit.getId());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hash(getId(), batchId, drugId, owner, manufacturerId, description, tags, currentState, dispensedBy, dispensedTo, dispensingTimestamp, temperatureReadings);
+    }
+
+    @Override
+    public String toString() {
+        return "DrugUnit{"
+                + "id='" + id + '\''
+                + ", batchId='" + batchId + '\''
+                + ", drugId='" + drugId + '\''
+                + ", owner='" + owner + '\''
+                + ", manufacturerId='" + manufacturerId + '\''
+                + ", description='" + description + '\''
+                + ", tags=" + tags
+                + ", currentState='" + currentState + '\''
+                + ", dispensedBy='" + dispensedBy + '\''
+                + ", dispensedTo='" + dispensedTo + '\''
+                + ", dispensingTimestamp='" + dispensingTimestamp + '\''
+                + ", temperatureReadings=" + temperatureReadings
+                + '}';
     }
 
     public static final class Builder {
-        private final String bId;
-        private final String bBatchId;
-        private final String bDrugId;
+        private String bId;
+        private String bBatchId;
+        private String bDrugId;
         private String bOwner;
         private String bManufacturerId;
         private String bDescription;
-        private List<String> bTags = new ArrayList<>();
+        private List<String> bTags;
         private String bCurrentState;
         private String bDispensedBy;
         private String bDispensedTo;
         private String bDispensingTimestamp;
-        private List<String> bTemperatureReadings = new ArrayList<>();
+        private List<String> bTemperatureReadings;
 
-        public Builder(final String id, final String batchId, final String drugId) {
+        public Builder id(final String id) {
             this.bId = id;
-            this.bBatchId = batchId;
-            this.bDrugId = drugId;
+            return this;
         }
 
-        /**
-         * Setzt den Eigentümer der Medikamenteneinheit.
-         *
-         * @param owner Die ID des Eigentümers
-         * @return Die Builder-Instanz für Method-Chaining
-         */
+        public Builder batchId(final String batchId) {
+            this.bBatchId = batchId;
+            return this;
+        }
+
+        public Builder drugId(final String drugId) {
+            this.bDrugId = drugId;
+            return this;
+        }
+
         public Builder owner(final String owner) {
             this.bOwner = owner;
             return this;
         }
 
-        /**
-         * Setzt die Hersteller-ID der Medikamenteneinheit.
-         *
-         * @param manufacturerId Die ID des Herstellers
-         * @return Die Builder-Instanz für Method-Chaining
-         */
         public Builder manufacturerId(final String manufacturerId) {
             this.bManufacturerId = manufacturerId;
             return this;
         }
 
-        /**
-         * Setzt die Beschreibung der Medikamenteneinheit.
-         *
-         * @param description Die Beschreibung
-         * @return Die Builder-Instanz für Method-Chaining
-         */
         public Builder description(final String description) {
             this.bDescription = description;
             return this;
         }
 
-        /**
-         * Setzt die Tags der Medikamenteneinheit.
-         *
-         * @param tags Eine Liste von Tags
-         * @return Die Builder-Instanz für Method-Chaining
-         */
         public Builder tags(final List<String> tags) {
             this.bTags = tags;
             return this;
         }
 
-        /**
-         * Setzt den aktuellen Status der Medikamenteneinheit.
-         *
-         * @param currentState Der aktuelle Status
-         * @return Die Builder-Instanz für Method-Chaining
-         */
         public Builder currentState(final String currentState) {
             this.bCurrentState = currentState;
             return this;
         }
 
-        /**
-         * Setzt den Abgeber der Medikamenteneinheit.
-         *
-         * @param dispensedBy Die ID des Abgebers
-         * @return Die Builder-Instanz für Method-Chaining
-         */
         public Builder dispensedBy(final String dispensedBy) {
             this.bDispensedBy = dispensedBy;
             return this;
         }
 
-        /**
-         * Setzt den Empfänger der Medikamenteneinheit.
-         *
-         * @param dispensedTo Die ID des Empfängers
-         * @return Die Builder-Instanz für Method-Chaining
-         */
         public Builder dispensedTo(final String dispensedTo) {
             this.bDispensedTo = dispensedTo;
             return this;
         }
 
-        /**
-         * Setzt den Zeitstempel der Abgabe der Medikamenteneinheit.
-         *
-         * @param dispensingTimestamp Der Zeitstempel der Abgabe
-         * @return Die Builder-Instanz für Method-Chaining
-         */
         public Builder dispensingTimestamp(final String dispensingTimestamp) {
             this.bDispensingTimestamp = dispensingTimestamp;
             return this;
         }
 
-        /**
-         * Setzt die Temperaturmessungen der Medikamenteneinheit.
-         *
-         * @param temperatureReadings Eine Liste von Temperaturmessungen
-         * @return Die Builder-Instanz für Method-Chaining
-         */
         public Builder temperatureReadings(final List<String> temperatureReadings) {
             this.bTemperatureReadings = temperatureReadings;
             return this;
         }
 
-        /**
-         * Fügt eine Temperaturmessung zur Liste der Messungen hinzu.
-         *
-         * @param reading Die neue Temperaturmessung
-         * @return Die Builder-Instanz für Method-Chaining
-         */
-        public Builder addTemperatureReading(final String reading) {
-            if (this.bTemperatureReadings == null) {
-                this.bTemperatureReadings = new ArrayList<>();
-            }
-            this.bTemperatureReadings.add(reading);
+        public Builder fromExistingDrugUnit(final DrugUnit existingDrugUnit) {
+            this.bId = existingDrugUnit.getId();
+            this.bBatchId = existingDrugUnit.getBatchId();
+            this.bDrugId = existingDrugUnit.getDrugId();
+            this.bOwner = existingDrugUnit.getOwner();
+            this.bManufacturerId = existingDrugUnit.getManufacturerId();
+            this.bDescription = existingDrugUnit.getDescription();
+            this.bTags = new ArrayList<>(existingDrugUnit.getTags()); // Erstelle eine neue Liste, um Referenzprobleme zu vermeiden
+            this.bCurrentState = existingDrugUnit.getCurrentState();
+            this.bDispensedBy = existingDrugUnit.getDispensedBy();
+            this.bDispensedTo = existingDrugUnit.getDispensedTo();
+            this.bDispensingTimestamp = existingDrugUnit.getDispensingTimestamp();
+            this.bTemperatureReadings = new ArrayList<>(existingDrugUnit.getTemperatureReadings()); // Erstelle eine neue Liste
             return this;
         }
 
-        /**
-         * Erstellt eine neue DrugUnit-Instanz mit den konfigurierten Werten.
-         *
-         * @return Die erstellte DrugUnit-Instanz
-         */
         public DrugUnit build() {
             return new DrugUnit(this);
         }

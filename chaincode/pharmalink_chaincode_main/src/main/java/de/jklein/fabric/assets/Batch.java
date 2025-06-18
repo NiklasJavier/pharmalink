@@ -12,15 +12,20 @@ public final class Batch {
     private static final Genson GENSON = new Genson();
 
     @Property()
-    private final String id;
+    private final String id; // UUID
+
     @Property()
     private final String drugId;
+
     @Property()
     private final long quantity;
+
     @Property()
     private final String manufacturerId;
+
     @Property()
-    private final String description;
+    private final String description; // Beschreibung / Alias der Charge
+
     @Property()
     private final List<String> tags;
 
@@ -33,6 +38,7 @@ public final class Batch {
         this.tags = new ArrayList<>();
     }
 
+    // Konstruktor mit 6 Parametern (konform)
     public Batch(final String id, final String drugId, final long quantity, final String manufacturerId, final String description, final List<String> tags) {
         this.id = id;
         this.drugId = drugId;
@@ -89,5 +95,17 @@ public final class Batch {
     @Override
     public int hashCode() {
         return Objects.hash(getId(), getDrugId(), getQuantity(), getManufacturerId(), getDescription(), getTags());
+    }
+
+    @Override
+    public String toString() {
+        return "Batch{"
+                + "id='" + id + '\''
+                + ", drugId='" + drugId + '\''
+                + ", quantity=" + quantity
+                + ", manufacturerId='" + manufacturerId + '\''
+                + ", description='" + description + '\''
+                + ", tags=" + tags
+                + '}';
     }
 }
