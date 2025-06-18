@@ -34,10 +34,10 @@ public final class Actor {
     private final String certId; // Die volle Zertifikat-ID (z.B. "x509::CN=...")
 
     // Parameterloser Konstruktor für die Deserialisierung
-    private Actor() {
+    public Actor() {
         this.actorId = "";
         this.enrollmentId = "";
-        this.description = ""; // Initialisierung angepasst
+        this.description = "";
         this.mspId = "";
         this.role = "";
         this.status = "";

@@ -138,24 +138,40 @@ public final class PharmacyChaincode implements ContractInterface {
         return actor;
     }
 
+
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public Actor approveActor(final Context ctx, final String actorIdToApprove) {
         requireRole(ctx, "behoerde");
+
         final ChaincodeStub stub = ctx.getStub();
         final Actor actorToApprove = getActorById(ctx, actorIdToApprove);
         final Actor approver = queryOwnActor(ctx);
+
+        // KORREKTUR: Explizite Prüfung, um Absturz bei nicht gefundenem Genehmiger zu verhindern.
+        if (approver == null) {
+            throw new ChaincodeException("Der genehmigende Akteur (Behörde) konnte nicht gefunden werden. Ist die Behörde selbst im System registriert?", PharmacyErrors.ACTOR_NOT_FOUND.toString());
+        }
+
         if (!actorToApprove.getStatus().equals("Pending")) {
             throw new ChaincodeException("Akteur hat nicht den Status 'Pending'.", PharmacyErrors.INVALID_ACTOR_STATUS.toString());
         }
+
         final Actor.Builder builder = new Actor.Builder()
-                .actorId(actorToApprove.getActorId()).enrollmentId(actorToApprove.getEnrollmentId())
-                .description(actorToApprove.getDescription()).mspId(actorToApprove.getMspId())
-                .role(actorToApprove.getRole()).certId(actorToApprove.getCertId()).status("Approved")
-                .approvedBy(approver.getActorId());
+                .actorId(actorToApprove.getActorId())
+                .enrollmentId(actorToApprove.getEnrollmentId())
+                .description(actorToApprove.getDescription())
+                .mspId(actorToApprove.getMspId())
+                .role(actorToApprove.getRole())
+                .certId(actorToApprove.getCertId())
+                .status("Approved")
+                .approvedBy(approver.getActorId()); // Jetzt sicher vor NullPointerException
+
         final Actor updatedActor = builder.build();
         stub.putStringState(updatedActor.getActorId(), updatedActor.toJSONString());
+
         return updatedActor;
     }
+
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public DrugInfo registerDrugInfo(final Context ctx, final String gtin, final String name, final String description) {
