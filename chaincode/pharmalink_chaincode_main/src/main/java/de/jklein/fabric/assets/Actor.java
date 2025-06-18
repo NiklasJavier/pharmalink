@@ -16,7 +16,7 @@ public final class Actor {
     private final String enrollmentId; // Die Enrollment ID aus dem Client-Zertifikat (z.B. user1, hersteller-user1)
 
     @Property()
-    private final String name; // Der beschreibende Name / Alias des Akteurs
+    private final String name; // Der beschreibende Name / Alias des Akteurs (entspricht "description" im JSON des Fehlers)
 
     @Property()
     private final String mspId;
@@ -65,7 +65,7 @@ public final class Actor {
         return enrollmentId;
     }
 
-    public String getName() {
+    public String getName() { // Name ist nun der Alias/die Beschreibung
         return name;
     }
 
@@ -131,14 +131,13 @@ public final class Actor {
     public static final class Builder {
         private String bActorId;
         private String bEnrollmentId;
-        private String bName;
+        private String bName; // Entspricht dem 'name' in der Actor-Klasse (Alias)
         private String bMspId;
         private String bRole;
         private String bStatus;
         private String bApprovedBy;
         private String bCertId;
 
-        // Optional: Ein Konstruktor für den Builder, um die primären Identifikatoren zu setzen
         public Builder actorId(final String actorId) {
             this.bActorId = actorId;
             return this;
@@ -149,7 +148,7 @@ public final class Actor {
             return this;
         }
 
-        public Builder name(final String name) {
+        public Builder name(final String name) { // Setter für den Alias/Namen
             this.bName = name;
             return this;
         }

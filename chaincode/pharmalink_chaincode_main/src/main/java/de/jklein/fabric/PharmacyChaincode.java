@@ -86,7 +86,7 @@ public final class PharmacyChaincode implements ContractInterface {
         Actor behorde = new Actor.Builder()
                 .actorId("behoerdeAdmin") // Feste ID für den System-Admin
                 .enrollmentId("behoerdeAdmin") // Feste Enrollment ID für den System-Admin
-                .name("Zentrale Arzneimittelbehörde")
+                .name("Zentrale Arzneimittelbehörde") // Name/Alias
                 .mspId("BehoerdeMSP") // Annahme: MSPID für Behörde
                 .role("behoerde")
                 .status("approved")
@@ -104,7 +104,7 @@ public final class PharmacyChaincode implements ContractInterface {
         Actor hersteller1 = new Actor.Builder()
                 .actorId(hersteller1ActorId)
                 .enrollmentId(hersteller1EnrollmentId)
-                .name("PharmaCorp GmbH")
+                .name("PharmaCorp GmbH") // Name/Alias
                 .mspId("HerstellerMSP") // Annahme: MSPID für Hersteller
                 .role("hersteller")
                 .status("approved")
@@ -120,7 +120,7 @@ public final class PharmacyChaincode implements ContractInterface {
         Actor grosshaendler1 = new Actor.Builder()
                 .actorId(grosshaendler1ActorId)
                 .enrollmentId(grosshaendler1EnrollmentId)
-                .name("MediDistributor AG")
+                .name("MediDistributor AG") // Name/Alias
                 .mspId("GrosshaendlerMSP") // Annahme: MSPID für Großhändler
                 .role("grosshaendler")
                 .status("approved")
@@ -136,7 +136,7 @@ public final class PharmacyChaincode implements ContractInterface {
         Actor apotheke1 = new Actor.Builder()
                 .actorId(apotheke1ActorId)
                 .enrollmentId(apotheke1EnrollmentId)
-                .name("Stadt Apotheke")
+                .name("Stadt Apotheke") // Name/Alias
                 .mspId("ApothekeMSP") // Annahme: MSPID für Apotheke
                 .role("apotheke")
                 .status("approved")
@@ -217,13 +217,17 @@ public final class PharmacyChaincode implements ContractInterface {
         String enrollmentId = getEnrollmentIdFromCertId(certId); // EnrollmentID aus der CertId ableiten
         String txId = stub.getTxId();
 
+        // Überprüfen, ob die Enrollment-ID abgeleitet werden konnte
+        if (enrollmentId == null || enrollmentId.isEmpty()) {
+            throw new ChaincodeException("Konnte Enrollment-ID aus Client-Zertifikat nicht ableiten. Stellen Sie sicher, dass 'hf.EnrollmentID' oder ein Common Name (CN) im Zertifikat enthalten ist.", PharmacyErrors.INVALID_ARGUMENT.toString());
+        }
+
         // Prüfen, ob Akteur mit dieser Enrollment-ID bereits existiert
         String query = String.format("{\"selector\":{\"enrollmentId\":\"%s\"}}", enrollmentId);
         try (QueryResultsIterator<KeyValue> results = stub.getQueryResult(query)) {
             Iterator<KeyValue> iterator = results.iterator();
             if (iterator.hasNext()) {
                 // Ein Akteur mit dieser Enrollment-ID ist bereits registriert.
-                // Wir können hier den existierenden Akteur zurückgeben oder einen Fehler werfen.
                 // Da "registrieren" einen neuen Vorgang impliziert, werfen wir einen Fehler.
                 throw new ChaincodeException(String.format("Ein Akteur mit der Identität '%s' (Enrollment-ID) ist bereits registriert.", enrollmentId), PharmacyErrors.ACTOR_ALREADY_EXISTS.toString());
             }
@@ -249,7 +253,7 @@ public final class PharmacyChaincode implements ContractInterface {
         Actor newActor = new Actor.Builder()
                 .actorId(actorId)
                 .enrollmentId(enrollmentId) // Speichere die abgeleitete Enrollment ID
-                .name(name)
+                .name(name) // Name/Alias des Akteurs
                 .mspId(currentMspId)
                 .role(role)
                 .status(status)
@@ -831,6 +835,7 @@ public final class PharmacyChaincode implements ContractInterface {
         return sb.toString();
     }
 
+
     /**
      * Hilfsfunktion zum Abrufen des aktuellen Akteurs basierend auf der Client-Identität.
      * Überprüft, ob der Akteur im Ledger existiert und den Status 'approved' hat.
@@ -909,8 +914,9 @@ public final class PharmacyChaincode implements ContractInterface {
      * @return Die extrahierte Enrollment-ID oder ein leerer String, wenn nicht gefunden.
      */
     private String getEnrollmentIdFromCertId(final String certId) {
-        // Zuerst versuchen, hf.EnrollmentID-Attribut aus der CertId zu parsen, falls es direkt kodiert ist.
-        // Fabric-Client-Identitäten geben oft CN=name::IssuerDN zurück.
+        // Fabric-Zertifikate können ein hf.EnrollmentID-Attribut haben.
+        // Die ClientIdentity.getAttributeValue("hf.EnrollmentID") ist der bevorzugte Weg,
+        // aber wenn wir hier eine rohe CertId parsen, dann ist das Muster CN=value
         Pattern pattern = Pattern.compile("CN=([^,]+)(?:,|::)"); // Matcht CN=VALUE, oder CN=VALUE::
         Matcher matcher = pattern.matcher(certId);
         if (matcher.find()) {
