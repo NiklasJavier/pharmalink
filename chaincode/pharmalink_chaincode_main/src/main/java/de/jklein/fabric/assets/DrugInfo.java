@@ -22,7 +22,6 @@ public final class DrugInfo {
     @Property()
     private final String status;
 
-    // Parameterloser Konstruktor für Genson-Deserialisierung
     public DrugInfo() {
         this.id = "";
         this.gtin = "";
@@ -44,18 +43,23 @@ public final class DrugInfo {
     public String getId() {
         return id;
     }
+
     public String getGtin() {
         return gtin;
     }
+
     public String getName() {
         return name;
     }
+
     public String getManufacturerId() {
         return manufacturerId;
     }
+
     public String getDescription() {
         return description;
     }
+
     public String getStatus() {
         return status;
     }
@@ -63,6 +67,7 @@ public final class DrugInfo {
     public String toJSONString() {
         return GENSON.serialize(this);
     }
+
     public static DrugInfo fromJSONString(final String json) {
         return GENSON.deserialize(json, DrugInfo.class);
     }

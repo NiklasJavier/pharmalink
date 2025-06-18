@@ -11,14 +11,19 @@ import java.util.Objects;
 public final class Batch {
     private static final Genson GENSON = new Genson();
 
-    @Property() private final String id;
-    @Property() private final String drugId;
-    @Property() private final long quantity;
-    @Property() private final String manufacturerId;
-    @Property() private final String description;
-    @Property() private final List<String> tags;
+    @Property()
+    private final String id;
+    @Property()
+    private final String drugId;
+    @Property()
+    private final long quantity;
+    @Property()
+    private final String manufacturerId;
+    @Property()
+    private final String description;
+    @Property()
+    private final List<String> tags;
 
-    // Parameterloser Konstruktor für Genson-Deserialisierung
     public Batch() {
         this.id = "";
         this.drugId = "";
@@ -40,18 +45,23 @@ public final class Batch {
     public String getId() {
         return id;
     }
+
     public String getDrugId() {
         return drugId;
     }
+
     public long getQuantity() {
         return quantity;
     }
+
     public String getManufacturerId() {
         return manufacturerId;
     }
+
     public String getDescription() {
         return description;
     }
+
     public List<String> getTags() {
         return tags;
     }
@@ -59,6 +69,7 @@ public final class Batch {
     public String toJSONString() {
         return GENSON.serialize(this);
     }
+
     public static Batch fromJSONString(final String json) {
         return GENSON.deserialize(json, Batch.class);
     }

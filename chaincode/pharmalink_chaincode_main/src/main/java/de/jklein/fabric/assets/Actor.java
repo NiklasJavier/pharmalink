@@ -22,11 +22,10 @@ public final class Actor {
     @Property()
     private final String status;
 
-    // Parameterloser Konstruktor für Genson-Deserialisierung
     public Actor() {
         this.certId = "";
         this.mspId = "";
-        this.actorId = null;
+        this.actorId = "";
         this.name = "";
         this.role = "";
         this.status = "";
@@ -44,18 +43,23 @@ public final class Actor {
     public String getCertId() {
         return certId;
     }
+
     public String getMspId() {
         return mspId;
     }
+
     public String getActorId() {
         return actorId;
     }
+
     public String getName() {
         return name;
     }
+
     public String getRole() {
         return role;
     }
+
     public String getStatus() {
         return status;
     }
@@ -63,6 +67,7 @@ public final class Actor {
     public String toJSONString() {
         return GENSON.serialize(this);
     }
+
     public static Actor fromJSONString(final String json) {
         return GENSON.deserialize(json, Actor.class);
     }
@@ -76,11 +81,11 @@ public final class Actor {
             return false;
         }
         final Actor actor = (Actor) o;
-        return Objects.equals(getCertId(), actor.getCertId());
+        return Objects.equals(getActorId(), actor.getActorId());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getCertId(), getMspId(), getActorId(), getName(), getRole(), getStatus());
+        return Objects.hash(getActorId());
     }
 }
