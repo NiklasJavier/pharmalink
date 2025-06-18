@@ -15,19 +15,21 @@ import org.hyperledger.fabric.contract.annotation.License;
 import org.hyperledger.fabric.contract.annotation.Transaction;
 import org.hyperledger.fabric.shim.ChaincodeException;
 import org.hyperledger.fabric.shim.ChaincodeStub;
-import org.hyperledger.fabric.shim.ledger.KeyModification; // KORREKTUR: Nötiger Import
+import org.hyperledger.fabric.shim.ledger.KeyModification;
 import org.hyperledger.fabric.shim.ledger.KeyValue;
 import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 
 @Contract(
         name = "PharmacyChaincode",
         info = @Info(
                 title = "Pharmacy Supply Chain Contract",
-                description = "Ein Prototyp für eine pharmazeutische Lieferkette",
-                version = "1.0.0",
+                description = "Ein Prototyp für eine pharmazeutische Lieferkette mit UUIDs",
+                version = "2.5.0",
                 license = @License(
                         name = "Apache-2.0"
                 ),
@@ -54,7 +56,10 @@ public final class PharmacyChaincode implements ContractInterface {
         DRUGUNIT_NOT_FOUND,
         DRUGUNIT_ALREADY_EXISTS,
         INSUFFICIENT_PERMISSIONS,
-        WRONG_OWNER
+        WRONG_OWNER,
+        HISTORY_QUERY_FAILED,
+        RICH_QUERY_FAILED,
+        ASSET_DESERIALIZATION_FAILED
     }
 
     private final String ACTOR_KEY_PREFIX = "actor~";
@@ -72,20 +77,41 @@ public final class PharmacyChaincode implements ContractInterface {
         ChaincodeStub stub = ctx.getStub();
         String mspId = ctx.getClientIdentity().getMSPID();
         String certId = ctx.getClientIdentity().getId();
-        String role = ctx.getClientIdentity().getAttributeValue("role");
-        String actorId = getActorIdFromCertificate(ctx);
+        String role = getRoleFromCertificate(ctx);
+        String enrollmentId = getEnrollmentIdFromCertificate(ctx);
 
-        if (role == null || role.isEmpty()) {
-            throw new ChaincodeException("Die Rolle des Benutzers ist nicht im Zertifikat gesetzt.", PharmacyErrors.INSUFFICIENT_PERMISSIONS.toString());
+        String query = String.format("{\"selector\":{\"enrollmentId\":\"%s\"}}", enrollmentId);
+        try (QueryResultsIterator<KeyValue> results = stub.getQueryResult(query)) {
+            Iterator<KeyValue> iterator = results.iterator();
+            if (iterator.hasNext()) {
+                throw new ChaincodeException("Ein Akteur mit der Enrollment-ID " + enrollmentId + " existiert bereits.", PharmacyErrors.ACTOR_ALREADY_EXISTS.toString());
+            }
+        } catch (Exception e) {
+            throw new ChaincodeException("Datenbankabfrage zur Existenzprüfung fehlgeschlagen: " + e.getMessage(), PharmacyErrors.RICH_QUERY_FAILED.toString());
         }
 
+        String actorId = UUID.randomUUID().toString();
         String key = ACTOR_KEY_PREFIX + actorId;
-        String existingActor = stub.getStringState(key);
-        if (existingActor != null && !existingActor.isEmpty()) {
-            throw new ChaincodeException("Akteur mit der ID " + actorId + " existiert bereits.", PharmacyErrors.ACTOR_ALREADY_EXISTS.toString());
+        String status;
+        String approvedBy;
+
+        if ("behoerde".equals(role)) {
+            status = "Approved";
+            approvedBy = actorId;
+        } else {
+            status = "Pending";
+            approvedBy = "";
         }
 
-        Actor actor = new Actor(certId, mspId, actorId, name, role, "Pending");
+        Actor actor = new Actor.Builder(actorId, enrollmentId)
+                .name(name)
+                .mspId(mspId)
+                .role(role)
+                .status(status)
+                .approvedBy(approvedBy)
+                .certId(certId)
+                .build();
+
         stub.putStringState(key, actor.toJSONString());
 
         return actor;
@@ -93,31 +119,56 @@ public final class PharmacyChaincode implements ContractInterface {
 
     @Transaction()
     public Actor approveActor(final Context ctx, final String actorIdToApprove) {
-        requireRole(ctx, "behoerde");
-
         ChaincodeStub stub = ctx.getStub();
-        String key = ACTOR_KEY_PREFIX + actorIdToApprove;
-        Actor actor = getAsset(stub, key, Actor.class, PharmacyErrors.ACTOR_NOT_FOUND);
 
-        if ("Approved".equals(actor.getStatus())) {
-            throw new ChaincodeException("Akteur " + actorIdToApprove + " ist bereits genehmigt.", PharmacyErrors.ACTOR_ALREADY_APPROVED.toString());
+        Actor approver = requireApprovedBehoerde(ctx);
+
+        String keyToApprove = ACTOR_KEY_PREFIX + actorIdToApprove;
+        Actor actorToApprove = getAsset(stub, keyToApprove, Actor.class, PharmacyErrors.ACTOR_NOT_FOUND);
+
+        if ("Approved".equals(actorToApprove.getStatus())) {
+            throw new ChaincodeException("Akteur mit UUID " + actorIdToApprove + " ist bereits genehmigt.", PharmacyErrors.ACTOR_ALREADY_APPROVED.toString());
         }
 
-        Actor approvedActor = new Actor(actor.getCertId(), actor.getMspId(), actor.getActorId(), actor.getName(), actor.getRole(), "Approved");
-        stub.putStringState(key, approvedActor.toJSONString());
+        Actor approvedActor = new Actor.Builder(actorToApprove.getActorId(), actorToApprove.getEnrollmentId())
+                .name(actorToApprove.getName())
+                .mspId(actorToApprove.getMspId())
+                .role(actorToApprove.getRole())
+                .certId(actorToApprove.getCertId())
+                .status("Approved")
+                .approvedBy(approver.getActorId())
+                .build();
 
+        stub.putStringState(keyToApprove, approvedActor.toJSONString());
         return approvedActor;
     }
 
     @Transaction()
-    public String getActor(final Context ctx, final String actorId) {
-        return ctx.getStub().getStringState(ACTOR_KEY_PREFIX + actorId);
+    public String getActorByUUID(final Context ctx, final String actorId) {
+        String assetJSON = ctx.getStub().getStringState(ACTOR_KEY_PREFIX + actorId);
+        if (assetJSON == null || assetJSON.isEmpty()) {
+            throw new ChaincodeException("Akteur mit UUID " + actorId + " nicht gefunden.", PharmacyErrors.ACTOR_NOT_FOUND.toString());
+        }
+        return assetJSON;
+    }
+
+    @Transaction()
+    public String queryPendingActors(final Context ctx) {
+        requireApprovedBehoerde(ctx);
+        String query = String.format("{\"selector\":{\"status\":\"Pending\", \"_id\":{\"$regex\": \"^%s\"}}}", ACTOR_KEY_PREFIX);
+        return richQuery(ctx, query);
+    }
+
+    @Transaction()
+    public String queryAllActors(final Context ctx) {
+        requireApprovedBehoerde(ctx);
+        String query = String.format("{\"selector\":{\"_id\":{\"$regex\": \"^%s\"}}}", ACTOR_KEY_PREFIX);
+        return richQuery(ctx, query);
     }
 
     @Transaction()
     public DrugInfo createDrugInfo(final Context ctx, final String gtin, final String name, final String description) {
-        requireRole(ctx, "hersteller");
-        String manufacturerId = getActorIdFromCertificate(ctx);
+        Actor manufacturer = requireApprovedActorByRole(ctx, "hersteller");
 
         ChaincodeStub stub = ctx.getStub();
         String drugId = "DRUG-" + gtin;
@@ -128,15 +179,15 @@ public final class PharmacyChaincode implements ContractInterface {
             throw new ChaincodeException("DrugInfo mit der ID " + drugId + " existiert bereits.", PharmacyErrors.DRUGINFO_ALREADY_EXISTS.toString());
         }
 
-        DrugInfo drugInfo = new DrugInfo(drugId, gtin, name, manufacturerId, description, "Active");
+        DrugInfo drugInfo = new DrugInfo(drugId, gtin, name, manufacturer.getActorId(), description, "Active");
         stub.putStringState(key, drugInfo.toJSONString());
         return drugInfo;
     }
 
     @Transaction()
     public Batch createBatch(final Context ctx, final String batchId, final String drugId, final long quantity, final String description) {
-        requireRole(ctx, "hersteller");
-        String manufacturerId = getActorIdFromCertificate(ctx);
+        Actor manufacturer = requireApprovedActorByRole(ctx, "hersteller");
+        String manufacturerId = manufacturer.getActorId();
 
         ChaincodeStub stub = ctx.getStub();
 
@@ -172,17 +223,19 @@ public final class PharmacyChaincode implements ContractInterface {
     @Transaction()
     public DrugUnit transferDrugUnit(final Context ctx, final String drugUnitId, final String newOwnerId, final String temperature) {
         ChaincodeStub stub = ctx.getStub();
-        String currentOwnerId = getActorIdFromCertificate(ctx);
-        String key = DRUGUNIT_KEY_PREFIX + drugUnitId;
+        Actor currentOwner = findActorByEnrollmentId(ctx, getEnrollmentIdFromCertificate(ctx));
 
+        String key = DRUGUNIT_KEY_PREFIX + drugUnitId;
         DrugUnit drugUnit = getAsset(stub, key, DrugUnit.class, PharmacyErrors.DRUGUNIT_NOT_FOUND);
 
-        if (!drugUnit.getOwner().equals(currentOwnerId)) {
+        if (!drugUnit.getOwner().equals(currentOwner.getActorId())) {
             throw new ChaincodeException("Nur der aktuelle Besitzer kann die Einheit transferieren.", PharmacyErrors.WRONG_OWNER.toString());
         }
 
         Actor newOwner = getAsset(stub, ACTOR_KEY_PREFIX + newOwnerId, Actor.class, PharmacyErrors.ACTOR_NOT_FOUND);
-        requireApprovedActor(newOwner);
+        if (!"Approved".equals(newOwner.getStatus())) {
+            throw new ChaincodeException("Der neue Besitzer mit UUID " + newOwnerId + " ist nicht genehmigt.", PharmacyErrors.ACTOR_NOT_APPROVED.toString());
+        }
 
         DrugUnit.Builder builder = new DrugUnit.Builder(drugUnit.getId(), drugUnit.getBatchId(), drugUnit.getDrugId())
                 .owner(newOwnerId)
@@ -203,12 +256,12 @@ public final class PharmacyChaincode implements ContractInterface {
         } else if (currentState.equals("InStock_Wholesaler") && newOwnerRole.equals("apotheke")) {
             builder.currentState("InTransit_ToPharmacy");
         } else {
-            throw new ChaincodeException("Ungültiger Transfer von " + drugUnit.getOwner() + " (" + currentState + ") an " + newOwnerId + " (" + newOwnerRole + ")", PharmacyErrors.INSUFFICIENT_PERMISSIONS.toString());
+            throw new ChaincodeException("Ungültiger Transfer von " + currentOwner.getEnrollmentId() + " an " + newOwner.getEnrollmentId(), PharmacyErrors.INSUFFICIENT_PERMISSIONS.toString());
         }
 
         if (temperature != null && !temperature.isEmpty()) {
             String reading = String.format("{\"timestamp\": \"%s\", \"temp\": \"%s\", \"by\": \"%s\"}",
-                    stub.getTxTimestamp().toString(), temperature, currentOwnerId);
+                    stub.getTxTimestamp().toString(), temperature, currentOwner.getActorId());
             builder.addTemperatureReading(reading);
         }
 
@@ -218,96 +271,65 @@ public final class PharmacyChaincode implements ContractInterface {
     }
 
     @Transaction()
-    public DrugUnit dispenseDrugUnit(final Context ctx, final String drugUnitId, final String dispensedTo, final String description) {
-        requireRole(ctx, "apotheke");
-
-        ChaincodeStub stub = ctx.getStub();
-        String dispenserId = getActorIdFromCertificate(ctx);
-        String key = DRUGUNIT_KEY_PREFIX + drugUnitId;
-
-        DrugUnit drugUnit = getAsset(stub, key, DrugUnit.class, PharmacyErrors.DRUGUNIT_NOT_FOUND);
-
-        if (!drugUnit.getOwner().equals(dispenserId)) {
-            throw new ChaincodeException("Nur der aktuelle Besitzer (Apotheke) kann die Einheit ausgeben.", PharmacyErrors.WRONG_OWNER.toString());
-        }
-
-        DrugUnit dispensedDrugUnit = new DrugUnit.Builder(drugUnit.getId(), drugUnit.getBatchId(), drugUnit.getDrugId())
-                .owner(drugUnit.getOwner())
-                .manufacturerId(drugUnit.getManufacturerId())
-                .description(description)
-                .tags(drugUnit.getTags())
-                .currentState("Dispensed")
-                .dispensedBy(dispenserId)
-                .dispensedTo(dispensedTo)
-                .dispensingTimestamp(stub.getTxTimestamp().toString())
-                .temperatureReadings(drugUnit.getTemperatureReadings())
-                .build();
-
-        stub.putStringState(key, dispensedDrugUnit.toJSONString());
-        return dispensedDrugUnit;
-    }
-
-    /**
-     * Ruft die Historie einer Medikamenteneinheit ab (wer war wann Besitzer).
-     *
-     * '{"function":"getDrugUnitHistory","Args":["BATCH-001-1"]}'
-     *
-     * @param ctx der Transaktionskontext
-     * @param drugUnitId Die ID der Medikamenteneinheit.
-     * @return Ein JSON-Array mit der Historie.
-     */
-    @Transaction()
     public String getDrugUnitHistory(final Context ctx, final String drugUnitId) {
         ChaincodeStub stub = ctx.getStub();
         String key = DRUGUNIT_KEY_PREFIX + drugUnitId;
 
         final List<String> history = new ArrayList<>();
         try (QueryResultsIterator<KeyModification> results = stub.getHistoryForKey(key)) {
-            // KORREKTUR: Der Typ in der for-Schleife ist jetzt 'KeyModification'.
             for (final KeyModification result : results) {
                 history.add(result.getStringValue());
             }
         } catch (Exception e) {
-            throw new ChaincodeException("Fehler beim Abrufen der Historie: " + e.getMessage());
+            throw new ChaincodeException("Fehler beim Abrufen der Historie: " + e.getMessage(), PharmacyErrors.HISTORY_QUERY_FAILED.toString());
         }
         return GENSON.serialize(history);
     }
 
-    @Transaction()
-    public String getTemperatureHistoryForDrugUnit(final Context ctx, final String drugUnitId) {
-        DrugUnit drugUnit = getAsset(ctx.getStub(), DRUGUNIT_KEY_PREFIX + drugUnitId, DrugUnit.class, PharmacyErrors.DRUGUNIT_NOT_FOUND);
-        return GENSON.serialize(drugUnit.getTemperatureReadings());
+    private Actor requireApprovedBehoerde(final Context ctx) {
+        String role = getRoleFromCertificate(ctx);
+        if (!"behoerde".equals(role)) {
+            throw new ChaincodeException("Benutzer hat nicht die erforderliche Rolle 'behoerde'.", PharmacyErrors.INSUFFICIENT_PERMISSIONS.toString());
+        }
+        return findAndCheckApprovedActor(ctx);
     }
 
-    @Transaction()
-    public String queryDrugUnitsByOwner(final Context ctx, final String ownerId) {
-        String query = String.format("{\"selector\":{\"owner\":\"%s\", \"_id\":{\"$regex\": \"^%s\"}}}", ownerId, DRUGUNIT_KEY_PREFIX);
-        return richQuery(ctx, query);
-    }
-
-    // --- Hilfsfunktionen ---
-
-    private void requireRole(final Context ctx, final String requiredRole) {
-        String role = ctx.getClientIdentity().getAttributeValue("role");
-        if (role == null || !role.equals(requiredRole)) {
+    private Actor requireApprovedActorByRole(final Context ctx, final String requiredRole) {
+        String role = getRoleFromCertificate(ctx);
+        if (!requiredRole.equals(role)) {
             throw new ChaincodeException("Benutzer hat nicht die erforderliche Rolle '" + requiredRole + "'.", PharmacyErrors.INSUFFICIENT_PERMISSIONS.toString());
         }
-        requireApprovedActor(ctx);
+        return findAndCheckApprovedActor(ctx);
     }
 
-    private void requireApprovedActor(final Context ctx) {
-        String actorId = getActorIdFromCertificate(ctx);
-        Actor actor = getAsset(ctx.getStub(), ACTOR_KEY_PREFIX + actorId, Actor.class, PharmacyErrors.ACTOR_NOT_FOUND);
-        requireApprovedActor(actor);
-    }
-
-    private void requireApprovedActor(final Actor actor) {
+    private Actor findAndCheckApprovedActor(final Context ctx) {
+        String enrollmentId = getEnrollmentIdFromCertificate(ctx);
+        Actor actor = findActorByEnrollmentId(ctx, enrollmentId);
         if (!"Approved".equals(actor.getStatus())) {
-            throw new ChaincodeException("Akteur " + actor.getActorId() + " ist nicht genehmigt.", PharmacyErrors.ACTOR_NOT_APPROVED.toString());
+            throw new ChaincodeException("Der aufrufende Akteur '" + enrollmentId + "' ist nicht genehmigt.", PharmacyErrors.ACTOR_NOT_APPROVED.toString());
+        }
+        return actor;
+    }
+
+    private Actor findActorByEnrollmentId(final Context ctx, final String enrollmentId) {
+        String query = String.format("{\"selector\":{\"enrollmentId\":\"%s\"}}", enrollmentId);
+        try (QueryResultsIterator<KeyValue> results = ctx.getStub().getQueryResult(query)) {
+            Iterator<KeyValue> iterator = results.iterator();
+            if (!iterator.hasNext()) {
+                throw new ChaincodeException("Akteur mit Enrollment-ID '" + enrollmentId + "' ist nicht im System registriert.", PharmacyErrors.ACTOR_NOT_FOUND.toString());
+            }
+            KeyValue result = iterator.next();
+            try {
+                return GENSON.deserialize(result.getStringValue(), Actor.class);
+            } catch (Exception e) {
+                throw new ChaincodeException("Fehler beim Deserialisieren von Akteur mit Enrollment-ID " + enrollmentId, PharmacyErrors.ASSET_DESERIALIZATION_FAILED.toString());
+            }
+        } catch (Exception e) {
+            throw new ChaincodeException("Datenbankabfrage für Enrollment-ID '" + enrollmentId + "' fehlgeschlagen: " + e.getMessage(), PharmacyErrors.RICH_QUERY_FAILED.toString());
         }
     }
 
-    private String getActorIdFromCertificate(final Context ctx) {
+    private String getEnrollmentIdFromCertificate(final Context ctx) {
         String enrollmentId = ctx.getClientIdentity().getAttributeValue("hf.EnrollmentID");
         if (enrollmentId == null || enrollmentId.isEmpty()) {
             throw new ChaincodeException("Attribut 'hf.EnrollmentID' konnte im Zertifikat nicht gefunden werden.");
@@ -315,28 +337,38 @@ public final class PharmacyChaincode implements ContractInterface {
         return enrollmentId;
     }
 
+    private String getRoleFromCertificate(final Context ctx) {
+        String role = ctx.getClientIdentity().getAttributeValue("role");
+        if (role == null || role.isEmpty()) {
+            throw new ChaincodeException("Die Rolle des Benutzers ist nicht im Zertifikat gesetzt.", PharmacyErrors.INSUFFICIENT_PERMISSIONS.toString());
+        }
+        return role;
+    }
+
     private <T> T getAsset(final ChaincodeStub stub, final String key, final Class<T> clazz, final PharmacyErrors error) {
         final String json = stub.getStringState(key);
         if (json == null || json.isEmpty()) {
             throw new ChaincodeException(String.format("Asset mit Schlüssel %s nicht gefunden", key), error.toString());
         }
-        return GENSON.deserialize(json, clazz);
+        try {
+            return GENSON.deserialize(json, clazz);
+        } catch (Exception e) {
+            throw new ChaincodeException("Fehler beim Deserialisieren von Asset " + key, PharmacyErrors.ASSET_DESERIALIZATION_FAILED.toString());
+        }
     }
 
     private String richQuery(final Context ctx, final String query) {
         final ChaincodeStub stub = ctx.getStub();
         final StringBuilder sb = new StringBuilder("[");
         try (QueryResultsIterator<KeyValue> results = stub.getQueryResult(query)) {
-            boolean first = true;
             for (final KeyValue result : results) {
-                if (!first) {
+                if (sb.length() > 1) {
                     sb.append(",");
                 }
                 sb.append(result.getStringValue());
-                first = false;
             }
         } catch (final Exception e) {
-            throw new ChaincodeException("Rich Query fehlgeschlagen: " + e.getMessage());
+            throw new ChaincodeException("Rich Query fehlgeschlagen: " + e.getMessage(), PharmacyErrors.RICH_QUERY_FAILED.toString());
         }
         sb.append("]");
         return sb.toString();
