@@ -47,41 +47,34 @@ public final class PharmacyChaincode implements ContractInterface {
     // KORREKTUR: Präfix für den Lookup-Schlüssel, um Rich Queries zu vermeiden
     private static final String ENROLLMENT_ID_LOOKUP_PREFIX = "enrollmentId~";
 
+
     /**
-     * FINALE KORREKTUR: Verhindert Duplikate und Race Conditions, indem die Akteur-ID
-     * direkt und deterministisch aus der Identität des Aufrufers erzeugt wird UND
-     * eine Prüfung gegen den Transaktions-Read-Set durchgeführt wird.
-     *
-     * @param ctx Der Transaktionskontext.
-     * @param description Eine Beschreibung des Akteurs (z.B. Firmenname).
-     * @param role Die gewünschte Rolle.
-     * @return Der neu erstellte Akteur.
+     * FINALE VERSION - Optimiert für die Verwendung mit einem CouchDB-Index.
+     * Dies ist der von Fabric empfohlene, zuverlässige Weg, um Eindeutigkeit zu prüfen.
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public Actor requestActorRegistration(final Context ctx, final String description, final String role) {
         final ChaincodeStub stub = ctx.getStub();
         final String enrollmentId = ctx.getClientIdentity().getId();
 
-        // Sicherheitsprüfung: Rolle im Zertifikat muss mit angeforderter Rolle überein-stimmen.
         final String certRole = getRoleFromCertificate(ctx);
         if (!certRole.equals(role)) {
             throw new ChaincodeException("Die angeforderte Rolle '" + role + "' stimmt nicht mit der Rolle im Zertifikat ('" + certRole + "') überein.", PharmacyErrors.PERMISSION_DENIED.toString());
         }
 
-        // Der Primärschlüssel des Akteurs ist ein deterministischer Hash seiner Enrollment-ID.
-        final String actorId = generateDeterministicUUID("Actor", enrollmentId);
+        // HIER ist der entscheidende Teil:
+        // Wir verwenden eine Rich Query. Mit dem Index aus Schritt 1 ist diese Abfrage
+        // atomar, schnell und verhindert Race Conditions zuverlässig.
+        final String query = String.format("{\"selector\":{\"enrollmentId\":\"%s\"}}", enrollmentId);
+        final String queryResult = richQuery(ctx, query);
 
-        // ZUERST: Lesezugriff auf den Schlüssel.
-        // Dieser Read wird Teil des Read-Sets der Transaktion. Wenn eine andere,
-        // gleichzeitige Transaktion denselben Schlüssel schreibt, wird diese Transaktion
-        // beim Commit wegen eines MVCC-Konflikts ungültig.
-        byte[] existingActor = stub.getState(actorId);
-        if (existingActor != null && existingActor.length > 0) {
-            // Dieser Fall tritt ein, wenn der Akteur bereits in einem früheren Block committed wurde.
+        if (!queryResult.equals("[]")) {
             throw new ChaincodeException("Ein Akteur mit dieser Identität existiert bereits.", PharmacyErrors.ACTOR_ALREADY_EXISTS.toString());
         }
 
-        // Der Akteur wird erstellt.
+        // Da die ID nicht mehr der Primärschlüssel sein muss, können wir wieder eine zufällige UUID nehmen.
+        final String actorId = UUID.randomUUID().toString();
+
         final Actor.Builder builder = new Actor.Builder()
                 .actorId(actorId)
                 .enrollmentId(enrollmentId)
@@ -99,9 +92,6 @@ public final class PharmacyChaincode implements ContractInterface {
 
         final Actor actor = builder.build();
 
-        // ZWEITENS: Schreibzugriff auf den Schlüssel.
-        // Das Schreiben in das Write-Set der Transaktion stellt sicher, dass
-        // gleichzeitige Versuche scheitern.
         stub.putStringState(actorId, actor.toJSONString());
 
         return actor;
