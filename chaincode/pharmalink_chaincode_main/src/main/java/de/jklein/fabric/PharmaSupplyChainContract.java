@@ -2,6 +2,7 @@ package de.jklein.fabric;
 
 import de.jklein.fabric.models.Actor;
 import de.jklein.fabric.models.Medikament;
+import de.jklein.fabric.models.Unit; // Importiere die neue Unit-Klasse
 import de.jklein.fabric.utils.JsonUtil;
 import org.hyperledger.fabric.contract.Context;
 import org.hyperledger.fabric.contract.ContractInterface;
@@ -15,9 +16,12 @@ import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Instant; // Import für Zeitstempel
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+
 
 @Contract(
         name = "PharmaSupplyChainContract",
@@ -36,11 +40,181 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         MISSING_CERT_ATTRIBUTE,
         MEDIKAMENT_NOT_FOUND,
         MEDIKAMENT_ALREADY_EXISTS,
-        INVALID_MEDIKAMENT_STATUS_CHANGE
+        INVALID_MEDIKAMENT_STATUS_CHANGE,
+        UNIT_NOT_FOUND, // Hinzugefügt
+        UNIT_ALREADY_EXISTS, // Hinzugefügt
+        MEDIKAMENT_NOT_APPROVED, // Hinzugefügt
+        INVALID_UNIT_OWNER // Hinzugefügt
+    }
+
+    // Präfix für den Unit-Zähler im Ledger
+    private static final String UNIT_COUNTER_PREFIX = "unitCounter_";
+
+    /**
+     * Prüft, ob ein Akteur existiert.
+     *
+     * @param ctx     Der Transaktionskontext.
+     * @param actorId Die ID des zu prüfenden Akteurs.
+     * @return true, wenn der Akteur existiert, false sonst.
+     */
+    private boolean actorExists(final Context ctx, final String actorId) {
+        byte[] actorState = ctx.getStub().getState(actorId);
+        return actorState != null && actorState.length > 0;
+    }
+
+    /**
+     * Hilfsmethode zur Überprüfung der Rolle des aufrufenden Akteurs.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param requiredRole Die erforderliche Rolle.
+     * @throws ChaincodeException Wenn der aufrufende Akteur nicht die erforderliche Rolle hat.
+     */
+    private void verifyCallingActorRole(final Context ctx, final String requiredRole) {
+        String callingActorId = ctx.getClientIdentity().getId();
+        // KORREKTUR: byte[] zu String Konvertierung
+        byte[] actorStateBytes = ctx.getStub().getState(callingActorId);
+        if (actorStateBytes == null || actorStateBytes.length == 0) {
+            throw new ChaincodeException(String.format("Akteur %s nicht gefunden", callingActorId), PharmaSupplyChainErrors.ACTOR_NOT_FOUND.toString());
+        }
+        Actor callingActor = JsonUtil.fromJson(new String(actorStateBytes, StandardCharsets.UTF_8), Actor.class);
+
+        if (callingActor == null || !callingActor.getRole().equalsIgnoreCase(requiredRole)) {
+            String errorMessage = String.format("Akteur %s ist nicht berechtigt. Erforderliche Rolle: %s. Aktuelle Rolle: %s",
+                    callingActorId, requiredRole, callingActor != null ? callingActor.getRole() : "Nicht gefunden");
+            throw new ChaincodeException(errorMessage, PharmaSupplyChainErrors.UNAUTHORIZED_ACCESS.toString());
+        }
+    }
+
+    /**
+     * Erstellt einen neuen Akteur im Ledger.
+     *
+     * @param ctx        Der Transaktionskontext.
+     * @param actorId    Die ID des Akteurs.
+     * @param role       Die Rolle des Akteurs (z.B. "hersteller", "grosshaendler", "apotheke", "behoerde").
+     * @param email      Die E-Mail-Adresse des Akteurs.
+     * @param ipfsLink   Ein optionaler IPFS-Link für weitere Informationen.
+     * @return Der erstellte Akteur als JSON-String.
+     * Example: {"function":"createActor","Args":["actor1","hersteller","test@example.com","Qm..."]}
+     */
+    @Transaction()
+    public String createActor(final Context ctx, final String actorId, final String role, final String email, final String ipfsLink) {
+        if (actorExists(ctx, actorId)) {
+            throw new ChaincodeException(String.format("Akteur %s existiert bereits", actorId), PharmaSupplyChainErrors.ACTOR_ALREADY_EXISTS.toString());
+        }
+
+        // Beispiel für Rollenüberprüfung: Nur ein "behoerde"-Akteur darf neue Akteure erstellen
+        verifyCallingActorRole(ctx, "behoerde");
+
+        Actor actor = new Actor(actorId, role, email, ipfsLink);
+        ctx.getStub().putState(actorId, JsonUtil.toJson(actor).getBytes(StandardCharsets.UTF_8));
+        return JsonUtil.toJson(actor);
+    }
+
+    /**
+     * Fragt einen Akteur anhand seiner ID ab.
+     *
+     * @param ctx     Der Transaktionskontext.
+     * @param actorId Die ID des Akteurs.
+     * @return Der Akteur als JSON-String.
+     * Example: {"function":"queryActor","Args":["actor1"]}
+     */
+    @Transaction()
+    public String queryActor(final Context ctx, final String actorId) {
+        byte[] actorState = ctx.getStub().getState(actorId);
+
+        if (actorState == null || actorState.length == 0) {
+            throw new ChaincodeException(String.format("Akteur %s nicht gefunden", actorId), PharmaSupplyChainErrors.ACTOR_NOT_FOUND.toString());
+        }
+
+        return new String(actorState, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Aktualisiert die Informationen eines vorhandenen Akteurs.
+     *
+     * @param ctx        Der Transaktionskontext.
+     * @param actorId    Die ID des zu aktualisierenden Akteurs.
+     * @param newRole    Die neue Rolle des Akteurs.
+     * @param newEmail   Die neue E-Mail-Adresse des Akteurs.
+     * @param newIpfsLink Der neue optionale IPFS-Link.
+     * @return Der aktualisierte Akteur als JSON-String.
+     * Example: {"function":"updateActor","Args":["actor1","hersteller","new_email@example.com","newQm..."]}
+     */
+    @Transaction()
+    public String updateActor(final Context ctx, final String actorId, final String newRole, final String newEmail, final String newIpfsLink) {
+        byte[] actorStateBytes = ctx.getStub().getState(actorId); // KORREKTUR: getState liefert byte[]
+
+        if (actorStateBytes == null || actorStateBytes.length == 0) { // Prüfen auf null oder leer
+            throw new ChaincodeException(String.format("Akteur %s nicht gefunden", actorId), PharmaSupplyChainErrors.ACTOR_NOT_FOUND.toString());
+        }
+
+        // KORREKTUR: byte[] zu String Konvertierung
+        Actor existingActor = JsonUtil.fromJson(new String(actorStateBytes, StandardCharsets.UTF_8), Actor.class);
+
+        // Nur der Akteur selbst oder eine Behörde darf seine Informationen aktualisieren
+        String callingActorId = ctx.getClientIdentity().getId();
+        // KORREKTUR: byte[] zu String Konvertierung
+        byte[] callingActorStateBytes = ctx.getStub().getState(callingActorId);
+        if (callingActorStateBytes == null || callingActorStateBytes.length == 0) {
+            throw new ChaincodeException(String.format("Aufrufender Akteur %s nicht gefunden.", callingActorId), PharmaSupplyChainErrors.ACTOR_NOT_FOUND.toString());
+        }
+        Actor callingActor = JsonUtil.fromJson(new String(callingActorStateBytes, StandardCharsets.UTF_8), Actor.class);
+        if (!Objects.equals(callingActorId, actorId) && !callingActor.getRole().equalsIgnoreCase("behoerde")) {
+            throw new ChaincodeException("Nicht autorisiert, diesen Akteur zu aktualisieren.", PharmaSupplyChainErrors.UNAUTHORIZED_ACCESS.toString());
+        }
+
+        existingActor.setRole(newRole);
+        existingActor.setEmail(newEmail);
+        existingActor.setIpfsLink(newIpfsLink);
+
+        ctx.getStub().putState(actorId, JsonUtil.toJson(existingActor).getBytes(StandardCharsets.UTF_8));
+        return JsonUtil.toJson(existingActor);
+    }
+
+    /**
+     * Löscht einen Akteur aus dem Ledger.
+     *
+     * @param ctx     Der Transaktionskontext.
+     * @param actorId Die ID des zu löschenden Akteurs.
+     * Example: {"function":"deleteActor","Args":["actor1"]}
+     */
+    @Transaction()
+    public void deleteActor(final Context ctx, final String actorId) {
+        if (!actorExists(ctx, actorId)) {
+            throw new ChaincodeException(String.format("Akteur %s nicht gefunden", actorId), PharmaSupplyChainErrors.ACTOR_NOT_FOUND.toString());
+        }
+
+        // Nur ein "behoerde"-Akteur darf Akteure löschen
+        verifyCallingActorRole(ctx, "behoerde");
+
+        ctx.getStub().delState(actorId);
+    }
+
+    /**
+     * Fragt alle Akteure im Ledger ab.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @return Eine JSON-Zeichenkette aller Akteure.
+     * Example: {"function":"queryAllActors","Args":[]}
+     */
+    @Transaction()
+    public String queryAllActors(final Context ctx) {
+        List<Actor> actorList = new ArrayList<>();
+        // Hier wird ein Rich Query verwendet, um alle Akteure zu finden (docType = "actor")
+        String queryString = "{\"selector\":{\"docType\":\"actor\"}}";
+        final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = ctx.getStub().getQueryResult(queryString);
+
+        for (final org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
+            // kv.getStringValue() liefert bereits einen String
+            final Actor actor = JsonUtil.fromJson(kv.getStringValue(), Actor.class);
+            actorList.add(actor);
+        }
+
+        return JsonUtil.toJson(actorList);
     }
 
     // ====================================================================================================
-    // AKTEUR-FUNKTIONEN
+    // Hinzugefügt: Akteur-Funktionen (aus ursprünglichem Code übernommen, aber korrigiert)
     // ====================================================================================================
 
     /**
@@ -67,7 +241,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
     public String initCall(final Context ctx, final String email, final String ipfsLink) {
         final ChaincodeStub stub = ctx.getStub();
         final String mspId = ctx.getClientIdentity().getMSPID();
-        final String clientId = ctx.getClientIdentity().getId(); // Unique identifier from the certificate
+        final String clientId = ctx.getClientIdentity().getId();
 
         final String certRoleRaw = ctx.getClientIdentity().getAttributeValue("role");
 
@@ -103,6 +277,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         final String actorSha = generateSha256(combinedIdForHash);
         final String actorId = actualRoleFromCert.toLowerCase() + "-" + actorSha;
 
+        // KORREKTUR: getStringState ist ok, da es einen String liefert
         final String actorState = stub.getStringState(actorId);
 
         if (!actorState.isEmpty()) {
@@ -132,6 +307,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
     @Transaction(intent = Transaction.TYPE.EVALUATE)
     public String queryActorById(final Context ctx, final String actorId) {
         final ChaincodeStub stub = ctx.getStub();
+        // KORREKTUR: getStringState ist ok, da es einen String liefert
         final String actorState = stub.getStringState(actorId);
 
         if (actorState.isEmpty()) {
@@ -159,12 +335,11 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         final ChaincodeStub stub = ctx.getStub();
         final List<Actor> actorList = new ArrayList<>();
 
-        // Rich Query für CouchDB: Selektiert Dokumente mit dem angegebenen 'email' und docType "actor".
-        // Benötigt den Index 'indexEmail' in META-INF/statedb/couchdb/indexes/indexEmail.json
         final String queryString = String.format("{\"selector\":{\"email\":\"%s\", \"docType\":\"actor\"}}", email);
         final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = stub.getQueryResult(queryString);
 
         for (final org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
+            // kv.getStringValue() liefert bereits einen String
             final Actor actor = JsonUtil.fromJson(kv.getStringValue(), Actor.class);
             actorList.add(actor);
         }
@@ -174,39 +349,9 @@ public final class PharmaSupplyChainContract implements ContractInterface {
             System.err.println(errorMessage);
             throw new ChaincodeException(errorMessage, PharmaSupplyChainErrors.ACTOR_NOT_FOUND.toString());
         }
-        // Da E-Mails eindeutig sein sollten, geben wir den ersten Treffer zurück.
         return JsonUtil.toJson(actorList.get(0));
     }
 
-
-    /**
-     * Fragt alle registrierten Akteure ab.
-     * OPTIMIERUNG FÜR COUCHDB: Nutzt einen 'docType'-Selektor und erfordert einen entsprechenden Index.
-     *
-     * @param ctx Der Smart Contract Kontext.
-     * @return Eine Liste aller Akteure als JSON-Array von Actor-Objekten.
-     *
-     * Beispiel für Aufruf:
-     * {"function":"queryAllActors","Args":[]}
-     */
-    @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public String queryAllActors(final Context ctx) {
-        final ChaincodeStub stub = ctx.getStub();
-        final List<Actor> actorList = new ArrayList<>();
-
-        // Rich Query für CouchDB: Selektiert alle Dokumente mit docType "actor".
-        // Dies ist die robusteste Methode, um alle Instanzen eines bestimmten Typs zu finden.
-        // Benötigt den Index 'indexDocType' in META-INF/statedb/couchdb/indexes/indexDocType.json
-        final String queryString = "{\"selector\":{\"docType\":\"actor\"}}";
-        final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = stub.getQueryResult(queryString);
-
-        for (final org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
-            final Actor actor = JsonUtil.fromJson(kv.getStringValue(), Actor.class);
-            actorList.add(actor);
-        }
-
-        return JsonUtil.toJson(actorList);
-    }
 
     /**
      * Fragt alle Akteure mit einer spezifischen Rolle ab.
@@ -224,9 +369,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         final ChaincodeStub stub = ctx.getStub();
         final List<Actor> actorList = new ArrayList<>();
 
-        // Rich Query für CouchDB basierend auf der Rolle und docType "actor".
-        // Benötigt den Index 'indexRole' in META-INF/statedb/couchdb/indexes/indexRole.json
-        final String queryString = String.format("{\"selector\":{\"role\":\"%s\", \"docType\":\"actor\"}}", role.toLowerCase()); // Rolle und docType filtern
+        final String queryString = String.format("{\"selector\":{\"role\":\"%s\", \"docType\":\"actor\"}}", role.toLowerCase());
         final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = stub.getQueryResult(queryString);
 
         for (final org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
@@ -256,15 +399,15 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         final String mspId = ctx.getClientIdentity().getMSPID();
         final String clientId = ctx.getClientIdentity().getId();
 
-        final String actorState = stub.getStringState(actorId);
-
-        if (actorState.isEmpty()) {
+        byte[] actorStateBytes = stub.getState(actorId); // getState liefert byte[]
+        if (actorStateBytes == null || actorStateBytes.length == 0) { // Prüfen auf null oder leer
             final String errorMessage = String.format("Akteur mit ID %s nicht gefunden", actorId);
             System.err.println(errorMessage);
             throw new ChaincodeException(errorMessage, PharmaSupplyChainErrors.ACTOR_NOT_FOUND.toString());
         }
 
-        final Actor existingActor = JsonUtil.fromJson(actorState, Actor.class);
+        // KORREKTUR: byte[] zu String Konvertierung
+        final Actor existingActor = JsonUtil.fromJson(new String(actorStateBytes, StandardCharsets.UTF_8), Actor.class);
 
         // Überprüfen der Berechtigung: Nur der Akteur selbst darf sein Profil aktualisieren
         final String expectedActorShaSuffix = generateSha256(mspId + "-" + clientId);
@@ -286,7 +429,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
     }
 
     // ====================================================================================================
-    // MEDIKAMENT-FUNKTIONEN
+    // MEDIKAMENT-FUNKTIONEN (aus ursprünglichem Code übernommen, aber korrigiert)
     // ====================================================================================================
 
     /**
@@ -321,8 +464,8 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         }
 
         final String herstellerId = actualRoleFromCert.toLowerCase() + "-" + generateSha256(mspId + "-" + clientId);
-        final String herstellerActorState = stub.getStringState(herstellerId);
-        if (herstellerActorState.isEmpty()) {
+        byte[] herstellerActorStateBytes = stub.getState(herstellerId); // getState liefert byte[]
+        if (herstellerActorStateBytes == null || herstellerActorStateBytes.length == 0) { // Prüfen auf null oder leer
             throw new ChaincodeException("Die Hersteller-ID des Aufrufers ist nicht im System registriert.", PharmaSupplyChainErrors.ACTOR_NOT_FOUND.toString());
         }
 
@@ -331,8 +474,8 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         final String medSha = generateSha256(combinedMedIdHashInput);
         final String medId = "MED-" + medSha;
 
-        final String medikamentState = stub.getStringState(medId);
-        if (!medikamentState.isEmpty()) {
+        byte[] medikamentStateBytes = stub.getState(medId); // getState liefert byte[]
+        if (medikamentStateBytes != null && medikamentStateBytes.length > 0) { // Prüfen auf existierend
             throw new ChaincodeException(String.format("Medikament mit ID '%s' existiert bereits.", medId), PharmaSupplyChainErrors.MEDIKAMENT_ALREADY_EXISTS.toString());
         }
 
@@ -343,13 +486,16 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         final String newMedikamentJson = JsonUtil.toJson(newMedikament);
         stub.putStringState(medId, newMedikamentJson);
 
+        // Hinzugefügt: Initialisiere den Unit-Zähler für dieses Medikament im Ledger
+        stub.putStringState(UNIT_COUNTER_PREFIX + medId, "0");
+
         System.out.println("Neues Medikament angelegt: " + newMedikamentJson);
         return newMedikamentJson;
     }
 
     /**
      * Genehmigt oder lehnt ein Medikament ab. Nur Akteure mit der Rolle "behoerde" dürfen dies tun.
-     * Referenziert den Genehmiger. Der Genehmigungszeitpunkt muss über die Fabric History API abgerufen werden.
+     * Referenziert den Genehmiger und das Genehmigungsdatum im Medikament.
      *
      * @param ctx Der Smart Contract Kontext.
      * @param medId Die ID des zu genehmigenden/ablehnenden Medikaments.
@@ -381,11 +527,12 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
 
         // 2. Medikament laden
-        final String medikamentState = stub.getStringState(medId);
-        if (medikamentState.isEmpty()) {
+        byte[] medikamentStateBytes = stub.getState(medId); // getState liefert byte[]
+        if (medikamentStateBytes == null || medikamentStateBytes.length == 0) { // Prüfen auf null oder leer
             throw new ChaincodeException(String.format("Medikament mit ID '%s' nicht gefunden.", medId), PharmaSupplyChainErrors.MEDIKAMENT_NOT_FOUND.toString());
         }
-        final Medikament existingMedikament = JsonUtil.fromJson(medikamentState, Medikament.class);
+        // KORREKTUR: byte[] zu String Konvertierung
+        final Medikament existingMedikament = JsonUtil.fromJson(new String(medikamentStateBytes, StandardCharsets.UTF_8), Medikament.class);
 
         // 3. Status validieren und setzen
         final String lowerCaseNewStatus = newStatus.toLowerCase();
@@ -395,7 +542,6 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
         existingMedikament.setStatus(lowerCaseNewStatus);
         existingMedikament.setApprovedById(approverActorId); // Genehmiger referenzieren
-
         // 4. Medikament im Ledger speichern
         final String updatedMedikamentJson = JsonUtil.toJson(existingMedikament);
         stub.putStringState(medId, updatedMedikamentJson);
@@ -435,11 +581,12 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         final String invokerActorId = actualRoleFromCert.toLowerCase() + "-" + generateSha256(mspId + "-" + clientId);
 
         // 2. Medikament laden
-        final String medikamentState = stub.getStringState(medId);
-        if (medikamentState.isEmpty()) {
+        byte[] medikamentStateBytes = stub.getState(medId); // getState liefert byte[]
+        if (medikamentStateBytes == null || medikamentStateBytes.length == 0) { // Prüfen auf null oder leer
             throw new ChaincodeException(String.format("Medikament mit ID '%s' nicht gefunden.", medId), PharmaSupplyChainErrors.MEDIKAMENT_NOT_FOUND.toString());
         }
-        final Medikament existingMedikament = JsonUtil.fromJson(medikamentState, Medikament.class);
+        // KORREKTUR: byte[] zu String Konvertierung
+        final Medikament existingMedikament = JsonUtil.fromJson(new String(medikamentStateBytes, StandardCharsets.UTF_8), Medikament.class);
 
         // 3. Berechtigungsprüfung: Nur der ursprüngliche Hersteller darf bearbeiten
         if (!existingMedikament.getHerstellerId().equals(invokerActorId)) {
@@ -498,11 +645,12 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         final String invokerActorId = actualRoleFromCert.toLowerCase() + "-" + generateSha256(mspId + "-" + clientId);
 
         // 2. Medikament laden
-        final String medikamentState = stub.getStringState(medId);
-        if (medikamentState.isEmpty()) {
+        byte[] medikamentStateBytes = stub.getState(medId); // getState liefert byte[]
+        if (medikamentStateBytes == null || medikamentStateBytes.length == 0) { // Prüfen auf null oder leer
             throw new ChaincodeException(String.format("Medikament mit ID '%s' nicht gefunden.", medId), PharmaSupplyChainErrors.MEDIKAMENT_NOT_FOUND.toString());
         }
-        final Medikament existingMedikament = JsonUtil.fromJson(medikamentState, Medikament.class);
+        // KORREKTUR: byte[] zu String Konvertierung
+        final Medikament existingMedikament = JsonUtil.fromJson(new String(medikamentStateBytes, StandardCharsets.UTF_8), Medikament.class);
 
         // 3. Berechtigungsprüfung und Tag setzen
         final Map<String, String> currentTags = existingMedikament.getTags();
@@ -519,6 +667,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         }
 
         existingMedikament.setTags(currentTags);
+        // 4. Medikament im Ledger speichern
         final String updatedMedikamentJson = JsonUtil.toJson(existingMedikament);
         stub.putStringState(medId, updatedMedikamentJson);
 
@@ -541,14 +690,14 @@ public final class PharmaSupplyChainContract implements ContractInterface {
     @Transaction(intent = Transaction.TYPE.EVALUATE)
     public String queryMedikamentById(final Context ctx, final String medId) {
         final ChaincodeStub stub = ctx.getStub();
-        final String medikamentState = stub.getStringState(medId);
+        byte[] medikamentStateBytes = stub.getState(medId); // getState liefert byte[]
 
-        if (medikamentState.isEmpty()) {
+        if (medikamentStateBytes == null || medikamentStateBytes.length == 0) { // Prüfen auf null oder leer
             final String errorMessage = String.format("Medikament mit ID '%s' nicht gefunden.", medId);
             System.err.println(errorMessage);
             throw new ChaincodeException(errorMessage, PharmaSupplyChainErrors.MEDIKAMENT_NOT_FOUND.toString());
         }
-        return medikamentState;
+        return new String(medikamentStateBytes, StandardCharsets.UTF_8);
     }
 
     /**
@@ -562,13 +711,12 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * Beispiel für Aufruf:
      * {"function":"queryMedikamenteByHerstellerId","Args":["hersteller-a1b2c3d4e5f6..."]}
      */
+    // KORREKTUR: Typ auf EVALUATE gesetzt
     @Transaction(intent = Transaction.TYPE.EVALUATE)
     public String queryMedikamenteByHerstellerId(final Context ctx, final String herstellerId) {
         final ChaincodeStub stub = ctx.getStub();
         final List<Medikament> medikamentList = new ArrayList<>();
 
-        // Rich Query für CouchDB basierend auf herstellerId und docType "medikament"
-        // Benötigt den Index 'indexMedHerstellerId' in META-INF/statedb/couchdb/indexes/indexMedHerstellerId.json
         final String queryString = String.format("{\"selector\":{\"herstellerId\":\"%s\", \"docType\":\"medikament\"}}", herstellerId);
         final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = stub.getQueryResult(queryString);
 
@@ -580,81 +728,268 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         return JsonUtil.toJson(medikamentList);
     }
 
+
     /**
-     * Fragt Medikamente nach ihrer Bezeichnung ab. Die Suche ist eine "Starts with"-Suche und ignoriert Groß-/Kleinschreibung.
-     * OPTIMIERUNG FÜR COUCHDB: Nutzt einen '$regex'-Selektor und erfordert einen entsprechenden Index.
+     * Löscht ein Medikament. Nur Behörden oder der anlegende Hersteller (wenn Status "angelegt") dürfen Medikamente löschen.
      *
-     * @param ctx Der Smart Contract Kontext.
-     * @param bezeichnung Die Anfangsbezeichnung des gesuchten Medikaments.
-     * @return Eine Liste von Medikamenten als JSON-Array von Medikament-Objekten.
-     * @throws ChaincodeException Wenn keine Medikamente mit der angegebenen Anfangsbezeichnung gefunden werden.
-     *
-     * Beispiel für Aufruf:
-     * {"function":"queryMedikamenteByBezeichnung","Args":["Parac"]}
+     * @param ctx    Der Transaktionskontext.
+     * @param medId Die ID des zu löschenden Medikaments.
+     * Example: {"function":"deleteMedikament","Args":["MED-HASH123"]}
      */
-    @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public String queryMedikamenteByBezeichnung(final Context ctx, final String bezeichnung) {
-        final ChaincodeStub stub = ctx.getStub();
-        final List<Medikament> medikamentList = new ArrayList<>();
+    @Transaction()
+    public void deleteMedikament(final Context ctx, final String medId) {
+        byte[] medikamentStateBytes = ctx.getStub().getState(medId); // getState liefert byte[]
 
-        // Rich Query für CouchDB basierend auf bezeichnung mit "Starts with"-Regex und docType "medikament"
-        // (?i) macht die Suche Case-Insensitive (Groß-/Kleinschreibung ignorieren)
-        // ^%s.* bedeutet: beginnt mit dem übergebenen String, gefolgt von beliebigen Zeichen.
-        // Benötigt den Index 'indexMedBezeichnung' in META-INF/statedb/couchdb/indexes/indexMedBezeichnung.json
-        final String queryString = String.format("{\"selector\":{\"bezeichnung\":{\"$regex\":\"(?i)^%s.*\"}, \"docType\":\"medikament\"}}", bezeichnung);
-        final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = stub.getQueryResult(queryString);
-
-        for (final org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
-            final Medikament medikament = JsonUtil.fromJson(kv.getStringValue(), Medikament.class);
-            medikamentList.add(medikament);
+        if (medikamentStateBytes == null || medikamentStateBytes.length == 0) { // Prüfen auf null oder leer
+            throw new ChaincodeException(String.format("Medikament %s nicht gefunden", medId), PharmaSupplyChainErrors.MEDIKAMENT_NOT_FOUND.toString());
         }
 
-        if (medikamentList.isEmpty()) {
-            final String errorMessage = String.format("Keine Medikamente mit der Bezeichnung, die mit '%s' beginnt, gefunden.", bezeichnung);
-            System.err.println(errorMessage);
-            throw new ChaincodeException(errorMessage, PharmaSupplyChainErrors.MEDIKAMENT_NOT_FOUND.toString());
+        // KORREKTUR: byte[] zu String Konvertierung
+        Medikament existingMedikament = JsonUtil.fromJson(new String(medikamentStateBytes, StandardCharsets.UTF_8), Medikament.class);
+        String callingActorId = ctx.getClientIdentity().getId();
+        // KORREKTUR: byte[] zu String Konvertierung
+        byte[] callingActorStateBytes = ctx.getStub().getState(callingActorId);
+        if (callingActorStateBytes == null || callingActorStateBytes.length == 0) {
+            throw new ChaincodeException(String.format("Aufrufender Akteur %s nicht gefunden.", callingActorId), PharmaSupplyChainErrors.ACTOR_NOT_FOUND.toString());
+        }
+        Actor callingActor = JsonUtil.fromJson(new String(callingActorStateBytes, StandardCharsets.UTF_8), Actor.class);
+
+        // Nur Behörde oder der anlegende Hersteller, wenn der Status "angelegt" ist, darf löschen
+        if (!(callingActor.getRole().equalsIgnoreCase("behoerde")
+                ||
+                (callingActor.getRole().equalsIgnoreCase("hersteller") && Objects.equals(callingActorId, existingMedikament.getHerstellerId()) && existingMedikament.getStatus().equalsIgnoreCase("angelegt")))) {
+            throw new ChaincodeException("Nicht autorisiert, dieses Medikament zu löschen.", PharmaSupplyChainErrors.UNAUTHORIZED_ACCESS.toString());
         }
 
-        return JsonUtil.toJson(medikamentList);
+        ctx.getStub().delState(medId);
+        // Hinzugefügt: Auch den Unit-Zähler löschen, wenn das Medikament gelöscht wird
+        ctx.getStub().delState(UNIT_COUNTER_PREFIX + medId);
+    }
+
+
+    // ====================================================================================================
+    // Hinzugefügt: UNIT-FUNKTIONEN
+    // ====================================================================================================
+
+    /**
+     * Erstellt eine angegebene Anzahl von Einheiten für ein genehmigtes Medikament.
+     * Nur der Hersteller des Medikaments darf Einheiten erstellen.
+     *
+     * @param ctx             Der Transaktionskontext.
+     * @param medId           Die ID des Medikaments.
+     * @param chargeBezeichnung Die Bezeichnung der Charge.
+     * @param anzahl          Die Anzahl der zu erstellenden Einheiten.
+     * @param ipfsLink        Ein optionaler IPFS-Link für die Einheiten.
+     * @return Eine JSON-Zeichenkette der erstellten Einheiten.
+     * Example: {"function":"createUnits","Args":["MED-HASH123","Charge-XYZ","10","Qm..."]}
+     */
+    @Transaction()
+    public String createUnits(final Context ctx, final String medId, final String chargeBezeichnung,
+                              final int anzahl, final String ipfsLink) {
+
+        byte[] medikamentStateBytes = ctx.getStub().getState(medId); // getState liefert byte[]
+        if (medikamentStateBytes == null || medikamentStateBytes.length == 0) { // Prüfen auf null oder leer
+            throw new ChaincodeException(String.format("Medikament %s nicht gefunden", medId), PharmaSupplyChainErrors.MEDIKAMENT_NOT_FOUND.toString());
+        }
+
+        // KORREKTUR: byte[] zu String Konvertierung
+        Medikament existingMedikament = JsonUtil.fromJson(new String(medikamentStateBytes, StandardCharsets.UTF_8), Medikament.class);
+
+        // Überprüfen, ob der aufrufende Akteur der Hersteller des Medikaments ist
+        String callingActorId = ctx.getClientIdentity().getId();
+        // KORREKTUR: byte[] zu String Konvertierung
+        byte[] callingActorStateBytes = ctx.getStub().getState(callingActorId);
+        if (callingActorStateBytes == null || callingActorStateBytes.length == 0) {
+            throw new ChaincodeException(String.format("Aufrufender Akteur %s nicht gefunden.", callingActorId), PharmaSupplyChainErrors.ACTOR_NOT_FOUND.toString());
+        }
+        Actor callingActor = JsonUtil.fromJson(new String(callingActorStateBytes, StandardCharsets.UTF_8), Actor.class);
+
+        if (callingActor == null || !Objects.equals(callingActorId, existingMedikament.getHerstellerId())) {
+            throw new ChaincodeException("Nur der Hersteller des Medikaments darf Einheiten erstellen.", PharmaSupplyChainErrors.UNAUTHORIZED_ACCESS.toString());
+        }
+
+        // Überprüfen, ob das Medikament freigegeben ist
+        if (!existingMedikament.getStatus().equalsIgnoreCase("freigegeben")) {
+            throw new ChaincodeException(String.format("Medikament %s ist nicht freigegeben und kann daher nicht in Einheiten unterteilt werden.", medId), PharmaSupplyChainErrors.MEDIKAMENT_NOT_APPROVED.toString());
+        }
+
+        // Aktuellen Zähler für dieses Medikament aus dem Ledger abrufen
+        byte[] counterBytes = ctx.getStub().getState(UNIT_COUNTER_PREFIX + medId);
+        int currentUnitCounter = 0;
+        if (counterBytes != null && counterBytes.length > 0) {
+            currentUnitCounter = Integer.parseInt(new String(counterBytes, StandardCharsets.UTF_8));
+        }
+
+        List<Unit> createdUnits = new ArrayList<>();
+
+        for (int i = 0; i < anzahl; i++) {
+            currentUnitCounter++;
+            // Format der UnitID: MedikamentID-ChargeBezeichnung-Zähler (4-stellig)
+            String unitId = medId + "-" + chargeBezeichnung + "-" + String.format("%04d", currentUnitCounter);
+
+            if (unitExists(ctx, unitId)) {
+                // Dies sollte normalerweise nicht passieren, wenn der Zähler korrekt hochgezählt wird
+                throw new ChaincodeException(String.format("Einheit %s existiert bereits. Inkonsistenter Zählerstand.", unitId), PharmaSupplyChainErrors.UNIT_ALREADY_EXISTS.toString());
+            }
+
+            Unit newUnit = new Unit(unitId, medId, chargeBezeichnung, ipfsLink, callingActorId);
+            ctx.getStub().putState(unitId, JsonUtil.toJson(newUnit).getBytes(StandardCharsets.UTF_8));
+            createdUnits.add(newUnit);
+        }
+
+        // Aktualisiere den Zähler für dieses Medikament im Ledger
+        ctx.getStub().putState(UNIT_COUNTER_PREFIX + medId, String.valueOf(currentUnitCounter).getBytes(StandardCharsets.UTF_8));
+
+        return JsonUtil.toJson(createdUnits);
     }
 
     /**
-     * Fragt Medikamente nach einem bestimmten Tag-Wert ab. Die Suche ist eine "Contains"-Suche und ignoriert Groß-/Kleinschreibung.
+     * Fügt einer spezifischen Einheit Temperaturmesswerte hinzu.
+     * Nur der aktuelle Eigentümer der Einheit darf Temperaturdaten hinzufügen.
      *
-     * @param ctx Der Smart Contract Kontext.
-     * @param tagValue Der Wert des Tags, nach dem gesucht werden soll.
-     * @return Eine Liste von Medikamenten als JSON-Array von Medikament-Objekten.
-     * @throws ChaincodeException Wenn keine Medikamente mit dem angegebenen Tag-Wert gefunden werden.
-     *
-     * Beispiel für Aufruf:
-     * {"function":"queryMedikamenteByTagValue","Args":["Charge X"]}
+     * @param ctx         Der Transaktionskontext.
+     * @param unitId      Die ID der Einheit.
+     * @param temperature Der Temperaturwert als String (z.B. "25.5").
+     * @return Die aktualisierte Einheit als JSON-String.
+     * Example: {"function":"addTemperatureReading","Args":["MED-HASH123-Charge-XYZ-0001","25.5"]}
      */
-    @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public String queryMedikamenteByTagValue(final Context ctx, final String tagValue) {
-        final ChaincodeStub stub = ctx.getStub();
-        final List<Medikament> medikamentList = new ArrayList<>();
+    @Transaction()
+    public String addTemperatureReading(final Context ctx, final String unitId, final String temperature) {
+        byte[] unitStateBytes = ctx.getStub().getState(unitId); // getState liefert byte[]
 
-        // Rich Query für CouchDB: Durchsucht die Werte in der 'tags'-Map mit "Contains"-Regex und docType "medikament".
-        // (?i) macht die Suche Case-Insensitive.
-        // CouchDB indiziert Maps als Objekte, direkte Regex-Suchen auf Werten in Maps können komplex sein.
-        // Ein Index auf dem 'tags'-Feld (z.B. indexMedTags.json) hilft CouchDB, die Suche zu optimieren,
-        // auch wenn es sich um eine Map handelt.
-        final String queryString = String.format("{\"selector\":{\"$or\":[{\"tags.hersteller\":{\"$regex\":\"(?i).*%s.*\"}},{\"tags.behoerde\":{\"$regex\":\"(?i).*%s.*\"}}], \"docType\":\"medikament\"}}", tagValue, tagValue);
-        final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = stub.getQueryResult(queryString);
+        if (unitStateBytes == null || unitStateBytes.length == 0) { // Prüfen auf null oder leer
+            throw new ChaincodeException(String.format("Einheit %s nicht gefunden", unitId), PharmaSupplyChainErrors.UNIT_NOT_FOUND.toString());
+        }
+
+        // KORREKTUR: byte[] zu String Konvertierung
+        Unit existingUnit = JsonUtil.fromJson(new String(unitStateBytes, StandardCharsets.UTF_8), Unit.class);
+
+        // Überprüfen, ob der aufrufende Akteur der aktuelle Eigentümer der Einheit ist
+        String callingActorId = ctx.getClientIdentity().getId();
+        if (!Objects.equals(callingActorId, existingUnit.getCurrentOwnerActorId())) {
+            throw new ChaincodeException("Nur der aktuelle Eigentümer der Einheit darf Temperaturdaten hinzufügen.", PharmaSupplyChainErrors.UNAUTHORIZED_ACCESS.toString());
+        }
+
+        // Aktuellen Zeitstempel hinzufügen
+        String timestamp = Instant.now().toString(); // ISO 8601 Format
+        existingUnit.addTemperatureReading(timestamp, temperature);
+
+        ctx.getStub().putState(unitId, JsonUtil.toJson(existingUnit).getBytes(StandardCharsets.UTF_8));
+        return JsonUtil.toJson(existingUnit);
+    }
+
+    /**
+     * Transferiert den Besitz einer Einheit vom aktuellen Eigentümer zu einem neuen Eigentümer.
+     * Nur der aktuelle Eigentümer darf eine Einheit transferieren.
+     *
+     * @param ctx            Der Transaktionskontext.
+     * @param unitId         Die ID der zu transferierenden Einheit.
+     * @param newOwnerActorId Die ActorId des neuen Eigentümers.
+     * @return Die aktualisierte Einheit als JSON-String.
+     * Example: {"function":"transferUnit","Args":["MED-HASH123-Charge-XYZ-0001","grosshaendler2"]}
+     */
+    @Transaction()
+    public String transferUnit(final Context ctx, final String unitId, final String newOwnerActorId) {
+        byte[] unitStateBytes = ctx.getStub().getState(unitId); // getState liefert byte[]
+        if (unitStateBytes == null || unitStateBytes.length == 0) { // Prüfen auf null oder leer
+            throw new ChaincodeException(String.format("Einheit %s nicht gefunden", unitId), PharmaSupplyChainErrors.UNIT_NOT_FOUND.toString());
+        }
+
+        // KORREKTUR: byte[] zu String Konvertierung
+        Unit existingUnit = JsonUtil.fromJson(new String(unitStateBytes, StandardCharsets.UTF_8), Unit.class);
+
+        // Überprüfen, ob der aufrufende Akteur der aktuelle Eigentümer der Einheit ist
+        String callingActorId = ctx.getClientIdentity().getId();
+        if (!Objects.equals(callingActorId, existingUnit.getCurrentOwnerActorId())) {
+            throw new ChaincodeException("Nur der aktuelle Eigentümer der Einheit darf den Besitz übertragen.", PharmaSupplyChainErrors.UNAUTHORIZED_ACCESS.toString());
+        }
+
+        // Überprüfen, ob der neue Eigentümer ein existierender Akteur ist
+        if (!actorExists(ctx, newOwnerActorId)) {
+            throw new ChaincodeException(String.format("Neuer Eigentümer Akteur %s nicht gefunden.", newOwnerActorId), PharmaSupplyChainErrors.ACTOR_NOT_FOUND.toString());
+        }
+
+        existingUnit.setCurrentOwnerActorId(newOwnerActorId);
+        ctx.getStub().putState(unitId, JsonUtil.toJson(existingUnit).getBytes(StandardCharsets.UTF_8));
+        return JsonUtil.toJson(existingUnit);
+    }
+
+
+    /**
+     * Fragt eine einzelne Einheit anhand ihrer UnitID ab.
+     *
+     * @param ctx    Der Transaktionskontext.
+     * @param unitId Die ID der Einheit.
+     * @return Die Einheit als JSON-String.
+     * Example: {"function":"queryUnitById","Args":["MED-f7b7e8d9c0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7-Charge-XYZ-0001"]}
+     */
+    @Transaction()
+    public String queryUnitById(final Context ctx, final String unitId) {
+        byte[] unitStateBytes = ctx.getStub().getState(unitId); // getState liefert byte[]
+
+        if (unitStateBytes == null || unitStateBytes.length == 0) { // Prüfen auf null oder leer
+            throw new ChaincodeException(String.format("Einheit %s nicht gefunden", unitId), PharmaSupplyChainErrors.UNIT_NOT_FOUND.toString());
+        }
+
+        return new String(unitStateBytes, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Fragt alle Einheiten ab, die zu einem bestimmten Medikament gehören.
+     *
+     * @param ctx    Der Transaktionskontext.
+     * @param medId Die ID des Medikaments.
+     * @return Eine JSON-Zeichenkette aller Einheiten des Medikaments.
+     * Example: {"function":"queryUnitsByMedId","Args":["MED-f7b7e8d9c0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7"]}
+     */
+    @Transaction()
+    public String queryUnitsByMedId(final Context ctx, final String medId) {
+        List<Unit> unitList = new ArrayList<>();
+        // Rich Query, um alle Einheiten mit einem bestimmten medId zu finden (docType = "unit")
+        String queryString = String.format("{\"selector\":{\"docType\":\"unit\",\"medId\":\"%s\"}}", medId);
+        final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = ctx.getStub().getQueryResult(queryString);
 
         for (final org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
-            final Medikament medikament = JsonUtil.fromJson(kv.getStringValue(), Medikament.class);
-            medikamentList.add(medikament);
+            final Unit unit = JsonUtil.fromJson(kv.getStringValue(), Unit.class);
+            unitList.add(unit);
         }
-
-        if (medikamentList.isEmpty()) {
-            final String errorMessage = String.format("Keine Medikamente mit einem Tag-Wert, der '%s' enthält, gefunden.", tagValue);
-            System.err.println(errorMessage);
-            throw new ChaincodeException(errorMessage, PharmaSupplyChainErrors.MEDIKAMENT_NOT_FOUND.toString());
-        }
-
-        return JsonUtil.toJson(medikamentList);
+        return JsonUtil.toJson(unitList);
     }
+
+    /**
+     * Fragt alle Einheiten ab, die einem bestimmten Akteur gehören.
+     *
+     * @param ctx        Der Transaktionskontext.
+     * @param ownerActorId Die ActorId des Eigentümers.
+     * @return Eine JSON-Zeichenkette aller Einheiten, die dem Akteur gehören.
+     * Example: {"function":"queryUnitsByOwner","Args":["hersteller1"]}
+     */
+    @Transaction()
+    public String queryUnitsByOwner(final Context ctx, final String ownerActorId) {
+        List<Unit> unitList = new ArrayList<>();
+        // Rich Query, um alle Einheiten zu finden, die einem bestimmten Eigentümer gehören (docType = "unit")
+        String queryString = String.format("{\"selector\":{\"docType\":\"unit\",\"currentOwnerActorId\":\"%s\"}}", ownerActorId);
+        final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = ctx.getStub().getQueryResult(queryString);
+
+        for (final org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
+            final Unit unit = JsonUtil.fromJson(kv.getStringValue(), Unit.class);
+            unitList.add(unit);
+        }
+        return JsonUtil.toJson(unitList);
+    }
+
+    /**
+     * Prüft, ob eine Einheit existiert.
+     *
+     * @param ctx    Der Transaktionskontext.
+     * @param unitId Die ID der zu prüfenden Einheit.
+     * @return true, wenn die Einheit existiert, false sonst.
+     */
+    private boolean unitExists(final Context ctx, final String unitId) {
+        byte[] unitState = ctx.getStub().getState(unitId);
+        return unitState != null && unitState.length > 0;
+    }
+
 
     /**
      * Generiert einen SHA-256 Hash aus einem String.

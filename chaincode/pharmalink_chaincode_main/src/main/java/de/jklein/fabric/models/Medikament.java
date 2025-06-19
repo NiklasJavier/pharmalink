@@ -32,18 +32,11 @@ public final class Medikament {
     @Property()
     private Map<String, String> tags; // Key: Rolle (hersteller, behoerde), Value: Tag-Bezeichnung
 
-    // @Property()
-    // private String lastChangeDate; // Entfernt, Historie über Fabric History API
-
     @Property()
     private String docType; // Für CouchDB-Abfragen
 
     @Property()
     private String approvedById; // ActorId des Genehmigers (Behörde)
-
-    // @Property()
-    // private String approvalDate; // Entfernt, da nicht deterministisch gesetzt werden soll
-
 
     // Leerer Konstruktor für Genson Deserialisierung
     public Medikament() {
@@ -52,7 +45,6 @@ public final class Medikament {
         this.docType = "medikament";
     }
 
-    // Konstruktor mit maximal 7 Parametern
     public Medikament(@JsonProperty("medId") final String medId,
                       @JsonProperty("herstellerId") final String herstellerId,
                       @JsonProperty("bezeichnung") final String bezeichnung,
@@ -122,7 +114,6 @@ public final class Medikament {
         this.tags = newTags;
     }
 
-    // getLastChangeDate und setLastChangeDate wurden entfernt
     public String getDocType() {
         return docType;
     }
@@ -139,7 +130,6 @@ public final class Medikament {
         this.approvedById = newApprovedById;
     }
 
-    // getApprovalDate und setApprovalDate wurden entfernt
     @Override
     public boolean equals(final Object o) {
         if (this == o) {
@@ -169,6 +159,6 @@ public final class Medikament {
                 + ", tags=" + tags
                 + ", docType='" + docType + '\''
                 + ", approvedById='" + approvedById + '\''
-                + '}'; // approvalDate entfernt
+                + '}';
     }
 }
