@@ -1,12 +1,23 @@
-### **Chaincodes: `PharmaSupplyChainContract`**
+### **Chaincodes: Pharmalink**
 
 **Rollen:** `behoerde`, `hersteller`, `grosshaendler`, `apotheke`
 **Autorisierungsprinzip:** Rollenbasierte Zugriffskontrolle (RBAC) über X.509-Zertifikatsattribute (`role`).
 
+Die Rollen und X.509-Zertifikatsattribute der Akteure werden durch das Skript
+[`fabric_setup_test_consortium.sh`](../fabric_setup_test_consortium.sh) generiert.
+
+Für die Interaktion über die Fabric CLI können die Umgebungsvariablen für jede Rolle
+separat gesourced werden, z.B. für einen Hersteller:
+[`Bsp. Hersteller Env. Sourcen`](../scripts/roles/fabric_role_hersteller.sh)
+(Dieser Pfad ist ein *Beispiel*, da ich die genaue Struktur Ihres `scripts/roles` Ordners nicht kenne.
+Bitte passen Sie den Pfad an Ihr tatsächliches Verzeichnis an.)
+
+Die detaillierte Implementierung der Chaincode-Funktionen finden Sie in der Datei
+[`PharmaSupplyChainContract.java`](./src/main/java/de/jklein/fabric/PharmaSupplyChainContract.java).
+
 | Kategorie | Funktion             | Typ           | Zweck & Autorisierung                                                                                                                                              | Beispielaufruf (JSON)                                                                                                                                                                          |
 | :-------- | :------------------- | :------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Akteur** | `initCall`           | Insert/Update | Registriert Akteur (generierte ID) oder gibt bestehende Daten zurück. **Autorisierung:** Rolle aus Zertifikat muss gültige Affiliation sein.            | `{"function":"initCall","Args":["max.mustermann@example.com","QmWgX..."]}`                                                                                                              |
-|           | `createActor`        | Insert        | Erstellt Akteur mit manueller ID. **Autorisierung: `behoerde`** | `{"function":"createActor","Args":["testorg-manufacturer","hersteller","info@testorg.com","QmTestOrgProfile"]}`                                                                           |
 |           | `updateActor`        | Update        | Aktualisiert Rolle, E-Mail, IPFS-Link. **Autorisierung: Akteur selbst ODER `behoerde`** | `{"function":"updateActor","Args":["hersteller-a1b2c3d4e5f6...","grosshaendler","updated@email.com","newQm..."]}`                                                                           |
 |           | `updateActorIpfsLink`| Update        | Aktualisiert nur den IPFS-Link. **Autorisierung: Akteur selbst** | `{"function":"updateActorIpfsLink","Args":["hersteller-a1b2c3d4e5f6...","QmNeuerIPFSLink..."]}`                                                                                        |
 |           | `deleteActor`        | Delete        | Löscht Akteur. **Autorisierung: `behoerde`** | `{"function":"deleteActor","Args":["hersteller-a1b2c3d4e5f6..."]}`                                                                                                                       |
