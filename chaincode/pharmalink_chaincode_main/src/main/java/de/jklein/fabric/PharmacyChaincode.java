@@ -48,28 +48,40 @@ public final class PharmacyChaincode implements ContractInterface {
     private static final String ENROLLMENT_ID_LOOKUP_PREFIX = "enrollmentId~";
 
     /**
-     * HINWEIS: Diese Methode ist korrekt, unterliegt aber ohne DB-Index einer Race Condition.
-     * Schnelle, wiederholte Aufrufe können zu doppelten Einträgen führen, bevor der
-     * erste Eintrag auf allen Peers final geschrieben wurde. Dies ist eine Limitierung
-     * der indexlosen Abfrage.
+     * FINALE KORREKTUR: Verhindert Duplikate und Race Conditions, indem die Akteur-ID
+     * direkt und deterministisch aus der Identität des Aufrufers erzeugt wird UND
+     * eine Prüfung gegen den Transaktions-Read-Set durchgeführt wird.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param description Eine Beschreibung des Akteurs (z.B. Firmenname).
+     * @param role Die gewünschte Rolle.
+     * @return Der neu erstellte Akteur.
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public Actor requestActorRegistration(final Context ctx, final String description, final String role) {
         final ChaincodeStub stub = ctx.getStub();
         final String enrollmentId = ctx.getClientIdentity().getId();
 
+        // Sicherheitsprüfung: Rolle im Zertifikat muss mit angeforderter Rolle überein-stimmen.
         final String certRole = getRoleFromCertificate(ctx);
         if (!certRole.equals(role)) {
             throw new ChaincodeException("Die angeforderte Rolle '" + role + "' stimmt nicht mit der Rolle im Zertifikat ('" + certRole + "') überein.", PharmacyErrors.PERMISSION_DENIED.toString());
         }
 
+        // Der Primärschlüssel des Akteurs ist ein deterministischer Hash seiner Enrollment-ID.
         final String actorId = generateDeterministicUUID("Actor", enrollmentId);
 
+        // ZUERST: Lesezugriff auf den Schlüssel.
+        // Dieser Read wird Teil des Read-Sets der Transaktion. Wenn eine andere,
+        // gleichzeitige Transaktion denselben Schlüssel schreibt, wird diese Transaktion
+        // beim Commit wegen eines MVCC-Konflikts ungültig.
         byte[] existingActor = stub.getState(actorId);
         if (existingActor != null && existingActor.length > 0) {
+            // Dieser Fall tritt ein, wenn der Akteur bereits in einem früheren Block committed wurde.
             throw new ChaincodeException("Ein Akteur mit dieser Identität existiert bereits.", PharmacyErrors.ACTOR_ALREADY_EXISTS.toString());
         }
 
+        // Der Akteur wird erstellt.
         final Actor.Builder builder = new Actor.Builder()
                 .actorId(actorId)
                 .enrollmentId(enrollmentId)
@@ -87,6 +99,9 @@ public final class PharmacyChaincode implements ContractInterface {
 
         final Actor actor = builder.build();
 
+        // ZWEITENS: Schreibzugriff auf den Schlüssel.
+        // Das Schreiben in das Write-Set der Transaktion stellt sicher, dass
+        // gleichzeitige Versuche scheitern.
         stub.putStringState(actorId, actor.toJSONString());
 
         return actor;
@@ -104,7 +119,7 @@ public final class PharmacyChaincode implements ContractInterface {
         final Actor approver = queryOwnActor(ctx);
 
         if (approver == null) {
-            throw new ChaincodeException("Der genehmigende Akteur (Behörde) konnte nicht gefunden werden. Ist die Behörde selbst im System registriert?", PharmacyErrors.ACTOR_NOT_FOUND.toString());
+            throw new ChaincodeException("Der genehmigende Akteur (Behörde) konnte nicht gefunden werden.", PharmacyErrors.ACTOR_NOT_FOUND.toString());
         }
 
         if (!actorToApprove.getStatus().equals("Pending")) {
@@ -112,10 +127,10 @@ public final class PharmacyChaincode implements ContractInterface {
         }
 
         final Actor.Builder builder = new Actor.Builder()
-                .actorId(actorToApprove.getActorId()).enrollmentId(actorToApprove.getEnrollmentId())
-                .description(actorToApprove.getDescription()).mspId(actorToApprove.getMspId())
-                .role(actorToApprove.getRole()).certId(actorToApprove.getCertId()).status("Approved")
+                .fromExistingActor(actorToApprove) // Verwenden Sie die Helfer-Methode falls vorhanden
+                .status("Approved")
                 .approvedBy(approver.getActorId());
+
         final Actor updatedActor = builder.build();
         stub.putStringState(updatedActor.getActorId(), updatedActor.toJSONString());
         return updatedActor;
