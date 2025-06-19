@@ -10,7 +10,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 @Component
-public class AppDataInitializer implements CommandLineRunner {
+public class AppFabricInitializer implements CommandLineRunner {
 
     private final FabricClient fabricClient;
     private final CurrentActorHolder actorHolder;
@@ -22,7 +22,7 @@ public class AppDataInitializer implements CommandLineRunner {
     private String userIpfsLink;
 
     @Autowired
-    public AppDataInitializer(FabricClient fabricClient, CurrentActorHolder actorHolder) {
+    public AppFabricInitializer(FabricClient fabricClient, CurrentActorHolder actorHolder) {
         this.fabricClient = fabricClient;
         this.actorHolder = actorHolder;
     }
