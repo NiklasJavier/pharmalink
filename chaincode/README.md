@@ -1,50 +1,30 @@
-### Basic (Grundlegend)
-Ein grundlegender Beispiel-Smart-Contract, der die Erstellung und Übertragung eines Assets durch Schreiben und Abrufen von Daten aus dem Ledger ermöglicht. Dieses Beispiel ist für neue Fabric-Benutzer empfehlenswert.
-* **Anleitung:** Schreiben der ersten Anwendung
-* **Sprachen:** Java
-* **Template:** [Beispiel](./templates/transfer/basic/)
+### **Chaincodes: `PharmaSupplyChainContract`**
 
------
+**Rollen:** `behoerde`, `hersteller`, `grosshaendler`, `apotheke`
+**Autorisierungsprinzip:** Rollenbasierte Zugriffskontrolle (RBAC) über X.509-Zertifikatsattribute (`role`).
 
-### Private Daten
-Dieses Beispiel demonstriert die Verwendung von privaten Datenkollektionen, wie diese mit dem Chaincode-Lifecycle verwaltet werden und wie der Hash privater Daten zur Verifizierung auf dem Ledger verwendet werden kann. Es zeigt auch, wie Asset-Aktualisierungen und -Übertragungen durch clientbasierten Besitz und Zugriffskontrolle gesteuert werden.
-* **Anleitung:** Verwendung von Privaten Daten
-* **Sprachen:** Java
-* **Template:** [Beispiel](./templates/transfer/private-data/)
-
------
-
-### Zustandsbasierte Bestätigungsrichtlinien (State-Based Endorsement)
-Dieses Beispiel zeigt, wie die Bestätigungsrichtlinie auf Chaincode-Ebene überschrieben werden kann, um Richtlinien auf Schlüssel-Ebene (Daten-/Asset-Ebene) festzulegen.
-* **Anleitung:** Verwendung von zustandsbasierten Bestätigungsrichtlinien
-* **Sprachen:** Java
-* **Template:** [Beispiel](./templates/transfer/sbe/)
-
------
-
-### Ereignisse (Events)
-Das Beispiel für Ereignisse zeigt, wie Smart Contracts Ereignisse auslösen können, die von den Anwendungen, die mit dem Netzwerk interagieren, gelesen werden.
-* **Anleitung:** README
-* **Sprachen:** Java
-* **Template:** [Beispiel](./templates/transfer/events/)
-
------
-
-### Gesicherte Vereinbarung
-Ein Smart Contract, der implizite private Datenkollektionen, zustandsbasierte Bestätigungsrichtlinien sowie organisationsbasierten Besitz und Zugriffskontrolle verwendet, um Daten privat zu halten und ein Asset sicher mit Zustimmung des Besitzers und des Käufers zu übertragen.
-* **Anleitung:** Gesicherte Asset-Übertragung
-* **Sprachen:** Go
-
------
-
-### Attributbasierte Zugriffskontrolle
-Demonstriert die Verwendung von attribut- und identitätsbasierter Zugriffskontrolle anhand eines einfachen Asset-Übertragungsszenarios.
-* **Anleitung:** README
-* **Sprachen:** Go
-
------
-
-### Ledger-Abfragen
-Das Beispiel für Ledger-Abfragen demonstriert Bereichsabfragen (anwendbar für LevelDB und CouchDB) und wie mit dem Chaincode ein Index bereitgestellt wird, um JSON-Abfragen zu unterstützen (nur für CouchDB anwendbar).
-* **Anleitung:** Verwendung von CouchDB
-* **Sprachen:** go
+| Kategorie | Funktion             | Typ           | Zweck & Autorisierung                                                                                                                                              | Beispielaufruf (JSON)                                                                                                                                                                          |
+| :-------- | :------------------- | :------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Akteur** | `initCall`           | Insert/Update | Registriert Akteur (generierte ID) oder gibt bestehende Daten zurück. **Autorisierung:** Rolle aus Zertifikat muss gültige Affiliation sein.            | `{"function":"initCall","Args":["max.mustermann@example.com","QmWgX..."]}`                                                                                                              |
+|           | `createActor`        | Insert        | Erstellt Akteur mit manueller ID. **Autorisierung: `behoerde`** | `{"function":"createActor","Args":["testorg-manufacturer","hersteller","info@testorg.com","QmTestOrgProfile"]}`                                                                           |
+|           | `updateActor`        | Update        | Aktualisiert Rolle, E-Mail, IPFS-Link. **Autorisierung: Akteur selbst ODER `behoerde`** | `{"function":"updateActor","Args":["hersteller-a1b2c3d4e5f6...","grosshaendler","updated@email.com","newQm..."]}`                                                                           |
+|           | `updateActorIpfsLink`| Update        | Aktualisiert nur den IPFS-Link. **Autorisierung: Akteur selbst** | `{"function":"updateActorIpfsLink","Args":["hersteller-a1b2c3d4e5f6...","QmNeuerIPFSLink..."]}`                                                                                        |
+|           | `deleteActor`        | Delete        | Löscht Akteur. **Autorisierung: `behoerde`** | `{"function":"deleteActor","Args":["hersteller-a1b2c3d4e5f6..."]}`                                                                                                                       |
+|           | `queryActor`         | Query         | Fragt Akteur nach ID ab (allgemein).                                                                                                                       | `{"function":"queryActor","Args":["actor1"]}`                                                                                                                                            |
+|           | `queryActorById`     | Query         | Fragt Akteur nach *generierter* Actor ID ab.                                                                                                               | `{"function":"queryActorById","Args":["hersteller-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2"]}`                                                                 |
+|           | `queryActorByEmail`  | Query         | Fragt Akteur nach E-Mail ab (CouchDB-Index benötigt).                                                                                                      | `{"function":"queryActorByEmail","Args":["max.mustermann@example.com"]}`                                                                                                                 |
+|           | `queryActorsByRole`  | Query         | Fragt alle Akteure nach Rolle ab (CouchDB-Index benötigt).                                                                                                 | `{"function":"queryActorsByRole","Args":["hersteller"]}`                                                                                                                                 |
+|           | `queryAllActors`     | Query         | Fragt alle Akteure ab.                                                                                                                                     | `{"function":"queryAllActors","Args":[]}`                                                                                                                                                |
+| **Medikament**| `createMedikament`   | Insert        | Legt neues Medikament an (autom. ID). **Autorisierung: `hersteller`** | `{"function":"createMedikament","Args":["Aspirin 500mg","a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890","Qmcidforinfoblatt"]}`                               |
+|           | `approveMedikament`  | Update        | Setzt Medikamentenstatus auf "freigegeben" oder "abgelehnt". **Autorisierung: `behoerde`** | `{"function":"approveMedikament","Args":["MED-HASH_VON_CREATE_MEDIKAMENT","freigegeben"]}`                                                                                              |
+|           | `updateMedikament`   | Update        | Aktualisiert Bezeichnung, Infoblatt-Hash, IPFS-Link. **Autorisierung: Anlegender `hersteller`** | `{"function":"updateMedikament","Args":["MED-HASH_VON_CREATE_MEDIKAMENT","Aspirin 800mg Forte","neuerhashfuerinfo","QmNeuerIpfsLink"]}`                                                     |
+|           | `addMedikamentTag`   | Update        | Fügt Medikament Tag hinzu (nach Rolle: 'hersteller' oder 'behoerde'). **Autorisierung: Anlegender `hersteller` ODER `behoerde`** | `{"function":"addMedikamentTag","Args":["MED-HASH_VON_CREATE_MEDIKAMENT","Produktion Charge A abgeschlossen"]}`                                                                        |
+|           | `deleteMedikament`   | Delete        | Löscht Medikament. **Autorisierung: `behoerde` ODER anlegender `hersteller` (wenn Status "angelegt")** | `{"function":"deleteMedikament","Args":["MED-HASH_VON_CREATE_MEDIKAMENT"]}`                                                                                                             |
+|           | `queryMedikamentById`| Query         | Fragt Medikament nach ID ab.                                                                                                                               | `{"function":"queryMedikamentById","Args":["MED-f7b7e8d9c0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7"]}`                                                                 |
+|           | `queryMedikamenteByHerstellerId`| Query         | Fragt alle Medikamente eines Herstellers ab (CouchDB-Index benötigt).                                                                                      | `{"function":"queryMedikamenteByHerstellerId","Args":["hersteller-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2"]}`                                                  |
+| **Einheiten**| `createUnits`        | Insert        | Erstellt X Einheiten für ein *freigegebenes* Medikament. **Autorisierung: `hersteller` des Medikaments** | `{"function":"createUnits","Args":["MED-HASH_VON_CREATE_MEDIKAMENT","Charge-2025-Q2","100","QmUnitBatchData"]}`                                                                          |
+|           | `addTemperatureReading`| Update        | Fügt Temperaturmesswerte zu Einheit hinzu. **Autorisierung: Aktueller Eigentümer der Einheit** | `{"function":"addTemperatureReading","Args":["MED-HASH_VON_CREATE_MEDIKAMENT-Charge-2025-Q2-0001","23.7","2025-06-20T10:30:00Z"]}`                                                         |
+|           | `transferUnit`       | Update        | Transferiert Besitz einer Einheit an neuen Eigentümer. **Autorisierung: Aktueller Eigentümer der Einheit** (neuer Eigentümer muss existieren)               | `{"function":"transferUnit","Args":["MED-HASH_VON_CREATE_MEDIKAMENT-Charge-2025-Q2-0001","grosshaendler-abcde12345","2025-06-20T11:00:00Z"]}`                                                |
+|           | `queryUnitById`      | Query         | Fragt einzelne Einheit nach UnitID ab.                                                                                                                     | `{"function":"queryUnitById","Args":["MED-f7b7e8d9c0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7-Charge-XYZ-0001"]}`                                                           |
+|           | `queryUnitsByMedId`  | Query         | Fragt alle Einheiten zu einem Medikament ab.                                                                                                               | `{"function":"queryUnitsByMedId","Args":["MED-f7b7e8d9c0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7"]}`                                                                     |
+|           | `queryUnitsByOwner`  | Query         | Fragt alle Einheiten ab, die einem Akteur gehören (aktueller Eigentümer).                                                                                  | `{"function":"queryUnitsByOwner","Args":["grosshaendler-abcde12345"]}`                                                                                                                  |
