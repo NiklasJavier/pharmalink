@@ -30,38 +30,75 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         ACTOR_NOT_FOUND,
         ACTOR_ALREADY_EXISTS,
         INVALID_ARGUMENT,
-        UNAUTHORIZED_ACCESS
+        UNAUTHORIZED_ACCESS,
+        MISSING_CERT_ATTRIBUTE // Fehlercode für fehlende Zertifikatsattribute
     }
 
     /**
      * Registriert einen neuen Akteur im Ledger oder gibt dessen Informationen zurück, wenn er bereits existiert.
      * Die Actor ID wird auf Basis des SHA-256 Hashs der Client-Identität (resultierend aus MSPID und der eindeutigen
-     * ID des Zertifikats des aufrufenden Akteurs, wie von Fabric zurückgegeben) und der zugewiesenen Rolle gebildet:
+     * ID des Zertifikats des aufrufenden Akteurs) und der aus dem Zertifikat bezogenen Rolle gebildet:
      * Rolle-SHA256(MSPID-ClientIdentityID). Dies gewährleistet eine konsistente ID-Generierung über verschiedene Peers hinweg,
      * solange die zugrunde liegende Client-Identität (Zertifikat und MSPID) gleich bleibt.
      *
+     * Die Rolle des Akteurs wird direkt aus dem 'role'-Attribut des X.509-Zertifikats des Aufrufers gelesen.
+     *
      * @param ctx Der Smart Contract Kontext.
      * @param email E-Mail des Akteurs.
-     * @param role Rolle des Akteurs (z.B. "hersteller", "grosshaendler", "apotheke", "behoerde").
      * @param ipfsLink Optionaler IPFS Link für weitere Attribute des Akteurs. Kann leer sein.
      * @return Die Informationen des registrierten oder bereits existierenden Akteurs als JSON-String.
-     * @throws ChaincodeException Wenn die Rolle ungültig ist oder ein Hash-Fehler auftritt.
+     * @throws ChaincodeException Wenn ein Hash-Fehler auftritt, das 'role'-Attribut im Zertifikat fehlt
+     * oder die aus dem Zertifikat gelesene Rolle keine gültige Affiliation darstellt.
      *
-     * Beispiel für Aufruf:
-     * {"function":"initCall","Args":["max.mustermann@example.com","hersteller","QmWgX..."]}
-     * {"function":"initCall","Args":["erika.musterfrau@example.com","apotheke",""]}
+     * Beispiel für Aufruf (beachten Sie, dass 'role' nicht mehr übergeben wird):
+     * {"function":"initCall","Args":["max.mustermann@example.com","QmWgX..."]}
+     * {"function":"initCall","Args":["erika.musterfrau@example.com",""]}
      */
-    @Transaction(intent = Transaction.TYPE.SUBMIT) // KORRIGIERT: TYPE in Großbuchstaben
-    public String initCall(final Context ctx, final String email, final String role, final String ipfsLink) {
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
+    public String initCall(final Context ctx, final String email, final String ipfsLink) { // 'role' Parameter entfernt
         final ChaincodeStub stub = ctx.getStub();
         final String mspId = ctx.getClientIdentity().getMSPID();
-        // Verwendung von getId() für Kompatibilität, wie in Fabric-Samples gezeigt
-        final String clientId = ctx.getClientIdentity().getId();
+        final String clientId = ctx.getClientIdentity().getId(); // Unique identifier from the certificate
 
-        // Generierung der Actor ID: Rolle-SHA256(MSPID-ClientIdentityID)
+        // --- Rolle direkt aus dem Zertifikat abrufen ---
+        final String certRoleRaw = ctx.getClientIdentity().getAttributeValue("role");
+
+        if (certRoleRaw == null || certRoleRaw.isEmpty()) {
+            final String errorMessage = "Client-Zertifikat enthält kein 'role'-Attribut. Registrierung nicht möglich.";
+            System.err.println(errorMessage);
+            throw new ChaincodeException(errorMessage, PharmaSupplyChainErrors.MISSING_CERT_ATTRIBUTE.toString());
+        }
+
+        // Das Attribut aus dem Zertifikat kann das Format "role=wert:ecert" haben (siehe fabric_setup_test_consortium.sh).
+        // Wir extrahieren den eigentlichen Rollenwert.
+        String actualRoleFromCert = "";
+        if (certRoleRaw.contains(":")) {
+            actualRoleFromCert = certRoleRaw.substring(0, certRoleRaw.indexOf(':'));
+        } else {
+            actualRoleFromCert = certRoleRaw; // Falls kein ":ecert" Suffix vorhanden ist
+        }
+        // --- ENDE DER ROLLENABFRAGE ---
+
+        // Überprüfen, ob die aus dem Zertifikat gelesene Rolle eine gültige Affiliation ist
+        boolean isValidRoleAffiliation = false;
+        final String[] allowedRoles = {"hersteller", "grosshaendler", "apotheke", "behoerde"};
+        for (final String allowedRole : allowedRoles) {
+            if (allowedRole.equalsIgnoreCase(actualRoleFromCert)) {
+                isValidRoleAffiliation = true;
+                break;
+            }
+        }
+
+        if (!isValidRoleAffiliation) {
+            final String errorMessage = String.format("Die aus dem Zertifikat gelesene Rolle '%s' ist keine gültige Lieferketten-Affiliation. Erlaubte Rollen sind: %s", actualRoleFromCert, String.join(", ", allowedRoles));
+            throw new ChaincodeException(errorMessage, PharmaSupplyChainErrors.INVALID_ARGUMENT.toString());
+        }
+
+
+        // Generierung der Actor ID unter Verwendung der aus dem Zertifikat bezogenen Rolle
         final String combinedIdForHash = mspId + "-" + clientId;
         final String actorSha = generateSha256(combinedIdForHash);
-        final String actorId = role.toLowerCase() + "-" + actorSha; // Rolle in Kleinbuchstaben für Konsistenz
+        final String actorId = actualRoleFromCert.toLowerCase() + "-" + actorSha; // Rolle in Kleinbuchstaben für Konsistenz
 
         final String actorState = stub.getStringState(actorId);
 
@@ -71,24 +108,8 @@ public final class PharmaSupplyChainContract implements ContractInterface {
             return actorState;
         }
 
-        // Überprüfen, ob die angegebene Rolle eine gültige Affiliation ist
-        // (laut fabric_setup_test_consortium.sh)
-        boolean isValidRole = false;
-        final String[] allowedRoles = {"hersteller", "grosshaendler", "apotheke", "behoerde"};
-        for (final String allowedRole : allowedRoles) {
-            if (allowedRole.equalsIgnoreCase(role)) {
-                isValidRole = true;
-                break;
-            }
-        }
-
-        if (!isValidRole) {
-            final String errorMessage = String.format("Die Rolle '%s' ist nicht gültig. Erlaubte Rollen sind: %s", role, String.join(", ", allowedRoles));
-            throw new ChaincodeException(errorMessage, PharmaSupplyChainErrors.INVALID_ARGUMENT.toString());
-        }
-
-        // Akteur registrieren (ohne 'name' und 'organization'), mit docType "actor"
-        final Actor newActor = new Actor(actorId, role.toLowerCase(), email, ipfsLink);
+        // Akteur registrieren (mit docType "actor")
+        final Actor newActor = new Actor(actorId, actualRoleFromCert.toLowerCase(), email, ipfsLink);
         final String newActorJson = JsonUtil.toJson(newActor);
         stub.putStringState(actorId, newActorJson);
 
@@ -108,7 +129,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * Beispiel für Aufruf:
      * {"function":"queryActorById","Args":["hersteller-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2"]}
      */
-    @Transaction(intent = Transaction.TYPE.EVALUATE) // KORRIGIERT: TYPE in Großbuchstaben
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
     public String queryActorById(final Context ctx, final String actorId) {
         final ChaincodeStub stub = ctx.getStub();
         final String actorState = stub.getStringState(actorId);
@@ -131,7 +152,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * Beispiel für Aufruf:
      * {"function":"queryAllActors","Args":[]}
      */
-    @Transaction(intent = Transaction.TYPE.EVALUATE) // KORRIGIERT: TYPE in Großbuchstaben
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
     public String queryAllActors(final Context ctx) {
         final ChaincodeStub stub = ctx.getStub();
         final List<Actor> actorList = new ArrayList<>();
