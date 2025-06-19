@@ -62,9 +62,7 @@ public final class PharmacyChaincode implements ContractInterface {
             throw new ChaincodeException("Die angeforderte Rolle '" + role + "' stimmt nicht mit der Rolle im Zertifikat ('" + certRole + "') überein.", PharmacyErrors.PERMISSION_DENIED.toString());
         }
 
-        // HIER ist der entscheidende Teil:
-        // Wir verwenden eine Rich Query. Mit dem Index aus Schritt 1 ist diese Abfrage
-        // atomar, schnell und verhindert Race Conditions zuverlässig.
+        // Mit dem Index aus Schritt 2 ist diese Rich Query atomar und zuverlässig.
         final String query = String.format("{\"selector\":{\"enrollmentId\":\"%s\"}}", enrollmentId);
         final String queryResult = richQuery(ctx, query);
 
@@ -72,7 +70,8 @@ public final class PharmacyChaincode implements ContractInterface {
             throw new ChaincodeException("Ein Akteur mit dieser Identität existiert bereits.", PharmacyErrors.ACTOR_ALREADY_EXISTS.toString());
         }
 
-        // Da die ID nicht mehr der Primärschlüssel sein muss, können wir wieder eine zufällige UUID nehmen.
+        // Da die Eindeutigkeit über die Abfrage sichergestellt ist, kann die ID wieder
+        // eine zufällige, eindeutige UUID sein.
         final String actorId = UUID.randomUUID().toString();
 
         final Actor.Builder builder = new Actor.Builder()
