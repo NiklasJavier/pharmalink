@@ -39,7 +39,6 @@ function deployChaincode() {
   # Wir nehmen an, das Skript wird aus dem übergeordneten Ordner von "chaincode" ausgeführt.
   gradle -p $SRC_DIR/../chaincode/pharmalink_chaincode_main/ installDist
 
-  # Prüfen, ob der Gradle-Befehl erfolgreich war
   if [ $? -ne 0 ]; then
     echo "!!! ERROR: Gradle build failed."
     exit 1
