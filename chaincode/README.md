@@ -4,7 +4,7 @@
 **Autorisierungsprinzip:** Rollenbasierte Zugriffskontrolle (RBAC) über X.509-Zertifikatsattribute (`role`).
 
 Die Rollen und X.509-Zertifikatsattribute der Akteure werden durch das Skript
-[`fabric_setup_test_consortium.sh`](../fabric_setup_test_consortium.sh) generiert.
+[`fabric_setup_test_consortium.sh`](../scripts/fabric_setup_test_consortium.sh) generiert.
 
 Für die Interaktion über die Fabric CLI können die Umgebungsvariablen für jede Rolle
 separat gesourced werden, z.B. für einen Hersteller:
@@ -13,7 +13,7 @@ separat gesourced werden, z.B. für einen Hersteller:
 Bitte passen Sie den Pfad an Ihr tatsächliches Verzeichnis an.)
 
 Die detaillierte Implementierung der Chaincode-Funktionen finden Sie in der Datei
-[`PharmaSupplyChainContract.java`](./src/main/java/de/jklein/fabric/PharmaSupplyChainContract.java).
+[`PharmaSupplyChainContract.java`](./pharmalink_chaincode_main/src/main/java/de/jklein/fabric/PharmaSupplyChainContract.java).
 
 | Kategorie | Funktion             | Typ           | Zweck & Autorisierung                                                                                                                                              | Beispielaufruf (JSON)                                                                                                                                                                          |
 | :-------- | :------------------- | :------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
