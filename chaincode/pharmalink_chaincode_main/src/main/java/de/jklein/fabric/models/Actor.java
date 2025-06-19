@@ -21,6 +21,9 @@ public final class Actor {
     @Property()
     private String ipfsLink; // Optionaler IPFS Link für weitere Attribute
 
+    @Property()
+    private String docType; // Hinzugefügt für CouchDB Abfragen zur Typisierung
+
     // Leerer Konstruktor für Genson Deserialisierung
     public Actor() {
     }
@@ -33,6 +36,7 @@ public final class Actor {
         this.role = role;
         this.email = email;
         this.ipfsLink = ipfsLink;
+        this.docType = "actor"; // Jedem Akteur-Objekt wird der docType "actor" zugewiesen
     }
 
     public String getActorId() {
@@ -67,6 +71,14 @@ public final class Actor {
         this.ipfsLink = newIpfsLink;
     }
 
+    public String getDocType() {
+        return docType;
+    }
+
+    public void setDocType(final String newDocType) {
+        this.docType = newDocType;
+    }
+
     @Override
     public boolean equals(final Object o) {
         if (this == o) {
@@ -75,7 +87,7 @@ public final class Actor {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        Actor actor = (Actor) o;
+        final Actor actor = (Actor) o;
         return Objects.equals(getActorId(), actor.getActorId());
     }
 
@@ -91,6 +103,7 @@ public final class Actor {
                 + ", role='" + role + '\''
                 + ", email='" + email + '\''
                 + ", ipfsLink='" + ipfsLink + '\''
+                + ", docType='" + docType + '\''
                 + '}';
     }
 }

@@ -53,17 +53,17 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT) // KORRIGIERT: TYPE in Großbuchstaben
     public String initCall(final Context ctx, final String email, final String role, final String ipfsLink) {
-        ChaincodeStub stub = ctx.getStub();
-        String mspId = ctx.getClientIdentity().getMSPID();
+        final ChaincodeStub stub = ctx.getStub();
+        final String mspId = ctx.getClientIdentity().getMSPID();
         // Verwendung von getId() für Kompatibilität, wie in Fabric-Samples gezeigt
-        String clientId = ctx.getClientIdentity().getId();
+        final String clientId = ctx.getClientIdentity().getId();
 
         // Generierung der Actor ID: Rolle-SHA256(MSPID-ClientIdentityID)
-        String combinedIdForHash = mspId + "-" + clientId;
-        String actorSha = generateSha256(combinedIdForHash);
-        String actorId = role.toLowerCase() + "-" + actorSha; // Rolle in Kleinbuchstaben für Konsistenz
+        final String combinedIdForHash = mspId + "-" + clientId;
+        final String actorSha = generateSha256(combinedIdForHash);
+        final String actorId = role.toLowerCase() + "-" + actorSha; // Rolle in Kleinbuchstaben für Konsistenz
 
-        String actorState = stub.getStringState(actorId);
+        final String actorState = stub.getStringState(actorId);
 
         if (!actorState.isEmpty()) {
             // Akteur existiert bereits, gib Informationen zurück
@@ -74,8 +74,8 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         // Überprüfen, ob die angegebene Rolle eine gültige Affiliation ist
         // (laut fabric_setup_test_consortium.sh)
         boolean isValidRole = false;
-        String[] allowedRoles = {"hersteller", "grosshaendler", "apotheke", "behoerde"};
-        for (String allowedRole : allowedRoles) {
+        final String[] allowedRoles = {"hersteller", "grosshaendler", "apotheke", "behoerde"};
+        for (final String allowedRole : allowedRoles) {
             if (allowedRole.equalsIgnoreCase(role)) {
                 isValidRole = true;
                 break;
@@ -83,13 +83,13 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         }
 
         if (!isValidRole) {
-            String errorMessage = String.format("Die Rolle '%s' ist nicht gültig. Erlaubte Rollen sind: %s", role, String.join(", ", allowedRoles));
+            final String errorMessage = String.format("Die Rolle '%s' ist nicht gültig. Erlaubte Rollen sind: %s", role, String.join(", ", allowedRoles));
             throw new ChaincodeException(errorMessage, PharmaSupplyChainErrors.INVALID_ARGUMENT.toString());
         }
 
-        // Akteur registrieren (ohne 'name' und 'organization')
-        Actor newActor = new Actor(actorId, role.toLowerCase(), email, ipfsLink);
-        String newActorJson = JsonUtil.toJson(newActor);
+        // Akteur registrieren (ohne 'name' und 'organization'), mit docType "actor"
+        final Actor newActor = new Actor(actorId, role.toLowerCase(), email, ipfsLink);
+        final String newActorJson = JsonUtil.toJson(newActor);
         stub.putStringState(actorId, newActorJson);
 
         System.out.println("Neuer Akteur registriert: " + newActorJson);
@@ -110,11 +110,11 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      */
     @Transaction(intent = Transaction.TYPE.EVALUATE) // KORRIGIERT: TYPE in Großbuchstaben
     public String queryActorById(final Context ctx, final String actorId) {
-        ChaincodeStub stub = ctx.getStub();
-        String actorState = stub.getStringState(actorId);
+        final ChaincodeStub stub = ctx.getStub();
+        final String actorState = stub.getStringState(actorId);
 
         if (actorState.isEmpty()) {
-            String errorMessage = String.format("Akteur mit ID %s nicht gefunden", actorId);
+            final String errorMessage = String.format("Akteur mit ID %s nicht gefunden", actorId);
             System.err.println(errorMessage);
             throw new ChaincodeException(errorMessage, PharmaSupplyChainErrors.ACTOR_NOT_FOUND.toString());
         }
@@ -123,6 +123,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
     /**
      * Fragt alle registrierten Akteure ab.
+     * OPTIMIERUNG FÜR COUCHDB: Nutzt einen 'docType'-Selektor und erfordert einen entsprechenden Index.
      *
      * @param ctx Der Smart Contract Kontext.
      * @return Eine Liste aller Akteure als JSON-Array von Actor-Objekten.
@@ -132,17 +133,17 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      */
     @Transaction(intent = Transaction.TYPE.EVALUATE) // KORRIGIERT: TYPE in Großbuchstaben
     public String queryAllActors(final Context ctx) {
-        ChaincodeStub stub = ctx.getStub();
-        List<Actor> actorList = new ArrayList<>();
+        final ChaincodeStub stub = ctx.getStub();
+        final List<Actor> actorList = new ArrayList<>();
 
-        // OPTIMIERUNG FÜR COUCHDB: Rich Query für alle Dokumente, die unserem ActorId-Schema entsprechen.
-        // Diese Abfrage ist effizienter, wenn ein Index auf 'actorId' existiert.
-        // Benötigt den Index 'indexActorId' in META-INF/statedb/couchdb/indexes/indexActorId.json
-        String queryString = "{\"selector\":{\"actorId\":{\"$regex\":\"^.*-\\\\[a-f0-9\\\\]{64}$\"}}}";
-        QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = stub.getQueryResult(queryString);
+        // Rich Query für CouchDB: Selektiert alle Dokumente mit docType "actor".
+        // Dies ist die robusteste Methode, um alle Instanzen eines bestimmten Typs zu finden.
+        // Benötigt den Index 'indexDocType' in META-INF/statedb/couchdb/indexes/indexDocType.json
+        final String queryString = "{\"selector\":{\"docType\":\"actor\"}}";
+        final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = stub.getQueryResult(queryString);
 
-        for (org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
-            Actor actor = JsonUtil.fromJson(kv.getStringValue(), Actor.class);
+        for (final org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
+            final Actor actor = JsonUtil.fromJson(kv.getStringValue(), Actor.class);
             actorList.add(actor);
         }
 
@@ -151,6 +152,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
     /**
      * Fragt alle Akteure mit einer spezifischen Rolle ab.
+     * OPTIMIERUNG FÜR COUCHDB: Nutzt einen 'role'-Selektor und erfordert einen entsprechenden Index.
      *
      * @param ctx Der Smart Contract Kontext.
      * @param role Die Rolle, nach der gefiltert werden soll (z.B. "hersteller").
@@ -159,18 +161,18 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * Beispiel für Aufruf:
      * {"function":"queryActorsByRole","Args":["hersteller"]}
      */
-    @Transaction(intent = Transaction.TYPE.EVALUATE) // KORRIGIERT: TYPE in Großbuchstaben
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
     public String queryActorsByRole(final Context ctx, final String role) {
-        ChaincodeStub stub = ctx.getStub();
-        List<Actor> actorList = new ArrayList<>();
+        final ChaincodeStub stub = ctx.getStub();
+        final List<Actor> actorList = new ArrayList<>();
 
-        // OPTIMIERUNG FÜR COUCHDB: Rich Query für Akteure basierend auf der Rolle.
+        // Rich Query für CouchDB basierend auf der Rolle
         // Benötigt den Index 'indexRole' in META-INF/statedb/couchdb/indexes/indexRole.json
-        String queryString = String.format("{\"selector\":{\"role\":\"%s\"}}", role.toLowerCase()); // Rolle in Kleinbuchstaben für Abfrage
-        QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = stub.getQueryResult(queryString);
+        final String queryString = String.format("{\"selector\":{\"role\":\"%s\"}}", role.toLowerCase()); // Rolle in Kleinbuchstaben für Abfrage
+        final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = stub.getQueryResult(queryString);
 
-        for (org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
-            Actor actor = JsonUtil.fromJson(kv.getStringValue(), Actor.class);
+        for (final org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
+            final Actor actor = JsonUtil.fromJson(kv.getStringValue(), Actor.class);
             actorList.add(actor);
         }
 
@@ -190,38 +192,38 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * Beispiel für Aufruf:
      * {"function":"updateActorIpfsLink","Args":["hersteller-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2","QmUpdatedIpfsLink..."]}
      */
-    @Transaction(intent = Transaction.TYPE.SUBMIT) // KORRIGIERT: TYPE in Großbuchstaben
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
     public String updateActorIpfsLink(final Context ctx, final String actorId, final String newIpfsLink) {
-        ChaincodeStub stub = ctx.getStub();
-        String mspId = ctx.getClientIdentity().getMSPID();
+        final ChaincodeStub stub = ctx.getStub();
+        final String mspId = ctx.getClientIdentity().getMSPID();
         // Verwendung von getId() für Kompatibilität
-        String clientId = ctx.getClientIdentity().getId();
+        final String clientId = ctx.getClientIdentity().getId();
 
-        String actorState = stub.getStringState(actorId);
+        final String actorState = stub.getStringState(actorId);
 
         if (actorState.isEmpty()) {
-            String errorMessage = String.format("Akteur mit ID %s nicht gefunden", actorId);
+            final String errorMessage = String.format("Akteur mit ID %s nicht gefunden", actorId);
             System.err.println(errorMessage);
             throw new ChaincodeException(errorMessage, PharmaSupplyChainErrors.ACTOR_NOT_FOUND.toString());
         }
 
-        Actor existingActor = JsonUtil.fromJson(actorState, Actor.class);
+        final Actor existingActor = JsonUtil.fromJson(actorState, Actor.class);
 
         // Überprüfen der Berechtigung: Nur der Akteur selbst darf sein Profil aktualisieren
         // Wir rekonstruieren die erwartete Actor ID basierend auf der Identität des Aufrufers
         // und der Rolle des gefundenen Akteurs.
-        String expectedActorShaSuffix = generateSha256(mspId + "-" + clientId);
-        String expectedActorId = existingActor.getRole().toLowerCase() + "-" + expectedActorShaSuffix;
+        final String expectedActorShaSuffix = generateSha256(mspId + "-" + clientId);
+        final String expectedActorId = existingActor.getRole().toLowerCase() + "-" + expectedActorShaSuffix;
 
         if (!actorId.equals(expectedActorId)) {
-            String errorMessage = "Nicht autorisiert: Nur der Eigentümer des Profils darf es aktualisieren.";
+            final String errorMessage = "Nicht autorisiert: Nur der Eigentümer des Profils darf es aktualisieren.";
             System.err.println(errorMessage);
             throw new ChaincodeException(errorMessage, PharmaSupplyChainErrors.UNAUTHORIZED_ACCESS.toString());
         }
 
         existingActor.setIpfsLink(newIpfsLink);
 
-        String updatedActorJson = JsonUtil.toJson(existingActor);
+        final String updatedActorJson = JsonUtil.toJson(existingActor);
         stub.putStringState(actorId, updatedActorJson);
 
         System.out.println("Akteur IPFS Link aktualisiert: " + updatedActorJson);
@@ -236,18 +238,18 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      */
     private String generateSha256(final String input) {
         try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
+            final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            final byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            final StringBuilder hexString = new StringBuilder();
+            for (final byte b : hash) {
+                final String hex = Integer.toHexString(0xff & b);
                 if (hex.length() == 1) {
                     hexString.append('0');
                 }
                 hexString.append(hex);
             }
             return hexString.toString();
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new ChaincodeException("Fehler beim Generieren des SHA-256 Hashs: " + e.getMessage(), e.getClass().getSimpleName());
         }
     }
