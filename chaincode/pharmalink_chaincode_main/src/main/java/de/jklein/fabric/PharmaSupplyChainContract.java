@@ -15,7 +15,6 @@ import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-// import java.time.Instant; // Nicht mehr für Obj. Zeitstempel benötigt
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -302,7 +301,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * oder die Hersteller-ID nicht gefunden wird.
      *
      * Beispiel für Aufruf:
-     * {"function":"createMedikament","Args":["Paracetamol 500mg","a1b2c3d4e5f6...","QmHashdesInfoblatts","2025-06-19T10:30:00Z"]}
+     * {"function":"createMedikament","Args":["Paracetamol 500mg","a1b2c3d4e5f6...","QmHashdesInfoblatts"]}
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public String createMedikament(final Context ctx, final String bezeichnung, final String infoblattHash, final String ipfsLink) {
@@ -350,7 +349,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
     /**
      * Genehmigt oder lehnt ein Medikament ab. Nur Akteure mit der Rolle "behoerde" dürfen dies tun.
-     * Referenziert den Genehmiger und das Genehmigungsdatum im Medikament.
+     * Referenziert den Genehmiger. Der Genehmigungszeitpunkt muss über die Fabric History API abgerufen werden.
      *
      * @param ctx Der Smart Contract Kontext.
      * @param medId Die ID des zu genehmigenden/ablehnenden Medikaments.
@@ -360,7 +359,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * oder der Status ungültig ist.
      *
      * Beispiel für Aufruf (von einer Behörde):
-     * {"function":"approveMedikament","Args":["MED-a1b2c3d4e5f6...","freigegeben","2025-06-19T10:35:00Z"]}
+     * {"function":"approveMedikament","Args":["MED-a1b2c3d4e5f6...","freigegeben"]}
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public String approveMedikament(final Context ctx, final String medId, final String newStatus) {
@@ -396,6 +395,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
         existingMedikament.setStatus(lowerCaseNewStatus);
         existingMedikament.setApprovedById(approverActorId); // Genehmiger referenzieren
+
         // 4. Medikament im Ledger speichern
         final String updatedMedikamentJson = JsonUtil.toJson(existingMedikament);
         stub.putStringState(medId, updatedMedikamentJson);
@@ -417,7 +417,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * das Medikament nicht gefunden wird, oder andere Fehler auftreten.
      *
      * Beispiel für Aufruf (vom Hersteller):
-     * {"function":"updateMedikament","Args":["MED-a1b2c3d4e5f6...","Paracetamol Forte","neuerhash","neueripfslink","2025-06-19T10:40:00Z"]}
+     * {"function":"updateMedikament","Args":["MED-a1b2c3d4e5f6...","Paracetamol Forte","neuerhash","neueripfslink"]}
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public String updateMedikament(final Context ctx, final String medId, final String newBezeichnung, final String newInfoblattHash, final String newIpfsLink) {
@@ -478,7 +478,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * oder andere Fehler auftreten.
      *
      * Beispiel für Aufruf (vom Hersteller):
-     * {"function":"addMedikamentTag","Args":["MED-a1b2c3d4e5f6...","Produktion Charge X erfolgreich abgeschlossen","2025-06-19T10:45:00Z"]}
+     * {"function":"addMedikamentTag","Args":["MED-a1b2c3d4e5f6...","Produktion Charge X erfolgreich abgeschlossen"]}
      * Beispiel für Aufruf (von Behörde):
      * {"function":"addMedikamentTag","Args":["MED-a1b2c3d4e5f6...","Zulassung 2024-06-19 erteilt"]}
      */
@@ -519,7 +519,6 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         }
 
         existingMedikament.setTags(currentTags);
-        // 4. Medikament im Ledger speichern
         final String updatedMedikamentJson = JsonUtil.toJson(existingMedikament);
         stub.putStringState(medId, updatedMedikamentJson);
 
@@ -576,6 +575,42 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         for (final org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
             final Medikament medikament = JsonUtil.fromJson(kv.getStringValue(), Medikament.class);
             medikamentList.add(medikament);
+        }
+
+        return JsonUtil.toJson(medikamentList);
+    }
+
+    /**
+     * Fragt Medikamente nach ihrer Bezeichnung ab.
+     * OPTIMIERUNG FÜR COUCHDB: Nutzt einen 'bezeichnung'-Selektor und erfordert einen entsprechenden Index.
+     *
+     * @param ctx Der Smart Contract Kontext.
+     * @param bezeichnung Die Bezeichnung des gesuchten Medikaments.
+     * @return Eine Liste von Medikamenten als JSON-Array von Medikament-Objekten.
+     * @throws ChaincodeException Wenn kein Medikament mit der angegebenen Bezeichnung gefunden wird.
+     *
+     * Beispiel für Aufruf:
+     * {"function":"queryMedikamenteByBezeichnung","Args":["Paracetamol 500mg"]}
+     */
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String queryMedikamenteByBezeichnung(final Context ctx, final String bezeichnung) {
+        final ChaincodeStub stub = ctx.getStub();
+        final List<Medikament> medikamentList = new ArrayList<>();
+
+        // Rich Query für CouchDB basierend auf bezeichnung und docType "medikament"
+        // Benötigt den Index 'indexMedBezeichnung' in META-INF/statedb/couchdb/indexes/indexMedBezeichnung.json
+        final String queryString = String.format("{\"selector\":{\"bezeichnung\":\"%s\", \"docType\":\"medikament\"}}", bezeichnung);
+        final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = stub.getQueryResult(queryString);
+
+        for (final org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
+            final Medikament medikament = JsonUtil.fromJson(kv.getStringValue(), Medikament.class);
+            medikamentList.add(medikament);
+        }
+
+        if (medikamentList.isEmpty()) {
+            final String errorMessage = String.format("Keine Medikamente mit der Bezeichnung '%s' gefunden.", bezeichnung);
+            System.err.println(errorMessage);
+            throw new ChaincodeException(errorMessage, PharmaSupplyChainErrors.MEDIKAMENT_NOT_FOUND.toString());
         }
 
         return JsonUtil.toJson(medikamentList);
