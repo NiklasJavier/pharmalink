@@ -47,50 +47,39 @@ public final class PharmacyChaincode implements ContractInterface {
     // KORREKTUR: Präfix für den Lookup-Schlüssel, um Rich Queries zu vermeiden
     private static final String ENROLLMENT_ID_LOOKUP_PREFIX = "enrollmentId~";
 
-    @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public void InitLedger(final Context ctx) {
-        ChaincodeStub stub = ctx.getStub();
-        String txId = stub.getTxId();
-        String mspId = ctx.getClientIdentity().getMSPID();
-
-        System.out.println("========= Initialisiere Ledger mit Test-Akteuren =========");
-
-        Actor behoerde = new Actor.Builder()
-                .actorId(generateDeterministicUUID("Actor", txId + "Behoerde"))
-                .enrollmentId("behoerde-admin")
-                .description("Zulassungsbehörde für Medikamente")
-                .mspId(mspId).role("behoerde").status("Approved").approvedBy("self").certId("InitialLedgerSetup")
-                .build();
-        stub.putStringState(behoerde.getActorId(), behoerde.toJSONString());
-        // Erstelle auch den Lookup-Schlüssel für den Init-Akteur
-        stub.putStringState(ENROLLMENT_ID_LOOKUP_PREFIX + "behoerde-admin", behoerde.getActorId());
-        System.out.println("Asset erstellt: " + behoerde);
-    }
-
     /**
-     * KORRIGIERTE VERSION: Verwendet einen direkten Key-Lookup statt einer Rich Query,
-     * um Duplikate zuverlässig zu verhindern.
+     * KORRIGIERTE VERSION (FINAL): Verhindert Duplikate 100% zuverlässig, indem die Akteur-ID
+     * direkt und deterministisch aus der Identität des Aufrufers erzeugt wird.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param description Eine Beschreibung des Akteurs (z.B. Firmenname).
+     * @param role Die gewünschte Rolle ('hersteller', 'grosshaendler', 'apotheke', 'behoerde').
+     * @return Der neu erstellte Akteur.
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public Actor requestActorRegistration(final Context ctx, final String description, final String role) {
         final ChaincodeStub stub = ctx.getStub();
         final String enrollmentId = ctx.getClientIdentity().getId();
 
+        // Sicherheitsprüfung: Rolle im Zertifikat muss mit angeforderter Rolle überein-stimmen.
         final String certRole = getRoleFromCertificate(ctx);
         if (!certRole.equals(role)) {
             throw new ChaincodeException("Die angeforderte Rolle '" + role + "' stimmt nicht mit der Rolle im Zertifikat ('" + certRole + "') überein.", PharmacyErrors.PERMISSION_DENIED.toString());
         }
 
-        // KORREKTUR: Verwende direkten Lookup-Schlüssel statt Rich Query
-        final String lookupKey = ENROLLMENT_ID_LOOKUP_PREFIX + enrollmentId;
-        byte[] existingActorId = stub.getState(lookupKey);
-        if (existingActorId != null && existingActorId.length > 0) {
-            throw new ChaincodeException("Ein Akteur mit der Enrollment ID '" + enrollmentId + "' existiert bereits.", PharmacyErrors.ACTOR_ALREADY_EXISTS.toString());
+        // FINALE, ROBUSTE LOGIK:
+        // Der Primärschlüssel des Akteurs wird ein Hash seiner eindeutigen Enrollment-ID.
+        final String actorId = generateDeterministicUUID("Actor", enrollmentId);
+
+        // Prüfen, ob ein Akteur mit diesem Schlüssel bereits existiert. Dies ist ein
+        // direkter Key-Lookup und benötigt keinen Index.
+        byte[] existingActor = stub.getState(actorId);
+        if (existingActor != null && existingActor.length > 0) {
+            throw new ChaincodeException("Ein Akteur mit dieser Identität existiert bereits.", PharmacyErrors.ACTOR_ALREADY_EXISTS.toString());
         }
 
-        final String actorId = generateDeterministicUUID(enrollmentId, ctx.getStub().getTxId());
         final Actor.Builder builder = new Actor.Builder()
-                .actorId(actorId)
+                .actorId(actorId) // Der deterministische Hash ist jetzt die primäre ID.
                 .enrollmentId(enrollmentId)
                 .description(description)
                 .mspId(ctx.getClientIdentity().getMSPID())
@@ -105,9 +94,9 @@ public final class PharmacyChaincode implements ContractInterface {
         }
 
         final Actor actor = builder.build();
-        stub.putStringState(actor.getActorId(), actor.toJSONString());
-        // Speichere den neuen Lookup-Schlüssel
-        stub.putStringState(lookupKey, actor.getActorId());
+
+        // Speichere den neuen Akteur unter seinem deterministischen Schlüssel.
+        stub.putStringState(actorId, actor.toJSONString());
 
         return actor;
     }
@@ -141,26 +130,17 @@ public final class PharmacyChaincode implements ContractInterface {
     }
 
     /**
-     * KORRIGIERTE VERSION: Verwendet einen direkten Key-Lookup statt einer Rich Query.
+     * KORRIGIERTE VERSION (FINAL): Findet den eigenen Akteur über dessen deterministischen Schlüssel,
+     * ohne eine Rich Query zu benötigen.
      */
     @Transaction(intent = Transaction.TYPE.EVALUATE)
     public Actor queryOwnActor(final Context ctx) {
         final String enrollmentId = ctx.getClientIdentity().getId();
-        final ChaincodeStub stub = ctx.getStub();
 
-        // KORREKTUR: Verwende direkten Lookup-Schlüssel
-        final String lookupKey = ENROLLMENT_ID_LOOKUP_PREFIX + enrollmentId;
-        byte[] actorIdBytes = stub.getState(lookupKey);
+        // Erzeuge denselben deterministischen Schlüssel wie bei der Registrierung.
+        final String actorId = generateDeterministicUUID("Actor", enrollmentId);
 
-        if (actorIdBytes == null || actorIdBytes.length == 0) {
-            // Versuche Fallback für InitLedger-Akteur mit einfacher ID
-            actorIdBytes = stub.getState(ENROLLMENT_ID_LOOKUP_PREFIX + getCnFromIdentity(enrollmentId));
-            if (actorIdBytes == null || actorIdBytes.length == 0) {
-                throw new ChaincodeException("Kein Akteur für die Enrollment ID '" + enrollmentId + "' gefunden.", PharmacyErrors.ACTOR_NOT_FOUND.toString());
-            }
-        }
-
-        final String actorId = new String(actorIdBytes, StandardCharsets.UTF_8);
+        // Führe einen direkten Lesezugriff mit der bekannten ID durch.
         return getActorById(ctx, actorId);
     }
 
