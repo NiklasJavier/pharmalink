@@ -52,7 +52,7 @@ public class FabricClient {
     }
 
     /**
-     * Führt eine generische, schreibende Transaktion aus. (NEU HINZUGEFÜGT)
+     * Führt eine generische, schreibende Transaktion aus.
      * @param functionName Der Name der Chaincode-Funktion.
      * @param args Die Argumente für die Chaincode-Funktion.
      */
