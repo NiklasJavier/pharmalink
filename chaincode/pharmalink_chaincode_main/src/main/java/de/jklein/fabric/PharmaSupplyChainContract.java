@@ -16,7 +16,6 @@ import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -799,11 +798,12 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * @param ctx            Der Transaktionskontext.
      * @param unitId         Die ID der zu transferierenden Einheit.
      * @param newOwnerActorId Die ActorId des neuen Eigentümers.
+     * @param transferTimestamp Der Zeitstempel des Transfers als ISO 8601 String.
      * @return Die aktualisierte Einheit als JSON-String.
-     * Example: {"function":"transferUnit","Args":["MED-HASH123-Charge-XYZ-0001","grosshaendler2"]}
+     * Example: {"function":"transferUnit","Args":["MED-HASH123-Charge-XYZ-0001","grosshaendler2","2025-06-19T10:05:00Z"]}
      */
     @Transaction()
-    public String transferUnit(final Context ctx, final String unitId, final String newOwnerActorId) {
+    public String transferUnit(final Context ctx, final String unitId, final String newOwnerActorId, final String transferTimestamp) {
         byte[] unitStateBytes = ctx.getStub().getState(unitId);
         if (unitStateBytes == null || unitStateBytes.length == 0) {
             throw new ChaincodeException(String.format("Einheit %s nicht gefunden", unitId), PharmaSupplyChainErrors.UNIT_NOT_FOUND.toString());
@@ -820,9 +820,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
             throw new ChaincodeException(String.format("Neuer Eigentümer Akteur %s nicht gefunden.", newOwnerActorId), PharmaSupplyChainErrors.ACTOR_NOT_FOUND.toString());
         }
 
-        // NEU: Vor dem Transfer den Eintrag in die Historie aufnehmen
         String previousOwnerId = existingUnit.getCurrentOwnerActorId();
-        String transferTimestamp = Instant.now().toString(); // Zeitstempel des Transfers
         existingUnit.addTransferEntry(previousOwnerId, newOwnerActorId, transferTimestamp);
 
 

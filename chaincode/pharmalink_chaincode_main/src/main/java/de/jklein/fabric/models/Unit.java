@@ -32,7 +32,7 @@ public final class Unit {
     private List<Map<String, String>> temperatureReadings; // Liste von Temperaturmesswerten (Timestamp, Temperatur)
 
     @Property()
-    private List<Map<String, String>> transferHistory; // NEU: Liste zur Nachverfolgung von Besitzwechseln (from, to, timestamp)
+    private List<Map<String, String>> transferHistory; // Liste zur Nachverfolgung von Besitzwechseln (from, to, timestamp)
 
     @Property()
     private String docType; // Hinzugefügt für CouchDB Abfragen zur Typisierung
@@ -40,7 +40,7 @@ public final class Unit {
     // Leerer Konstruktor für Genson Deserialisierung
     public Unit() {
         this.temperatureReadings = new ArrayList<>();
-        this.transferHistory = new ArrayList<>(); // NEU: Initialisierung der Transferhistorie
+        this.transferHistory = new ArrayList<>();
     }
 
     public Unit(@JsonProperty("unitId") final String unitId,
@@ -54,8 +54,8 @@ public final class Unit {
         this.ipfsLink = ipfsLink;
         this.currentOwnerActorId = currentOwnerActorId;
         this.temperatureReadings = new ArrayList<>();
-        this.transferHistory = new ArrayList<>(); // NEU: Initialisierung der Transferhistorie
-        this.docType = "unit"; // Jedem Unit-Objekt wird der docType "unit" zugewiesen
+        this.transferHistory = new ArrayList<>();
+        this.docType = "unit";
     }
 
     public String getUnitId() {
@@ -113,7 +113,6 @@ public final class Unit {
         return transferHistory;
     }
 
-    // NEU: Methode zum Hinzufügen eines Transfer-Eintrags
     public void addTransferEntry(final String fromActorId, final String toActorId, final String transferTimestamp) {
         Map<String, String> transferEntry = new TreeMap<>();
         transferEntry.put("from", fromActorId);
@@ -156,7 +155,7 @@ public final class Unit {
                 + ", ipfsLink='" + ipfsLink + '\''
                 + ", currentOwnerActorId='" + currentOwnerActorId + '\''
                 + ", temperatureReadings=" + temperatureReadings
-                + ", transferHistory=" + transferHistory // NEU: In toString() aufnehmen
+                + ", transferHistory=" + transferHistory
                 + ", docType='" + docType + '\''
                 + '}';
     }
