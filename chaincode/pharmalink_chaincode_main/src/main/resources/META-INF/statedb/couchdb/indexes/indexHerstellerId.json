@@ -1,0 +1,8 @@
+{
+  "index": {
+    "fields": ["herstellerId", "docType"]
+  },
+  "ddoc": "indexHerstellerIdDoc",
+  "name": "indexHerstellerId",
+  "type": "json"
+}

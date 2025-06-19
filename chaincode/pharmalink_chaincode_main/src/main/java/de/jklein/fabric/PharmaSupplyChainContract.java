@@ -15,7 +15,7 @@ import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.time.Instant; // Beibehalten, falls direkt für approvalDate etc. benötigt
+// import java.time.Instant; // Nicht mehr für Obj. Zeitstempel benötigt
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -297,15 +297,16 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * @param bezeichnung Die Bezeichnung des Medikaments.
      * @param infoblattHash Der Hash des Infoblatts (On-Chain-Referenz).
      * @param ipfsLink Der IPFS Link zu weiteren Off-Chain-Informationen des Infoblatts.
+     * @param creationTimestamp Der Zeitstempel der Erstellung des Medikaments im ISO 8601 Format (von der Client-Anwendung bereitgestellt).
      * @return Das erstellte Medikament als JSON-String.
      * @throws ChaincodeException Wenn der Aufrufer kein Hersteller ist, das Medikament bereits existiert
      * oder die Hersteller-ID nicht gefunden wird.
      *
      * Beispiel für Aufruf:
-     * {"function":"createMedikament","Args":["Paracetamol 500mg","a1b2c3d4e5f6...","QmHashdesInfoblatts"]}
+     * {"function":"createMedikament","Args":["Paracetamol 500mg","a1b2c3d4e5f6...","QmHashdesInfoblatts","2025-06-19T10:30:00Z"]}
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public String createMedikament(final Context ctx, final String bezeichnung, final String infoblattHash, final String ipfsLink) {
+    public String createMedikament(final Context ctx, final String bezeichnung, final String infoblattHash, final String ipfsLink, final String creationTimestamp) {
         final ChaincodeStub stub = ctx.getStub();
         final String mspId = ctx.getClientIdentity().getMSPID();
         final String clientId = ctx.getClientIdentity().getId();
@@ -338,10 +339,8 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         }
 
         // 3. Medikament-Objekt erstellen und im Ledger speichern
-        // infoblattHash wird über Setter gesetzt, lastChangeDate wird nicht mehr explizit im Objekt gespeichert
         final Medikament newMedikament = new Medikament(medId, herstellerId, bezeichnung, ipfsLink);
         newMedikament.setInfoblattHash(infoblattHash);
-        // lastChangeDate wird NICHT mehr hier gesetzt. Historie über Fabric History API.
 
         final String newMedikamentJson = JsonUtil.toJson(newMedikament);
         stub.putStringState(medId, newMedikamentJson);
@@ -357,15 +356,16 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * @param ctx Der Smart Contract Kontext.
      * @param medId Die ID des zu genehmigenden/ablehnenden Medikaments.
      * @param newStatus Der neue Status (z.B. "freigegeben" oder "abgelehnt").
+     * @param approvalTimestamp Der Zeitstempel der Genehmigung im ISO 8601 Format (von der Client-Anwendung bereitgestellt).
      * @return Das aktualisierte Medikament als JSON-String.
      * @throws ChaincodeException Wenn der Aufrufer keine Behörde ist, das Medikament nicht gefunden wird
      * oder der Status ungültig ist.
      *
      * Beispiel für Aufruf (von einer Behörde):
-     * {"function":"approveMedikament","Args":["MED-a1b2c3d4e5f6...","freigegeben"]}
+     * {"function":"approveMedikament","Args":["MED-a1b2c3d4e5f6...","freigegeben","2025-06-19T10:35:00Z"]}
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public String approveMedikament(final Context ctx, final String medId, final String newStatus) {
+    public String approveMedikament(final Context ctx, final String medId, final String newStatus, final String approvalTimestamp) {
         final ChaincodeStub stub = ctx.getStub();
         final String mspId = ctx.getClientIdentity().getMSPID();
         final String clientId = ctx.getClientIdentity().getId();
@@ -397,10 +397,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         }
 
         existingMedikament.setStatus(lowerCaseNewStatus);
-        // lastChangeDate wird NICHT mehr hier gesetzt. Historie über Fabric History API.
         existingMedikament.setApprovedById(approverActorId); // Genehmiger referenzieren
-        existingMedikament.setApprovalDate(Instant.now().toString()); // Genehmigungsdatum setzen (dieser Zeitstempel ist spezifisch für den Genehmigungsprozess, nicht für die allgemeine letzte Änderung des Objekts)
-
         // 4. Medikament im Ledger speichern
         final String updatedMedikamentJson = JsonUtil.toJson(existingMedikament);
         stub.putStringState(medId, updatedMedikamentJson);
@@ -417,15 +414,16 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * @param newBezeichnung Die neue Bezeichnung (kann leer sein, wenn keine Änderung).
      * @param newInfoblattHash Der neue Infoblatt-Hash (kann leer sein).
      * @param newIpfsLink Der neue IPFS Link (kann leer sein).
+     * @param updateTimestamp Der Zeitstempel der Aktualisierung im ISO 8601 Format (von der Client-Anwendung bereitgestellt).
      * @return Das aktualisierte Medikament als JSON-String.
      * @throws ChaincodeException Wenn der Aufrufer nicht der Ersteller des Medikaments ist,
      * das Medikament nicht gefunden wird, oder andere Fehler auftreten.
      *
      * Beispiel für Aufruf (vom Hersteller):
-     * {"function":"updateMedikament","Args":["MED-a1b2c3d4e5f6...","Paracetamol Forte","neuerhash","neueripfslink"]}
+     * {"function":"updateMedikament","Args":["MED-a1b2c3d4e5f6...","Paracetamol Forte","neuerhash","neueripfslink","2025-06-19T10:40:00Z"]}
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public String updateMedikament(final Context ctx, final String medId, final String newBezeichnung, final String newInfoblattHash, final String newIpfsLink) {
+    public String updateMedikament(final Context ctx, final String medId, final String newBezeichnung, final String newInfoblattHash, final String newIpfsLink, final String updateTimestamp) {
         final ChaincodeStub stub = ctx.getStub();
         final String mspId = ctx.getClientIdentity().getMSPID();
         final String clientId = ctx.getClientIdentity().getId();
@@ -462,8 +460,6 @@ public final class PharmaSupplyChainContract implements ContractInterface {
             existingMedikament.setIpfsLink(newIpfsLink);
         }
 
-        // lastChangeDate wird NICHT mehr hier gesetzt. Historie über Fabric History API.
-
         // 5. Medikament im Ledger speichern
         final String updatedMedikamentJson = JsonUtil.toJson(existingMedikament);
         stub.putStringState(medId, updatedMedikamentJson);
@@ -480,17 +476,18 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * @param ctx Der Smart Contract Kontext.
      * @param medId Die ID des Medikaments.
      * @param tagValue Der Wert des Tags, der gesetzt werden soll.
+     * @param updateTimestamp Der Zeitstempel der Aktualisierung im ISO 8601 Format (von der Client-Anwendung bereitgestellt).
      * @return Das aktualisierte Medikament als JSON-String.
      * @throws ChaincodeException Wenn das Medikament nicht gefunden wird, der Aufrufer nicht autorisiert ist,
      * oder andere Fehler auftreten.
      *
      * Beispiel für Aufruf (vom Hersteller):
-     * {"function":"addMedikamentTag","Args":["MED-a1b2c3d4e5f6...","Produktion Charge X erfolgreich abgeschlossen"]}
+     * {"function":"addMedikamentTag","Args":["MED-a1b2c3d4e5f6...","Produktion Charge X erfolgreich abgeschlossen","2025-06-19T10:45:00Z"]}
      * Beispiel für Aufruf (von Behörde):
-     * {"function":"addMedikamentTag","Args":["MED-a1b2c3d4e5f6...","Zulassung 2024-06-19 erteilt"]}
+     * {"function":"addMedikamentTag","Args":["MED-a1b2c3d4e5f6...","Zulassung 2024-06-19 erteilt","2025-06-19T10:46:00Z"]}
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public String addMedikamentTag(final Context ctx, final String medId, final String tagValue) {
+    public String addMedikamentTag(final Context ctx, final String medId, final String tagValue, final String updateTimestamp) {
         final ChaincodeStub stub = ctx.getStub();
         final String mspId = ctx.getClientIdentity().getMSPID();
         final String clientId = ctx.getClientIdentity().getId();
@@ -526,8 +523,6 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         }
 
         existingMedikament.setTags(currentTags);
-        // lastChangeDate wird NICHT mehr hier gesetzt. Historie über Fabric History API.
-
         // 4. Medikament im Ledger speichern
         final String updatedMedikamentJson = JsonUtil.toJson(existingMedikament);
         stub.putStringState(medId, updatedMedikamentJson);

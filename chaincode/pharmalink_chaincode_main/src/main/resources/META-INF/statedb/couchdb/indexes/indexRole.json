@@ -1,6 +1,6 @@
 {
   "index": {
-    "fields": ["role"]
+    "fields": ["role", "docType"]
   },
   "ddoc": "indexRoleDoc",
   "name": "indexRole",

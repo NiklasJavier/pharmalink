@@ -41,8 +41,8 @@ public final class Medikament {
     @Property()
     private String approvedById; // ActorId des Genehmigers (Behörde)
 
-    @Property()
-    private String approvalDate; // Datum der Genehmigung (ISO 8601 String)
+    // @Property()
+    // private String approvalDate; // Entfernt, da nicht deterministisch gesetzt werden soll
 
 
     // Leerer Konstruktor für Genson Deserialisierung
@@ -123,13 +123,6 @@ public final class Medikament {
     }
 
     // getLastChangeDate und setLastChangeDate wurden entfernt
-    // public String getLastChangeDate() {
-    //     return lastChangeDate;
-    // }
-    // public void setLastChangeDate(final String newLastChangeDate) {
-    //     this.lastChangeDate = newLastChangeDate;
-    // }
-
     public String getDocType() {
         return docType;
     }
@@ -146,14 +139,7 @@ public final class Medikament {
         this.approvedById = newApprovedById;
     }
 
-    public String getApprovalDate() {
-        return approvalDate;
-    }
-
-    public void setApprovalDate(final String newApprovalDate) {
-        this.approvalDate = newApprovalDate;
-    }
-
+    // getApprovalDate und setApprovalDate wurden entfernt
     @Override
     public boolean equals(final Object o) {
         if (this == o) {
@@ -183,7 +169,6 @@ public final class Medikament {
                 + ", tags=" + tags
                 + ", docType='" + docType + '\''
                 + ", approvedById='" + approvedById + '\''
-                + ", approvalDate='" + approvalDate + '\''
-                + '}';
+                + '}'; // approvalDate entfernt
     }
 }
