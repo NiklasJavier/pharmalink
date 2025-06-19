@@ -25,7 +25,7 @@ public class FabricClient {
      * Führt eine schreibende Transaktion aus, die ein Objekt als JSON-String erwartet.
      * @param functionName Der Name der Chaincode-Funktion (z.B. "CreateMedication")
      * @param assetId Die ID des Assets.
-     * @param asset DDas zu erstellende Asset-Objekt.
+     * @param asset Das zu erstellende Asset-Objekt.
      */
     public void submitCreateTransaction(String functionName, String assetId, Object asset) throws Exception {
         String assetJson = gson.toJson(asset);
@@ -55,10 +55,19 @@ public class FabricClient {
      * Führt eine generische, schreibende Transaktion aus.
      * @param functionName Der Name der Chaincode-Funktion.
      * @param args Die Argumente für die Chaincode-Funktion.
+     * @return Der JSON-String der Transaktionsantwort.
+     * @throws GatewayException Bei Fehlern im Gateway.
+     * @throws CommitException Bei Fehlern beim Commit der Transaktion.
      */
-    public void submitGenericTransaction(String functionName, String... args) throws GatewayException, CommitException {
+    public String submitGenericTransaction(String functionName, String... args) throws GatewayException, CommitException {
         logger.info("--> Submitting Generic Transaction: {} with args: {}", functionName, String.join(", ", args));
-        contract.submitTransaction(functionName, args);
-        logger.info("*** Generic Transaction '{}' committed successfully", functionName);
+        byte[] resultBytes = contract.submitTransaction(functionName, args);
+        String result = new String(resultBytes, StandardCharsets.UTF_8);
+        logger.info("*** Generic Transaction '{}' committed successfully. Result: {}", functionName, result);
+        return result;
+    }
+
+    public Gson getGson() {
+        return gson;
     }
 }
