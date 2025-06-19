@@ -228,10 +228,6 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         return JsonUtil.toJson(actorList);
     }
 
-    // ====================================================================================================
-    // Hinzugefügt: Akteur-Funktionen (aus ursprünglichem Code übernommen, aber korrigiert)
-    // ====================================================================================================
-
     /**
      * Registriert einen neuen Akteur im Ledger oder gibt dessen Informationen zurück, wenn er bereits existiert.
      * Die Actor ID wird auf Basis des SHA-256 Hashs der Client-Identität (resultierend aus MSPID und der eindeutigen
@@ -408,8 +404,6 @@ public final class PharmaSupplyChainContract implements ContractInterface {
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public String updateActorIpfsLink(final Context ctx, final String actorId, final String newIpfsLink) {
         final ChaincodeStub stub = ctx.getStub();
-        final String mspId = ctx.getClientIdentity().getMSPID();
-        final String clientId = ctx.getClientIdentity().getId();
 
         byte[] actorStateBytes = stub.getState(actorId);
         if (actorStateBytes == null || actorStateBytes.length == 0) {
@@ -420,10 +414,8 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
         final Actor existingActor = JsonUtil.fromJson(new String(actorStateBytes, StandardCharsets.UTF_8), Actor.class);
 
-        // Überprüfen der Berechtigung: Nur der Akteur selbst darf sein Profil aktualisieren
-        // Der ActorId des Aufrufers muss der des zu aktualisierenden Akteurs entsprechen
         Actor callingActor = getCallingActorFromContext(ctx);
-        if (!Objects.equals(actorId, callingActor.getActorId())) { // Vergleich der ActorId aus dem Ledger
+        if (!Objects.equals(actorId, callingActor.getActorId())) {
             final String errorMessage = "Nicht autorisiert: Nur der Eigentümer des Profils darf es aktualisieren.";
             System.err.println(errorMessage);
             throw new ChaincodeException(errorMessage, PharmaSupplyChainErrors.UNAUTHORIZED_ACCESS.toString());
@@ -438,17 +430,13 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         return updatedActorJson;
     }
 
-    // ====================================================================================================
-    // MEDIKAMENT-FUNKTIONEN (aus ursprünglichem Code übernommen, aber korrigiert)
-    // ====================================================================================================
-
     /**
      * Erstellt ein neues Medikament im Ledger. Nur Hersteller dürfen Medikamente anlegen.
      *
      * @param ctx Der Smart Contract Kontext.
      * @param bezeichnung Die Bezeichnung des Medikaments.
      * @param infoblattHash Der Hash des Infoblatts (On-Chain-Referenz).
-     * @param ipfsLink Der IPFS Link zu weiteren Off-Chain-Informationen des Infoblatts.
+     * @param ipfsLink Der IPFS Link zu weiteren Off-Chain-Informationen des Infoblatt.
      * @return Das erstellte Medikament als JSON-String.
      * @throws ChaincodeException Wenn der Aufrufer kein Hersteller ist, das Medikament bereits existiert
      * oder die Hersteller-ID nicht gefunden wird.
@@ -459,16 +447,14 @@ public final class PharmaSupplyChainContract implements ContractInterface {
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public String createMedikament(final Context ctx, final String bezeichnung, final String infoblattHash, final String ipfsLink) {
         final ChaincodeStub stub = ctx.getStub();
-        // 1. Hersteller-ID des Aufrufers ermitteln und Rolle prüfen
         Actor callingActor = getCallingActorFromContext(ctx);
 
         if (!"hersteller".equalsIgnoreCase(callingActor.getRole())) {
             throw new ChaincodeException("Nicht autorisiert: Nur Hersteller dürfen Medikamente anlegen.", PharmaSupplyChainErrors.UNAUTHORIZED_ACCESS.toString());
         }
 
-        final String herstellerId = callingActor.getActorId(); // Die bereits korrekt abgeleitete ActorId des Aufrufers
+        final String herstellerId = callingActor.getActorId();
 
-        // 2. Medikamenten-ID generieren: MED-SHA256(HerstellerID-Bezeichnung)
         final String combinedMedIdHashInput = herstellerId + "-" + bezeichnung;
         final String medSha = generateSha256(combinedMedIdHashInput);
         final String medId = "MED-" + medSha;
@@ -478,14 +464,12 @@ public final class PharmaSupplyChainContract implements ContractInterface {
             throw new ChaincodeException(String.format("Medikament mit ID '%s' existiert bereits.", medId), PharmaSupplyChainErrors.MEDIKAMENT_ALREADY_EXISTS.toString());
         }
 
-        // 3. Medikament-Objekt erstellen und im Ledger speichern
         final Medikament newMedikament = new Medikament(medId, herstellerId, bezeichnung, ipfsLink);
         newMedikament.setInfoblattHash(infoblattHash);
 
         final String newMedikamentJson = JsonUtil.toJson(newMedikament);
         stub.putStringState(medId, newMedikamentJson);
 
-        // Initialisiere den Unit-Zähler für dieses Medikament im Ledger
         stub.putStringState(UNIT_COUNTER_PREFIX + medId, "0");
 
         System.out.println("Neues Medikament angelegt: " + newMedikamentJson);
@@ -509,7 +493,6 @@ public final class PharmaSupplyChainContract implements ContractInterface {
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public String approveMedikament(final Context ctx, final String medId, final String newStatus) {
         final ChaincodeStub stub = ctx.getStub();
-        // 1. Rolle des Aufrufers überprüfen und ActorId ermitteln
         Actor callingActor = getCallingActorFromContext(ctx);
 
         if (!"behoerde".equalsIgnoreCase(callingActor.getRole())) {
@@ -518,14 +501,12 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         final String approverActorId = callingActor.getActorId();
 
 
-        // 2. Medikament laden
         byte[] medikamentStateBytes = stub.getState(medId);
         if (medikamentStateBytes == null || medikamentStateBytes.length == 0) {
             throw new ChaincodeException(String.format("Medikament mit ID '%s' nicht gefunden.", medId), PharmaSupplyChainErrors.MEDIKAMENT_NOT_FOUND.toString());
         }
         final Medikament existingMedikament = JsonUtil.fromJson(new String(medikamentStateBytes, StandardCharsets.UTF_8), Medikament.class);
 
-        // 3. Status validieren und setzen
         final String lowerCaseNewStatus = newStatus.toLowerCase();
         if (!("freigegeben".equals(lowerCaseNewStatus) || "abgelehnt".equals(lowerCaseNewStatus))) {
             throw new ChaincodeException("Ungültiger Status: Der Status muss 'freigegeben' oder 'abgelehnt' sein.", PharmaSupplyChainErrors.INVALID_MEDIKAMENT_STATUS_CHANGE.toString());
@@ -533,7 +514,6 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
         existingMedikament.setStatus(lowerCaseNewStatus);
         existingMedikament.setApprovedById(approverActorId);
-        // 4. Medikament im Ledger speichern
         final String updatedMedikamentJson = JsonUtil.toJson(existingMedikament);
         stub.putStringState(medId, updatedMedikamentJson);
 
@@ -559,23 +539,19 @@ public final class PharmaSupplyChainContract implements ContractInterface {
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public String updateMedikament(final Context ctx, final String medId, final String newBezeichnung, final String newInfoblattHash, final String newIpfsLink) {
         final ChaincodeStub stub = ctx.getStub();
-        // 1. Rolle des Aufrufers und dessen ActorId ermitteln
         Actor callingActor = getCallingActorFromContext(ctx);
         final String invokerActorId = callingActor.getActorId();
 
-        // 2. Medikament laden
         byte[] medikamentStateBytes = stub.getState(medId);
         if (medikamentStateBytes == null || medikamentStateBytes.length == 0) {
             throw new ChaincodeException(String.format("Medikament mit ID '%s' nicht gefunden.", medId), PharmaSupplyChainErrors.MEDIKAMENT_NOT_FOUND.toString());
         }
         final Medikament existingMedikament = JsonUtil.fromJson(new String(medikamentStateBytes, StandardCharsets.UTF_8), Medikament.class);
 
-        // 3. Berechtigungsprüfung: Nur der ursprüngliche Hersteller darf bearbeiten
         if (!existingMedikament.getHerstellerId().equals(invokerActorId)) {
             throw new ChaincodeException("Nicht autorisiert: Nur der anlegende Hersteller darf dieses Medikament bearbeiten.", PharmaSupplyChainErrors.UNAUTHORIZED_ACCESS.toString());
         }
 
-        // 4. Felder aktualisieren (nur wenn neue Werte ungleich leer sind)
         if (newBezeichnung != null && !newBezeichnung.isEmpty()) {
             existingMedikament.setBezeichnung(newBezeichnung);
         }
@@ -586,7 +562,6 @@ public final class PharmaSupplyChainContract implements ContractInterface {
             existingMedikament.setIpfsLink(newIpfsLink);
         }
 
-        // 5. Medikament im Ledger speichern
         final String updatedMedikamentJson = JsonUtil.toJson(existingMedikament);
         stub.putStringState(medId, updatedMedikamentJson);
 
@@ -614,34 +589,29 @@ public final class PharmaSupplyChainContract implements ContractInterface {
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public String addMedikamentTag(final Context ctx, final String medId, final String tagValue) {
         final ChaincodeStub stub = ctx.getStub();
-        // 1. Rolle des Aufrufers und dessen ActorId ermitteln
         Actor callingActor = getCallingActorFromContext(ctx);
         final String invokerActorId = callingActor.getActorId();
         final String actualRoleFromCert = callingActor.getRole();
 
-        // 2. Medikament laden
         byte[] medikamentStateBytes = stub.getState(medId);
         if (medikamentStateBytes == null || medikamentStateBytes.length == 0) {
             throw new ChaincodeException(String.format("Medikament mit ID '%s' nicht gefunden.", medId), PharmaSupplyChainErrors.MEDIKAMENT_NOT_FOUND.toString());
         }
         final Medikament existingMedikament = JsonUtil.fromJson(new String(medikamentStateBytes, StandardCharsets.UTF_8), Medikament.class);
 
-        // 3. Berechtigungsprüfung und Tag setzen
         final Map<String, String> currentTags = existingMedikament.getTags();
         if ("hersteller".equalsIgnoreCase(actualRoleFromCert)) {
-            // Nur der Ersteller-Hersteller darf Tags als "hersteller" setzen
             if (!existingMedikament.getHerstellerId().equals(invokerActorId)) {
                 throw new ChaincodeException("Nicht autorisiert: Nur der anlegende Hersteller darf Tags für dieses Medikament setzen.", PharmaSupplyChainErrors.UNAUTHORIZED_ACCESS.toString());
             }
-            currentTags.put("hersteller", tagValue); // Key "hersteller" für Hersteller-Tags
+            currentTags.put("hersteller", tagValue);
         } else if ("behoerde".equalsIgnoreCase(actualRoleFromCert)) {
-            currentTags.put("behoerde", tagValue); // Key "behoerde" für Behörden-Tags
+            currentTags.put("behoerde", tagValue);
         } else {
             throw new ChaincodeException("Nicht autorisiert: Nur Hersteller oder Behörden dürfen Tags setzen.", PharmaSupplyChainErrors.UNAUTHORIZED_ACCESS.toString());
         }
 
         existingMedikament.setTags(currentTags);
-        // 4. Medikament im Ledger speichern
         final String updatedMedikamentJson = JsonUtil.toJson(existingMedikament);
         stub.putStringState(medId, updatedMedikamentJson);
 
@@ -685,7 +655,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * Beispiel für Aufruf:
      * {"function":"queryMedikamenteByHerstellerId","Args":["hersteller-a1b2c3d4e5f6..."]}
      */
-    @Transaction(intent = Transaction.TYPE.EVALUATE) // Korrigiertes Transaction Type
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
     public String queryMedikamenteByHerstellerId(final Context ctx, final String herstellerId) {
         final ChaincodeStub stub = ctx.getStub();
         final List<Medikament> medikamentList = new ArrayList<>();
@@ -718,9 +688,8 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         }
 
         Medikament existingMedikament = JsonUtil.fromJson(new String(medikamentStateBytes, StandardCharsets.UTF_8), Medikament.class);
-        Actor callingActor = getCallingActorFromContext(ctx); // Verwende die neue Hilfsmethode
+        Actor callingActor = getCallingActorFromContext(ctx);
 
-        // Nur Behörde oder der anlegende Hersteller, wenn der Status "angelegt" ist, darf löschen
         if (!(callingActor.getRole().equalsIgnoreCase("behoerde")
                 ||
                 (callingActor.getRole().equalsIgnoreCase("hersteller") && Objects.equals(callingActor.getActorId(), existingMedikament.getHerstellerId()) && existingMedikament.getStatus().equalsIgnoreCase("angelegt")))) {
@@ -728,14 +697,9 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         }
 
         ctx.getStub().delState(medId);
-        // Auch den Unit-Zähler löschen, wenn das Medikament gelöscht wird
         ctx.getStub().delState(UNIT_COUNTER_PREFIX + medId);
     }
 
-
-    // ====================================================================================================
-    // Hinzugefügt: UNIT-FUNKTIONEN
-    // ====================================================================================================
 
     /**
      * Erstellt eine angegebene Anzahl von Einheiten für ein genehmigtes Medikament.
@@ -760,19 +724,16 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
         Medikament existingMedikament = JsonUtil.fromJson(new String(medikamentStateBytes, StandardCharsets.UTF_8), Medikament.class);
 
-        // Überprüfen, ob der aufrufende Akteur der Hersteller des Medikaments ist
-        Actor callingActor = getCallingActorFromContext(ctx); // Verwende die neue Hilfsmethode
+        Actor callingActor = getCallingActorFromContext(ctx);
 
         if (!Objects.equals(callingActor.getActorId(), existingMedikament.getHerstellerId())) {
             throw new ChaincodeException("Nur der Hersteller des Medikaments darf Einheiten erstellen.", PharmaSupplyChainErrors.UNAUTHORIZED_ACCESS.toString());
         }
 
-        // Überprüfen, ob das Medikament freigegeben ist
         if (!existingMedikament.getStatus().equalsIgnoreCase("freigegeben")) {
             throw new ChaincodeException(String.format("Medikament %s ist nicht freigegeben und kann daher nicht in Einheiten unterteilt werden.", medId), PharmaSupplyChainErrors.MEDIKAMENT_NOT_APPROVED.toString());
         }
 
-        // Aktuellen Zähler für dieses Medikament aus dem Ledger abrufen
         byte[] counterBytes = ctx.getStub().getState(UNIT_COUNTER_PREFIX + medId);
         int currentUnitCounter = 0;
         if (counterBytes != null && counterBytes.length > 0) {
@@ -783,19 +744,17 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
         for (int i = 0; i < anzahl; i++) {
             currentUnitCounter++;
-            // Format der UnitID: MedikamentID-ChargeBezeichnung-Zähler (4-stellig)
             String unitId = medId + "-" + chargeBezeichnung + "-" + String.format("%04d", currentUnitCounter);
 
             if (unitExists(ctx, unitId)) {
                 throw new ChaincodeException(String.format("Einheit %s existiert bereits. Inkonsistenter Zählerstand.", unitId), PharmaSupplyChainErrors.UNIT_ALREADY_EXISTS.toString());
             }
 
-            Unit newUnit = new Unit(unitId, medId, chargeBezeichnung, ipfsLink, callingActor.getActorId()); // Verwende die ActorId des Aufrufers
+            Unit newUnit = new Unit(unitId, medId, chargeBezeichnung, ipfsLink, callingActor.getActorId());
             ctx.getStub().putState(unitId, JsonUtil.toJson(newUnit).getBytes(StandardCharsets.UTF_8));
             createdUnits.add(newUnit);
         }
 
-        // Aktualisiere den Zähler für dieses Medikament im Ledger
         ctx.getStub().putState(UNIT_COUNTER_PREFIX + medId, String.valueOf(currentUnitCounter).getBytes(StandardCharsets.UTF_8));
 
         return JsonUtil.toJson(createdUnits);
@@ -807,12 +766,13 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      *
      * @param ctx         Der Transaktionskontext.
      * @param unitId      Die ID der Einheit.
-     * @param temperature Der Temperaturwert als String (z.B. "25.5").
+     * @param temperature Der Temperaturwert als String.
+     * @param timestamp   Der Zeitstempel der Messung als ISO 8601 String.
      * @return Die aktualisierte Einheit als JSON-String.
-     * Example: {"function":"addTemperatureReading","Args":["MED-HASH123-Charge-XYZ-0001","25.5"]}
+     * Example: {"function":"addTemperatureReading","Args":["MED-HASH123-Charge-XYZ-0001","25.5","2025-06-19T10:00:00Z"]}
      */
     @Transaction()
-    public String addTemperatureReading(final Context ctx, final String unitId, final String temperature) {
+    public String addTemperatureReading(final Context ctx, final String unitId, final String temperature, final String timestamp) {
         byte[] unitStateBytes = ctx.getStub().getState(unitId);
 
         if (unitStateBytes == null || unitStateBytes.length == 0) {
@@ -821,14 +781,11 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
         Unit existingUnit = JsonUtil.fromJson(new String(unitStateBytes, StandardCharsets.UTF_8), Unit.class);
 
-        // Überprüfen, ob der aufrufende Akteur der aktuelle Eigentümer der Einheit ist
-        Actor callingActor = getCallingActorFromContext(ctx); // Verwende die neue Hilfsmethode
+        Actor callingActor = getCallingActorFromContext(ctx);
         if (!Objects.equals(callingActor.getActorId(), existingUnit.getCurrentOwnerActorId())) {
             throw new ChaincodeException("Nur der aktuelle Eigentümer der Einheit darf Temperaturdaten hinzufügen.", PharmaSupplyChainErrors.UNAUTHORIZED_ACCESS.toString());
         }
 
-        // Aktuellen Zeitstempel hinzufügen
-        String timestamp = Instant.now().toString(); // ISO 8601 Format
         existingUnit.addTemperatureReading(timestamp, temperature);
 
         ctx.getStub().putState(unitId, JsonUtil.toJson(existingUnit).getBytes(StandardCharsets.UTF_8));
@@ -854,16 +811,20 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
         Unit existingUnit = JsonUtil.fromJson(new String(unitStateBytes, StandardCharsets.UTF_8), Unit.class);
 
-        // Überprüfen, ob der aufrufende Akteur der aktuelle Eigentümer der Einheit ist
-        Actor callingActor = getCallingActorFromContext(ctx); // Verwende die neue Hilfsmethode
+        Actor callingActor = getCallingActorFromContext(ctx);
         if (!Objects.equals(callingActor.getActorId(), existingUnit.getCurrentOwnerActorId())) {
             throw new ChaincodeException("Nur der aktuelle Eigentümer der Einheit darf den Besitz übertragen.", PharmaSupplyChainErrors.UNAUTHORIZED_ACCESS.toString());
         }
 
-        // Überprüfen, ob der neue Eigentümer ein existierender Akteur ist
         if (!actorExists(ctx, newOwnerActorId)) {
             throw new ChaincodeException(String.format("Neuer Eigentümer Akteur %s nicht gefunden.", newOwnerActorId), PharmaSupplyChainErrors.ACTOR_NOT_FOUND.toString());
         }
+
+        // NEU: Vor dem Transfer den Eintrag in die Historie aufnehmen
+        String previousOwnerId = existingUnit.getCurrentOwnerActorId();
+        String transferTimestamp = Instant.now().toString(); // Zeitstempel des Transfers
+        existingUnit.addTransferEntry(previousOwnerId, newOwnerActorId, transferTimestamp);
+
 
         existingUnit.setCurrentOwnerActorId(newOwnerActorId);
         ctx.getStub().putState(unitId, JsonUtil.toJson(existingUnit).getBytes(StandardCharsets.UTF_8));
