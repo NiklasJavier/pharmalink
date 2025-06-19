@@ -48,38 +48,30 @@ public final class PharmacyChaincode implements ContractInterface {
     private static final String ENROLLMENT_ID_LOOKUP_PREFIX = "enrollmentId~";
 
     /**
-     * KORRIGIERTE VERSION (FINAL): Verhindert Duplikate 100% zuverlässig, indem die Akteur-ID
-     * direkt und deterministisch aus der Identität des Aufrufers erzeugt wird.
-     *
-     * @param ctx Der Transaktionskontext.
-     * @param description Eine Beschreibung des Akteurs (z.B. Firmenname).
-     * @param role Die gewünschte Rolle ('hersteller', 'grosshaendler', 'apotheke', 'behoerde').
-     * @return Der neu erstellte Akteur.
+     * HINWEIS: Diese Methode ist korrekt, unterliegt aber ohne DB-Index einer Race Condition.
+     * Schnelle, wiederholte Aufrufe können zu doppelten Einträgen führen, bevor der
+     * erste Eintrag auf allen Peers final geschrieben wurde. Dies ist eine Limitierung
+     * der indexlosen Abfrage.
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public Actor requestActorRegistration(final Context ctx, final String description, final String role) {
         final ChaincodeStub stub = ctx.getStub();
         final String enrollmentId = ctx.getClientIdentity().getId();
 
-        // Sicherheitsprüfung: Rolle im Zertifikat muss mit angeforderter Rolle überein-stimmen.
         final String certRole = getRoleFromCertificate(ctx);
         if (!certRole.equals(role)) {
             throw new ChaincodeException("Die angeforderte Rolle '" + role + "' stimmt nicht mit der Rolle im Zertifikat ('" + certRole + "') überein.", PharmacyErrors.PERMISSION_DENIED.toString());
         }
 
-        // FINALE, ROBUSTE LOGIK:
-        // Der Primärschlüssel des Akteurs wird ein Hash seiner eindeutigen Enrollment-ID.
         final String actorId = generateDeterministicUUID("Actor", enrollmentId);
 
-        // Prüfen, ob ein Akteur mit diesem Schlüssel bereits existiert. Dies ist ein
-        // direkter Key-Lookup und benötigt keinen Index.
         byte[] existingActor = stub.getState(actorId);
         if (existingActor != null && existingActor.length > 0) {
             throw new ChaincodeException("Ein Akteur mit dieser Identität existiert bereits.", PharmacyErrors.ACTOR_ALREADY_EXISTS.toString());
         }
 
         final Actor.Builder builder = new Actor.Builder()
-                .actorId(actorId) // Der deterministische Hash ist jetzt die primäre ID.
+                .actorId(actorId)
                 .enrollmentId(enrollmentId)
                 .description(description)
                 .mspId(ctx.getClientIdentity().getMSPID())
@@ -95,11 +87,11 @@ public final class PharmacyChaincode implements ContractInterface {
 
         final Actor actor = builder.build();
 
-        // Speichere den neuen Akteur unter seinem deterministischen Schlüssel.
         stub.putStringState(actorId, actor.toJSONString());
 
         return actor;
     }
+
 
     /**
      * KORRIGIERTE VERSION: Mit zusätzlicher Null-Prüfung zur Vermeidung von Abstürzen.
@@ -130,17 +122,12 @@ public final class PharmacyChaincode implements ContractInterface {
     }
 
     /**
-     * KORRIGIERTE VERSION (FINAL): Findet den eigenen Akteur über dessen deterministischen Schlüssel,
-     * ohne eine Rich Query zu benötigen.
+     * Findet den eigenen Akteur über dessen deterministischen Schlüssel.
      */
     @Transaction(intent = Transaction.TYPE.EVALUATE)
     public Actor queryOwnActor(final Context ctx) {
         final String enrollmentId = ctx.getClientIdentity().getId();
-
-        // Erzeuge denselben deterministischen Schlüssel wie bei der Registrierung.
         final String actorId = generateDeterministicUUID("Actor", enrollmentId);
-
-        // Führe einen direkten Lesezugriff mit der bekannten ID durch.
         return getActorById(ctx, actorId);
     }
 
