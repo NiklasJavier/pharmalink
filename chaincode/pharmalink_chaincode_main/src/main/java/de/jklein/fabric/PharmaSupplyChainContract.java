@@ -355,7 +355,6 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * @param ctx Der Smart Contract Kontext.
      * @param medId Die ID des zu genehmigenden/ablehnenden Medikaments.
      * @param newStatus Der neue Status (z.B. "freigegeben" oder "abgelehnt").
-     * @param approvalTimestamp Der Zeitstempel der Genehmigung im ISO 8601 Format (von der Client-Anwendung bereitgestellt).
      * @return Das aktualisierte Medikament als JSON-String.
      * @throws ChaincodeException Wenn der Aufrufer keine Behörde ist, das Medikament nicht gefunden wird
      * oder der Status ungültig ist.
@@ -364,7 +363,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * {"function":"approveMedikament","Args":["MED-a1b2c3d4e5f6...","freigegeben","2025-06-19T10:35:00Z"]}
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public String approveMedikament(final Context ctx, final String medId, final String newStatus, final String approvalTimestamp) {
+    public String approveMedikament(final Context ctx, final String medId, final String newStatus) {
         final ChaincodeStub stub = ctx.getStub();
         final String mspId = ctx.getClientIdentity().getMSPID();
         final String clientId = ctx.getClientIdentity().getId();
