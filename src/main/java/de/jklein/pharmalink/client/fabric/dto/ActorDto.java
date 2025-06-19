@@ -1,4 +1,4 @@
-package de.jklein.pharmalink.dto;
+package de.jklein.pharmalink.client.fabric.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

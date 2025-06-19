@@ -2,7 +2,7 @@
 package de.jklein.pharmalink.runner;
 
 import de.jklein.pharmalink.client.fabric.FabricClient;
-import de.jklein.pharmalink.dto.ActorDto;
+import de.jklein.pharmalink.client.fabric.dto.ActorDto;
 import de.jklein.pharmalink.service.CurrentActorHolder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
