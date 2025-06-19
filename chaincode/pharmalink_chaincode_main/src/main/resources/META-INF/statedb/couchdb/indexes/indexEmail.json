@@ -1,0 +1,8 @@
+{
+  "index": {
+    "fields": ["email", "docType"]
+  },
+  "ddoc": "indexEmailDoc",
+  "name": "indexEmail",
+  "type": "json"
+}
