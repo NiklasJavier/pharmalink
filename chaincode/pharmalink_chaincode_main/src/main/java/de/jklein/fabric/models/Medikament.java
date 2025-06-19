@@ -4,7 +4,6 @@ import com.owlike.genson.annotation.JsonProperty;
 import org.hyperledger.fabric.contract.annotation.DataType;
 import org.hyperledger.fabric.contract.annotation.Property;
 
-import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
@@ -33,8 +32,8 @@ public final class Medikament {
     @Property()
     private Map<String, String> tags; // Key: Rolle (hersteller, behoerde), Value: Tag-Bezeichnung
 
-    @Property()
-    private String lastChangeDate; // Automatisch gesetztes Änderungsdatum (ISO 8601 String)
+    // @Property()
+    // private String lastChangeDate; // Entfernt, Historie über Fabric History API
 
     @Property()
     private String docType; // Für CouchDB-Abfragen
@@ -51,15 +50,13 @@ public final class Medikament {
         this.status = "angelegt";
         this.tags = new TreeMap<>();
         this.docType = "medikament";
-        this.lastChangeDate = Instant.now().toString();
     }
 
-    // Konstruktor mit maximal 7 Parametern (medId, herstellerId, bezeichnung, ipfsLink, status, tags, docType)
-    // infoblattHash wird nicht mehr im Konstruktor gesetzt, kann über Setter erfolgen, falls benötigt
+    // Konstruktor mit maximal 7 Parametern
     public Medikament(@JsonProperty("medId") final String medId,
                       @JsonProperty("herstellerId") final String herstellerId,
                       @JsonProperty("bezeichnung") final String bezeichnung,
-                      @JsonProperty("ipfsLink") final String ipfsLink) { // infoblattHash entfernt
+                      @JsonProperty("ipfsLink") final String ipfsLink) {
         this.medId = medId;
         this.herstellerId = herstellerId;
         this.bezeichnung = bezeichnung;
@@ -67,7 +64,6 @@ public final class Medikament {
         this.status = "angelegt"; // Initialer Status
         this.tags = new TreeMap<>(); // Initialisiere leere Map für Tags
         this.docType = "medikament"; // Festgelegter docType
-        this.lastChangeDate = Instant.now().toString(); // Initiales Änderungsdatum
     }
 
     public String getMedId() {
@@ -98,7 +94,7 @@ public final class Medikament {
         return infoblattHash;
     }
 
-    public void setInfoblattHash(final String newInfoblattHash) { // Setter bleibt erhalten
+    public void setInfoblattHash(final String newInfoblattHash) {
         this.infoblattHash = newInfoblattHash;
     }
 
@@ -126,13 +122,13 @@ public final class Medikament {
         this.tags = newTags;
     }
 
-    public String getLastChangeDate() {
-        return lastChangeDate;
-    }
-
-    public void setLastChangeDate(final String newLastChangeDate) {
-        this.lastChangeDate = newLastChangeDate;
-    }
+    // getLastChangeDate und setLastChangeDate wurden entfernt
+    // public String getLastChangeDate() {
+    //     return lastChangeDate;
+    // }
+    // public void setLastChangeDate(final String newLastChangeDate) {
+    //     this.lastChangeDate = newLastChangeDate;
+    // }
 
     public String getDocType() {
         return docType;
@@ -185,7 +181,6 @@ public final class Medikament {
                 + ", ipfsLink='" + ipfsLink + '\''
                 + ", status='" + status + '\''
                 + ", tags=" + tags
-                + ", lastChangeDate='" + lastChangeDate + '\''
                 + ", docType='" + docType + '\''
                 + ", approvedById='" + approvedById + '\''
                 + ", approvalDate='" + approvalDate + '\''

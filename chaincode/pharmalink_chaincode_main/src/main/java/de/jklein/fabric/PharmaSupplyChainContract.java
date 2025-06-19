@@ -15,7 +15,7 @@ import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.time.Instant;
+import java.time.Instant; // Beibehalten, falls direkt für approvalDate etc. benötigt
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -161,8 +161,6 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         final List<Actor> actorList = new ArrayList<>();
 
         // Rich Query für CouchDB: Selektiert Dokumente mit dem angegebenen 'email' und docType "actor".
-        // Es ist wichtig, den docType hier mit zu filtern, um nur Akteur-Objekte zu finden
-        // und nicht versehentlich andere Dokumente, die eine 'email'-Feld haben könnten.
         // Benötigt den Index 'indexEmail' in META-INF/statedb/couchdb/indexes/indexEmail.json
         final String queryString = String.format("{\"selector\":{\"email\":\"%s\", \"docType\":\"actor\"}}", email);
         final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = stub.getQueryResult(queryString);
@@ -340,9 +338,11 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         }
 
         // 3. Medikament-Objekt erstellen und im Ledger speichern
-        // Beachten Sie, dass infoblattHash nicht mehr im Konstruktor erwartet wird.
+        // infoblattHash wird über Setter gesetzt, lastChangeDate wird nicht mehr explizit im Objekt gespeichert
         final Medikament newMedikament = new Medikament(medId, herstellerId, bezeichnung, ipfsLink);
-        newMedikament.setInfoblattHash(infoblattHash); // infoblattHash wird über Setter gesetzt
+        newMedikament.setInfoblattHash(infoblattHash);
+        // lastChangeDate wird NICHT mehr hier gesetzt. Historie über Fabric History API.
+
         final String newMedikamentJson = JsonUtil.toJson(newMedikament);
         stub.putStringState(medId, newMedikamentJson);
 
@@ -397,9 +397,9 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         }
 
         existingMedikament.setStatus(lowerCaseNewStatus);
-        existingMedikament.setLastChangeDate(Instant.now().toString()); // Änderungsdatum aktualisieren
+        // lastChangeDate wird NICHT mehr hier gesetzt. Historie über Fabric History API.
         existingMedikament.setApprovedById(approverActorId); // Genehmiger referenzieren
-        existingMedikament.setApprovalDate(Instant.now().toString()); // Genehmigungsdatum setzen
+        existingMedikament.setApprovalDate(Instant.now().toString()); // Genehmigungsdatum setzen (dieser Zeitstempel ist spezifisch für den Genehmigungsprozess, nicht für die allgemeine letzte Änderung des Objekts)
 
         // 4. Medikament im Ledger speichern
         final String updatedMedikamentJson = JsonUtil.toJson(existingMedikament);
@@ -423,7 +423,6 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      *
      * Beispiel für Aufruf (vom Hersteller):
      * {"function":"updateMedikament","Args":["MED-a1b2c3d4e5f6...","Paracetamol Forte","neuerhash","neueripfslink"]}
-     * {"function":"updateMedikament","Args":["MED-a1b2c3d4e5f6...","","","QmNeuerIpfsLinkOhneHashAenderung"]}
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public String updateMedikament(final Context ctx, final String medId, final String newBezeichnung, final String newInfoblattHash, final String newIpfsLink) {
@@ -463,7 +462,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
             existingMedikament.setIpfsLink(newIpfsLink);
         }
 
-        existingMedikament.setLastChangeDate(Instant.now().toString()); // Änderungsdatum aktualisieren
+        // lastChangeDate wird NICHT mehr hier gesetzt. Historie über Fabric History API.
 
         // 5. Medikament im Ledger speichern
         final String updatedMedikamentJson = JsonUtil.toJson(existingMedikament);
@@ -527,7 +526,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         }
 
         existingMedikament.setTags(currentTags);
-        existingMedikament.setLastChangeDate(Instant.now().toString()); // Änderungsdatum aktualisieren
+        // lastChangeDate wird NICHT mehr hier gesetzt. Historie über Fabric History API.
 
         // 4. Medikament im Ledger speichern
         final String updatedMedikamentJson = JsonUtil.toJson(existingMedikament);
