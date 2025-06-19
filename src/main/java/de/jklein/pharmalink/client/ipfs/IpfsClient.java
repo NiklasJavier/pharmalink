@@ -3,12 +3,9 @@ package de.jklein.pharmalink.client.ipfs;
 import io.ipfs.api.IPFS;
 import io.ipfs.api.MerkleNode;
 import io.ipfs.api.NamedStreamable;
-import io.ipfs.multiaddr.MultiAddress;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired; // Autowired für die IPFS-Bean
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -20,41 +17,13 @@ public class IpfsClient {
 
     private static final Logger logger = LoggerFactory.getLogger(IpfsClient.class);
 
-    @Value("${ipfs.host}")
-    private String ipfsHost;
+    private final IPFS ipfs; // IPFS-Instanz wird injiziert
 
-    @Value("${ipfs.port}")
-    private int ipfsPort;
-
-    @Value("${ipfs.protocol:http}")
-    private String ipfsProtocol;
-
-    private IPFS ipfs;
-
-    /**
-     * Initialisiert den IPFS-Client nach der Injektion der Abhängigkeiten.
-     * Stellt die Verbindung zum IPFS-Daemon her.
-     */
-    @PostConstruct
-    public void init() {
-        try {
-            // Beispiel: /ip4/127.0.0.1/tcp/5001
-            String multiAddr = String.format("/ip4/%s/tcp/%d", ipfsHost, ipfsPort);
-            this.ipfs = new IPFS(new MultiAddress(multiAddr));
-            ipfs.id(); // test
-            logger.info("✅ IPFS client successfully connected to {}:{}", ipfsHost, ipfsPort);
-        } catch (IOException e) {
-            logger.error("❌ Failed to connect to IPFS daemon at {}:{}. Please ensure the daemon is running.", ipfsHost, ipfsPort, e);
-        }
-    }
-
-    /**
-     * Schließt die IPFS-Verbindung vor dem Beenden der Anwendung (falls erforderlich).
-     * io.ipfs.api.IPFS hat keine explizite close-Methode, aber für Robustheit kann man dies hier haben.
-     */
-    @PreDestroy
-    public void destroy() {
-        logger.info("IPFS client shutting down.");
+    // Konstruktor-Injektion für die IPFS-Bean
+    @Autowired
+    public IpfsClient(IPFS ipfs) {
+        this.ipfs = ipfs;
+        logger.info("IPFS client instance created.");
     }
 
     /**
@@ -66,9 +35,9 @@ public class IpfsClient {
      */
     public String add(byte[] data) throws IOException {
         NamedStreamable.ByteArrayWrapper file = new NamedStreamable.ByteArrayWrapper(data);
-        MerkleNode result = ipfs.add(file).get(0); // get(0) da es ein einzelnes Element ist
+        MerkleNode result = ipfs.add(file).get(0);
         logger.info("Added data to IPFS. CID: {}", result.hash.toBase58());
-        return result.hash.toBase58(); // Konvertiert den Hash zu einem Base58-String (CID)
+        return result.hash.toBase58();
     }
 
     /**
@@ -85,7 +54,6 @@ public class IpfsClient {
         logger.info("Added stream data to IPFS. CID: {}", result.hash.toBase58());
         return result.hash.toBase58();
     }
-
 
     /**
      * Ruft Inhalte vom IPFS-Netzwerk anhand des CID ab.

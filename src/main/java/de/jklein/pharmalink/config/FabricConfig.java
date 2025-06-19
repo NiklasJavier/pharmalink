@@ -100,8 +100,6 @@ public class FabricConfig {
         }
     }
 
-    // --- Private Hilfsmethoden zur Erstellung der Verbindung und Identität ---
-
     private ManagedChannel newGrpcConnection(Path tlsCertPath) throws IOException {
         if (!Files.exists(tlsCertPath)) {
             throw new IOException("TLS Zertifikats-Datei nicht gefunden unter: " + tlsCertPath);
