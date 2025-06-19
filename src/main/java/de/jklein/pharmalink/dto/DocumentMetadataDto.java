@@ -7,9 +7,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ActorDto {
-    private String actorId;
-    private String email;
-    private String role;
-    private String ipfsLink;
+public class DocumentMetadataDto {
+    private String s3Url;
+    private String fileName;
+    private String originalIpfsCid;
 }
