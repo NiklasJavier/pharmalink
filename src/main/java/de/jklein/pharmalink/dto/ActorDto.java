@@ -3,8 +3,6 @@ package de.jklein.pharmalink.dto;
 import java.util.Objects;
 
 /**
- * Data Transfer Object for Actor information returned by the Chaincode.
- * This mirrors the structure of the Actor class in the chaincode
  * (chaincode/pharmalink_chaincode_main/src/main/java/de/jklein/fabric/models/Actor.java).
  */
 public class ActorDto {

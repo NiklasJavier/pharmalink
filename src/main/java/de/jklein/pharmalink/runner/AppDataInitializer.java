@@ -29,27 +29,21 @@ public class AppDataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        System.out.println("\n========================================================");
-        System.out.println("▶️  FÜHRE initCall FÜR DEN ANWENDUNGSBENUTZER BEIM START AUS...");
-        System.out.println("========================================================");
         try {
-            // Dies funktioniert, sobald submitGenericTransaction einen String zurückgibt
             String actorJson = fabricClient.submitGenericTransaction("initCall", userEmail, userIpfsLink);
 
-            // Dies funktioniert, sobald getGson() in FabricClient existiert
             ActorDto initializedActor = fabricClient.getGson().fromJson(actorJson, ActorDto.class);
             actorHolder.setCurrentActor(initializedActor);
 
-            System.out.println("\n✅ initCall erfolgreich ausgeführt. Initialisierter Akteur:");
+            System.out.println("\ninitCall erfolgreich ausgeführt. Initialisierter Akteur:");
             System.out.println("   ID: " + initializedActor.getActorId());
             System.out.println("   Rolle: " + initializedActor.getRole());
             System.out.println("   E-Mail: " + initializedActor.getEmail());
             System.out.println("   IPFS Link: " + (initializedActor.getIpfsLink() != null && !initializedActor.getIpfsLink().isEmpty() ? initializedActor.getIpfsLink() : "N/A"));
 
         } catch (Exception e) {
-            System.err.println("\n❌ Fehler bei der Ausführung von initCall:");
+            System.err.println("Fehler bei der Ausführung von initCall:");
             e.printStackTrace();
         }
-        System.out.println("\n========================================================");
     }
 }

@@ -29,10 +29,8 @@ import java.util.concurrent.TimeUnit;
 @Configuration
 public class FabricConfig {
 
-    // Diese gRPC-Kanal-Instanz wird manuell verwaltet
     private ManagedChannel grpcChannel;
 
-    // Injiziert Werte aus application.properties
     @Value("${fabric.msp-id}")
     private String mspId;
 

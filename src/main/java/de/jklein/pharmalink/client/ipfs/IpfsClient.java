@@ -17,9 +17,8 @@ public class IpfsClient {
 
     private static final Logger logger = LoggerFactory.getLogger(IpfsClient.class);
 
-    private final IPFS ipfs; // IPFS-Instanz wird injiziert
+    private final IPFS ipfs;
 
-    // Konstruktor-Injektion für die IPFS-Bean
     @Autowired
     public IpfsClient(IPFS ipfs) {
         this.ipfs = ipfs;
