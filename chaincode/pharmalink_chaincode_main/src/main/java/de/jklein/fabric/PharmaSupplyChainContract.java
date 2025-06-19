@@ -480,7 +480,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * Beispiel für Aufruf (vom Hersteller):
      * {"function":"addMedikamentTag","Args":["MED-a1b2c3d4e5f6...","Produktion Charge X erfolgreich abgeschlossen","2025-06-19T10:45:00Z"]}
      * Beispiel für Aufruf (von Behörde):
-     * {"function":"addMedikamentTag","Args":["MED-a1b2c3d4e5f6...","Zulassung 2024-06-19 erteilt","2025-06-19T10:46:00Z"]}
+     * {"function":"addMedikamentTag","Args":["MED-a1b2c3d4e5f6...","Zulassung 2024-06-19 erteilt"]}
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public String addMedikamentTag(final Context ctx, final String medId, final String tagValue) {
