@@ -297,7 +297,6 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * @param bezeichnung Die Bezeichnung des Medikaments.
      * @param infoblattHash Der Hash des Infoblatts (On-Chain-Referenz).
      * @param ipfsLink Der IPFS Link zu weiteren Off-Chain-Informationen des Infoblatts.
-     * @param creationTimestamp Der Zeitstempel der Erstellung des Medikaments im ISO 8601 Format (von der Client-Anwendung bereitgestellt).
      * @return Das erstellte Medikament als JSON-String.
      * @throws ChaincodeException Wenn der Aufrufer kein Hersteller ist, das Medikament bereits existiert
      * oder die Hersteller-ID nicht gefunden wird.
@@ -306,7 +305,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * {"function":"createMedikament","Args":["Paracetamol 500mg","a1b2c3d4e5f6...","QmHashdesInfoblatts","2025-06-19T10:30:00Z"]}
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public String createMedikament(final Context ctx, final String bezeichnung, final String infoblattHash, final String ipfsLink, final String creationTimestamp) {
+    public String createMedikament(final Context ctx, final String bezeichnung, final String infoblattHash, final String ipfsLink) {
         final ChaincodeStub stub = ctx.getStub();
         final String mspId = ctx.getClientIdentity().getMSPID();
         final String clientId = ctx.getClientIdentity().getId();
@@ -414,7 +413,6 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * @param newBezeichnung Die neue Bezeichnung (kann leer sein, wenn keine Änderung).
      * @param newInfoblattHash Der neue Infoblatt-Hash (kann leer sein).
      * @param newIpfsLink Der neue IPFS Link (kann leer sein).
-     * @param updateTimestamp Der Zeitstempel der Aktualisierung im ISO 8601 Format (von der Client-Anwendung bereitgestellt).
      * @return Das aktualisierte Medikament als JSON-String.
      * @throws ChaincodeException Wenn der Aufrufer nicht der Ersteller des Medikaments ist,
      * das Medikament nicht gefunden wird, oder andere Fehler auftreten.
@@ -423,7 +421,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * {"function":"updateMedikament","Args":["MED-a1b2c3d4e5f6...","Paracetamol Forte","neuerhash","neueripfslink","2025-06-19T10:40:00Z"]}
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public String updateMedikament(final Context ctx, final String medId, final String newBezeichnung, final String newInfoblattHash, final String newIpfsLink, final String updateTimestamp) {
+    public String updateMedikament(final Context ctx, final String medId, final String newBezeichnung, final String newInfoblattHash, final String newIpfsLink) {
         final ChaincodeStub stub = ctx.getStub();
         final String mspId = ctx.getClientIdentity().getMSPID();
         final String clientId = ctx.getClientIdentity().getId();
@@ -476,7 +474,6 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * @param ctx Der Smart Contract Kontext.
      * @param medId Die ID des Medikaments.
      * @param tagValue Der Wert des Tags, der gesetzt werden soll.
-     * @param updateTimestamp Der Zeitstempel der Aktualisierung im ISO 8601 Format (von der Client-Anwendung bereitgestellt).
      * @return Das aktualisierte Medikament als JSON-String.
      * @throws ChaincodeException Wenn das Medikament nicht gefunden wird, der Aufrufer nicht autorisiert ist,
      * oder andere Fehler auftreten.
@@ -487,7 +484,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * {"function":"addMedikamentTag","Args":["MED-a1b2c3d4e5f6...","Zulassung 2024-06-19 erteilt","2025-06-19T10:46:00Z"]}
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public String addMedikamentTag(final Context ctx, final String medId, final String tagValue, final String updateTimestamp) {
+    public String addMedikamentTag(final Context ctx, final String medId, final String tagValue) {
         final ChaincodeStub stub = ctx.getStub();
         final String mspId = ctx.getClientIdentity().getMSPID();
         final String clientId = ctx.getClientIdentity().getId();
