@@ -20,8 +20,6 @@ import org.hyperledger.fabric.shim.ledger.KeyValue;
 import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
 
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +30,7 @@ import java.util.UUID;
         info = @Info(
                 title = "Pharmacy Supply-Chain Contract",
                 description = "Chaincode zur Nachverfolgung von Medikamenten in einer Lieferkette",
-                version = "2.0.0", // Finale Version
+                version = "FINAL",
                 license = @License(
                         name = "Apache-2.0",
                         url = "http://www.apache.org/licenses/LICENSE-2.0"),
@@ -53,12 +51,12 @@ public final class PharmacyChaincode implements ContractInterface {
         System.out.println("========= Leeres Ledger wurde initialisiert =========");
     }
 
+
     /**
-     * Registriert einen Akteur. Verhindert Duplikate zuverlässig, indem die Akteur-ID
-     * deterministisch aus der Identität des Aufrufers erzeugt wird.
+     * Registriert einen Akteur. Die 'description' wurde entfernt, um das 7-Parameter-Limit einzuhalten.
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Actor requestActorRegistration(final Context ctx, final String description, final String role) {
+    public Actor requestActorRegistration(final Context ctx, final String role) {
         final ChaincodeStub stub = ctx.getStub();
         final String enrollmentId = ctx.getClientIdentity().getId();
 
@@ -67,42 +65,40 @@ public final class PharmacyChaincode implements ContractInterface {
             throw new ChaincodeException("Die angeforderte Rolle '" + role + "' stimmt nicht mit der Rolle im Zertifikat ('" + certRole + "') überein.", PharmacyErrors.PERMISSION_DENIED.toString());
         }
 
-        // Der Primärschlüssel des Akteurs wird ein deterministischer Hash seiner Enrollment-ID.
-        final String actorId = generateDeterministicUUID("Actor", enrollmentId);
-
-        // Prüfen, ob ein Akteur mit diesem Schlüssel bereits existiert.
-        // Dies ist der entscheidende Read-Vorgang für die MVCC-Prüfung von Fabric.
-        byte[] existingActor = stub.getState(actorId);
-        if (existingActor != null && existingActor.length > 0) {
+        final String query = String.format("{\"selector\":{\"enrollmentId\":\"%s\"}}", enrollmentId);
+        final String queryResult = richQuery(ctx, query);
+        if (!queryResult.equals("[]")) {
             throw new ChaincodeException("Ein Akteur mit dieser Identität existiert bereits.", PharmacyErrors.ACTOR_ALREADY_EXISTS.toString());
         }
 
-        final Actor.Builder builder = new Actor.Builder()
-                .actorId(actorId)
-                .enrollmentId(enrollmentId)
-                .description(description)
-                .mspId(ctx.getClientIdentity().getMSPID())
-                .role(role)
-                .certId(ctx.getClientIdentity().getId());
+        final String actorId = UUID.randomUUID().toString();
+        String status;
+        String approvedBy;
 
         if (role.equals("behoerde")) {
-            builder.status("Approved");
-            builder.approvedBy("self");
+            status = "Approved";
+            approvedBy = "self";
         } else {
-            builder.status("Pending");
+            status = "Pending";
+            approvedBy = "";
         }
 
-        final Actor actor = builder.build();
+        // Ruft den neuen Konstruktor mit 7 Parametern auf
+        final Actor actor = new Actor(
+                actorId,
+                enrollmentId,
+                ctx.getClientIdentity().getMSPID(),
+                role,
+                status,
+                approvedBy,
+                ctx.getClientIdentity().getId()
+        );
 
-        // Schreibe den Akteur unter seinem deterministischen Schlüssel in den State.
         stub.putStringState(actorId, actor.toJSONString());
-
         return actor;
     }
 
-    /**
-     * Genehmigt einen 'Pending' Akteur.
-     */
+
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public Actor approveActor(final Context ctx, final String actorIdToApprove) {
         requireRole(ctx, "behoerde");
@@ -110,44 +106,58 @@ public final class PharmacyChaincode implements ContractInterface {
         final Actor actorToApprove = getActorById(ctx, actorIdToApprove);
         final Actor approver = queryOwnActor(ctx);
 
-        if (approver == null) {
-            throw new ChaincodeException("Der genehmigende Akteur (Behörde) konnte nicht gefunden werden.", PharmacyErrors.ACTOR_NOT_FOUND.toString());
-        }
-
         if (!actorToApprove.getStatus().equals("Pending")) {
             throw new ChaincodeException("Akteur hat nicht den Status 'Pending'.", PharmacyErrors.INVALID_ACTOR_STATUS.toString());
         }
 
-        final Actor.Builder builder = new Actor.Builder();
-        // Hier sollte die fromExistingActor Methode aus Ihrer Actor-Klasse verwendet werden.
-        // Falls sie nicht existiert, müssen die Felder manuell kopiert werden.
-        builder.actorId(actorToApprove.getActorId())
-                .enrollmentId(actorToApprove.getEnrollmentId())
-                .description(actorToApprove.getDescription())
-                .mspId(actorToApprove.getMspId())
-                .role(actorToApprove.getRole())
-                .certId(actorToApprove.getCertId());
+        // Erstellt das aktualisierte Objekt mit dem neuen 7-Parameter-Konstruktor
+        Actor updatedActor = new Actor(
+                actorToApprove.getActorId(),
+                actorToApprove.getEnrollmentId(),
+                actorToApprove.getMspId(),
+                actorToApprove.getRole(),
+                "Approved", // neuer Status
+                approver.getActorId(), // ID des Genehmigers
+                actorToApprove.getCertId()
+        );
 
-        builder.status("Approved").approvedBy(approver.getActorId());
-
-        final Actor updatedActor = builder.build();
         stub.putStringState(updatedActor.getActorId(), updatedActor.toJSONString());
         return updatedActor;
     }
 
+
     /**
-     * Findet den eigenen Akteur über dessen deterministischen Schlüssel.
+     * Findet den eigenen Akteur über eine Rich Query (mit Index).
      */
     @Transaction(intent = Transaction.TYPE.EVALUATE)
     public Actor queryOwnActor(final Context ctx) {
         final String enrollmentId = ctx.getClientIdentity().getId();
-        final String actorId = generateDeterministicUUID("Actor", enrollmentId);
+        final String query = String.format("{\"selector\":{\"enrollmentId\":\"%s\"}}", enrollmentId);
+        final String queryResultString = richQuery(ctx, query);
+
+        if (queryResultString.equals("[]")) {
+            throw new ChaincodeException("Kein Akteur für die Enrollment ID '" + enrollmentId + "' gefunden.", PharmacyErrors.ACTOR_NOT_FOUND.toString());
+        }
+        try {
+            // Die Deserialisierungslogik, die auch mit verschiedenen Genson-Versionen funktioniert
+            List<Object> rawList = GENSON.deserialize(queryResultString, List.class);
+            if (rawList.isEmpty()) {
+                throw new ChaincodeException("Kein Akteur für die Enrollment ID " + enrollmentId + " gefunden.", PharmacyErrors.ACTOR_NOT_FOUND.toString());
+            }
+            String actorJson = GENSON.serialize(rawList.get(0));
+            return Actor.fromJSONString(actorJson);
+        } catch (Exception e) {
+            throw new ChaincodeException("Fehler beim Parsen des Abfrageergebnisses für queryOwnActor: " + e.getMessage(), PharmacyErrors.RICH_QUERY_FAILED.toString());
+        }
+    }
+
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public Actor queryActor(final Context ctx, final String actorId) {
         return getActorById(ctx, actorId);
     }
 
     // ===================================================================================
-    // HIER FOLGEN ALLE ANDEREN FUNKTIONEN, DIE UNVERÄNDERT BLEIBEN
-    // (registerDrugInfo, createBatchAndDrugUnits, transferDrugUnit, etc.)
+    //  ANDERE TRANSAKTIONEN & HILFSMETHODEN (unverändert)
     // ===================================================================================
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
@@ -231,11 +241,6 @@ public final class PharmacyChaincode implements ContractInterface {
     }
 
     @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public Actor queryActor(final Context ctx, final String actorId) {
-        return getActorById(ctx, actorId);
-    }
-
-    @Transaction(intent = Transaction.TYPE.EVALUATE)
     public String queryDrugUnitHistory(final Context ctx, final String drugUnitId) {
         final ChaincodeStub stub = ctx.getStub();
         final StringBuilder sb = new StringBuilder("[");
@@ -270,8 +275,6 @@ public final class PharmacyChaincode implements ContractInterface {
         return richQuery(ctx, query);
     }
 
-    // ========= Private Hilfsmethoden =========
-
     private Actor getActorById(final Context ctx, final String actorId) {
         final byte[] state = ctx.getStub().getState(actorId);
         if (state == null || state.length == 0) {
@@ -305,7 +308,7 @@ public final class PharmacyChaincode implements ContractInterface {
 
     private void requireApproved(final Actor actor) {
         if (!actor.getStatus().equals("Approved")) {
-            throw new ChaincodeException("Der Akteur '" + actor.getDescription() + "' ist nicht für Aktionen genehmigt.", PharmacyErrors.ACTOR_NOT_APPROVED.toString());
+            throw new ChaincodeException("Der Akteur ist nicht für Aktionen genehmigt.", PharmacyErrors.ACTOR_NOT_APPROVED.toString());
         }
     }
 
@@ -315,18 +318,6 @@ public final class PharmacyChaincode implements ContractInterface {
             throw new ChaincodeException("Die Rolle des Benutzers ist nicht im Zertifikat gesetzt.", PharmacyErrors.PERMISSION_DENIED.toString());
         }
         return role;
-    }
-
-    private String generateDeterministicUUID(final String namespace, final String name) {
-        try {
-            String source = namespace + name;
-            byte[] bytes = source.getBytes(StandardCharsets.UTF_8);
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(bytes);
-            return UUID.nameUUIDFromBytes(hash).toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Fehler bei der UUID-Generierung", e);
-        }
     }
 
     private String richQuery(final Context ctx, final String query) {

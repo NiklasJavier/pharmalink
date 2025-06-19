@@ -1,0 +1,8 @@
+{
+  "index": {
+    "fields": ["enrollmentId"]
+  },
+  "ddoc": "indexEnrollmentIdDoc",
+  "name": "indexEnrollmentId",
+  "type": "json"
+}
