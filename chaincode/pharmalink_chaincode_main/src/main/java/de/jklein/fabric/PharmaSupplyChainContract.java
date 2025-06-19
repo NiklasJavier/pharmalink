@@ -568,7 +568,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         final List<Medikament> medikamentList = new ArrayList<>();
 
         // Rich Query für CouchDB basierend auf herstellerId und docType "medikament"
-        // Benötigt den Index 'indexHerstellerId' in META-INF/statedb/couchdb/indexes/indexHerstellerId.json
+        // Benötigt den Index 'indexMedHerstellerId' in META-INF/statedb/couchdb/indexes/indexMedHerstellerId.json
         final String queryString = String.format("{\"selector\":{\"herstellerId\":\"%s\", \"docType\":\"medikament\"}}", herstellerId);
         final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = stub.getQueryResult(queryString);
 
@@ -581,25 +581,27 @@ public final class PharmaSupplyChainContract implements ContractInterface {
     }
 
     /**
-     * Fragt Medikamente nach ihrer Bezeichnung ab.
-     * OPTIMIERUNG FÜR COUCHDB: Nutzt einen 'bezeichnung'-Selektor und erfordert einen entsprechenden Index.
+     * Fragt Medikamente nach ihrer Bezeichnung ab. Die Suche ist eine "Starts with"-Suche und ignoriert Groß-/Kleinschreibung.
+     * OPTIMIERUNG FÜR COUCHDB: Nutzt einen '$regex'-Selektor und erfordert einen entsprechenden Index.
      *
      * @param ctx Der Smart Contract Kontext.
-     * @param bezeichnung Die Bezeichnung des gesuchten Medikaments.
+     * @param bezeichnung Die Anfangsbezeichnung des gesuchten Medikaments.
      * @return Eine Liste von Medikamenten als JSON-Array von Medikament-Objekten.
-     * @throws ChaincodeException Wenn kein Medikament mit der angegebenen Bezeichnung gefunden wird.
+     * @throws ChaincodeException Wenn keine Medikamente mit der angegebenen Anfangsbezeichnung gefunden werden.
      *
      * Beispiel für Aufruf:
-     * {"function":"queryMedikamenteByBezeichnung","Args":["Paracetamol 500mg"]}
+     * {"function":"queryMedikamenteByBezeichnung","Args":["Parac"]}
      */
     @Transaction(intent = Transaction.TYPE.EVALUATE)
     public String queryMedikamenteByBezeichnung(final Context ctx, final String bezeichnung) {
         final ChaincodeStub stub = ctx.getStub();
         final List<Medikament> medikamentList = new ArrayList<>();
 
-        // Rich Query für CouchDB basierend auf bezeichnung und docType "medikament"
+        // Rich Query für CouchDB basierend auf bezeichnung mit "Starts with"-Regex und docType "medikament"
+        // (?i) macht die Suche Case-Insensitive (Groß-/Kleinschreibung ignorieren)
+        // ^%s.* bedeutet: beginnt mit dem übergebenen String, gefolgt von beliebigen Zeichen.
         // Benötigt den Index 'indexMedBezeichnung' in META-INF/statedb/couchdb/indexes/indexMedBezeichnung.json
-        final String queryString = String.format("{\"selector\":{\"bezeichnung\":\"%s\", \"docType\":\"medikament\"}}", bezeichnung);
+        final String queryString = String.format("{\"selector\":{\"bezeichnung\":{\"$regex\":\"(?i)^%s.*\"}, \"docType\":\"medikament\"}}", bezeichnung);
         final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = stub.getQueryResult(queryString);
 
         for (final org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
@@ -608,7 +610,45 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         }
 
         if (medikamentList.isEmpty()) {
-            final String errorMessage = String.format("Keine Medikamente mit der Bezeichnung '%s' gefunden.", bezeichnung);
+            final String errorMessage = String.format("Keine Medikamente mit der Bezeichnung, die mit '%s' beginnt, gefunden.", bezeichnung);
+            System.err.println(errorMessage);
+            throw new ChaincodeException(errorMessage, PharmaSupplyChainErrors.MEDIKAMENT_NOT_FOUND.toString());
+        }
+
+        return JsonUtil.toJson(medikamentList);
+    }
+
+    /**
+     * Fragt Medikamente nach einem bestimmten Tag-Wert ab. Die Suche ist eine "Contains"-Suche und ignoriert Groß-/Kleinschreibung.
+     *
+     * @param ctx Der Smart Contract Kontext.
+     * @param tagValue Der Wert des Tags, nach dem gesucht werden soll.
+     * @return Eine Liste von Medikamenten als JSON-Array von Medikament-Objekten.
+     * @throws ChaincodeException Wenn keine Medikamente mit dem angegebenen Tag-Wert gefunden werden.
+     *
+     * Beispiel für Aufruf:
+     * {"function":"queryMedikamenteByTagValue","Args":["Charge X"]}
+     */
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String queryMedikamenteByTagValue(final Context ctx, final String tagValue) {
+        final ChaincodeStub stub = ctx.getStub();
+        final List<Medikament> medikamentList = new ArrayList<>();
+
+        // Rich Query für CouchDB: Durchsucht die Werte in der 'tags'-Map mit "Contains"-Regex und docType "medikament".
+        // (?i) macht die Suche Case-Insensitive.
+        // CouchDB indiziert Maps als Objekte, direkte Regex-Suchen auf Werten in Maps können komplex sein.
+        // Ein Index auf dem 'tags'-Feld (z.B. indexMedTags.json) hilft CouchDB, die Suche zu optimieren,
+        // auch wenn es sich um eine Map handelt.
+        final String queryString = String.format("{\"selector\":{\"$or\":[{\"tags.hersteller\":{\"$regex\":\"(?i).*%s.*\"}},{\"tags.behoerde\":{\"$regex\":\"(?i).*%s.*\"}}], \"docType\":\"medikament\"}}", tagValue, tagValue);
+        final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = stub.getQueryResult(queryString);
+
+        for (final org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
+            final Medikament medikament = JsonUtil.fromJson(kv.getStringValue(), Medikament.class);
+            medikamentList.add(medikament);
+        }
+
+        if (medikamentList.isEmpty()) {
+            final String errorMessage = String.format("Keine Medikamente mit einem Tag-Wert, der '%s' enthält, gefunden.", tagValue);
             System.err.println(errorMessage);
             throw new ChaincodeException(errorMessage, PharmaSupplyChainErrors.MEDIKAMENT_NOT_FOUND.toString());
         }

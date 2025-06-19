@@ -1,0 +1,8 @@
+{
+  "index": {
+    "fields": ["tags", "docType"]
+  },
+  "ddoc": "indexMedTagsDoc",
+  "name": "indexMedTags",
+  "type": "json"
+}
