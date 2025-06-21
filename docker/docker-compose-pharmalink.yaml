@@ -9,6 +9,6 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./pharmalink/organizations:/fabric-crypto/organizations:ro
+      - ../fabric-samples/test-network/organizations:/fabric-crypto/organizations:ro
       - ./pharmalink/config.yaml:/etc/pharmalink/config.yaml:ro
     restart: unless-stopped
