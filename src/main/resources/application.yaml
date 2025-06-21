@@ -9,8 +9,8 @@ spring:
 fabric:
   msp-id: Org1MSP
   crypto-path: /Users/niklas/pharmalink/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com
-  cert-path: users/Admin@org1.example.com/msp/signcerts
-  key-dir-path: users/Admin@org1.example.com/msp/keystore
+  cert-path: users/hersteller-user1@org1.example.com/msp/signcerts
+  key-dir-path: users/hersteller-user1@org1.example.com/msp/keystore
   tls-cert-path: peers/peer0.org1.example.com/tls/ca.crt
   peer:
     endpoint: node.d1.navine.tech:7051

@@ -9,6 +9,7 @@ import org.hyperledger.fabric.client.Contract;
 import org.hyperledger.fabric.client.Gateway;
 import org.hyperledger.fabric.client.identity.*;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -27,6 +28,7 @@ import java.util.concurrent.TimeUnit;
  * Stellt den Gateway und den Contract als verwaltete Spring Beans bereit.
  */
 @Configuration
+@ConfigurationProperties(prefix = "fabric")
 public class FabricConfig {
 
     private ManagedChannel grpcChannel;
