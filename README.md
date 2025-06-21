@@ -70,7 +70,7 @@ cd ~ && git clone git@github.com:NiklasJavier/pharmalink.git
 Dieser Schritt startet ein komplettes Hyperledger Fabric Test-Netzwerk.
 
 ```bash
-./scripts/fabric_setup_test.sh up
+bash ./scripts/fabric_setup_test.sh up
 ```
 
 #### b) Fabric CLI einrichten
@@ -78,7 +78,7 @@ Dieser Schritt startet ein komplettes Hyperledger Fabric Test-Netzwerk.
 Laden Sie die Kommandozeilen-Tools für Hyperledger Fabric herunter.
 
 ```bash
-./scripts/fabric_setup_cli.sh
+bash ./scripts/fabric_setup_cli.sh
 ```
 
 #### c) Umgebungsvariablen für die CLI setzen
@@ -88,7 +88,7 @@ Damit Sie die `peer`-Befehle direkt ausführen können, müssen die passenden Um
 Um beispielsweise als **Hersteller** zu agieren, führen Sie folgenden Befehl aus:
 
 ```bash
-source scripts/roles/fabric_role_hersteller.sh
+source ./scripts/fabric_setEnv.sh
 ```
 
 #### d) Chaincode initialisieren und Akteure registrieren
@@ -96,7 +96,7 @@ source scripts/roles/fabric_role_hersteller.sh
 Dieser entscheidende Schritt installiert, genehmigt und committet den Chaincode im Netzwerk. Zusätzlich werden die initialen Akteure (Hersteller, Großhändler etc.) auf der Blockchain registriert.
 
 ```bash
-./scripts/fabric_setup_test_consortium.sh
+bash ./scripts/fabric_setup_test_consortium.sh
 ```
 
 #### e) Optional: Hyperledger Explorer starten
@@ -104,7 +104,7 @@ Dieser entscheidende Schritt installiert, genehmigt und committet den Chaincode 
 Starten Sie den Explorer, um eine Weboberfläche zur Visualisierung des Netzwerks und der Transaktionen zu erhalten.
 
 ```bash
-./scripts/fabric_setup_test_explorer.sh up
+bash ./scripts/fabric_setup_test_explorer.sh up
 ```
 
 > 🔎 Die Weboberfläche des Explorers ist nach dem Start unter **`http://localhost:8088`** erreichbar.
@@ -153,7 +153,6 @@ peer chaincode invoke -o $ORDERER_ADDRESS --tls --cafile $ORDERER_CA -C $CHANNEL
 Führen Sie den folgenden Befehl im Stammverzeichnis aus. Er kompiliert die Anwendung und baut das Docker-Image.
 
 ```bash
-# Ggf. auf die korrekte Java-Version wechseln: sdk use java 21-graal
 ./gradlew build && docker build -f src/main/docker/Dockerfile.jvm -t pharmalink/app .
 ```
 
@@ -162,7 +161,7 @@ Führen Sie den folgenden Befehl im Stammverzeichnis aus. Er kompiliert die Anwe
 Starten Sie den erstellten Container. Wichtig ist hierbei, den Container mit dem `pharmalink_default`-Netzwerk zu verbinden, damit die Applikation die Fabric-Peers erreichen kann.
 
 ```bash
-docker run -p 8080:8080 --network="pharmalink_default" --rm pharmalink/app
+docker run -p 8080:8080 --network="pharmalink" --rm pharmalink/app
 ```
 
 -----
