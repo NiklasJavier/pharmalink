@@ -5,6 +5,13 @@ spring:
     url: jdbc:postgresql://localhost:5432/pharmalinkdb
     username: user
     password: user
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
 
 fabric:
   msp-id: Org1MSP

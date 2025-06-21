@@ -2,9 +2,16 @@ spring:
   application:
     name: pharmalink
   datasource:
-    url: jdbc:postgresql://localhost:5432/pharmalinkdb
+    url: jdbc:postgresql://host.docker.internal:5432/pharmalinkdb
     username: user
     password: user
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
 
 fabric:
   msp-id: Org1MSP
@@ -21,5 +28,5 @@ fabric:
 ipfs:
   email: ipfs@example.com
   ipfs-link: 12
-  host: 127.0.0.1
+  host: host.docker.internal
   port: 5001
