@@ -84,7 +84,7 @@ bash ./scripts/fabric_setup_cli.sh
 
 #### c) Umgebungsvariablen für die CLI setzen
 
-Damit Sie die `peer`-Befehle direkt ausführen können, müssen die passenden Umgebungsvariablen für Ihre Rolle im Netzwerk gesetzt werden. Die Skripte dafür liegen unter [`scripts/roles/`](https://www.google.com/search?q=./scripts/roles/).
+Damit Sie die `peer`-Befehle direkt ausführen können, müssen die passenden Umgebungsvariablen für Ihre Rolle im Netzwerk gesetzt werden. Die Skripte dafür liegen unter [`scripts/roles/`](./scripts/roles/).
 
 Um beispielsweise als **Admin** zu agieren, führen Sie folgenden Befehl aus:
 
@@ -141,7 +141,7 @@ Sie können die Identität in Ihrer Kommandozeile jederzeit wechseln, indem Sie 
 
 Nachdem das Netzwerk läuft und die Umgebungsvariablen gesetzt sind, können Sie mit dem `peer`-CLI direkt mit dem Smart Contract interagieren.
 
-Eine detaillierte Beschreibung aller verfügbaren Chaincode-Funktionen und deren Parameter finden Sie in der [`README` des Chaincode-Verzeichnisses](https://www.google.com/search?q=./chaincode/README.md).
+Eine detaillierte Beschreibung aller verfügbaren Chaincode-Funktionen und deren Parameter finden Sie in der [`README` des Chaincode-Verzeichnisses](./chaincode/README.md).
 
 **Beispiel: `initCall` als Hersteller ausführen**
 
