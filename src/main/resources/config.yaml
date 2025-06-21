@@ -13,3 +13,9 @@ fabric:
     override-auth: peer0.org1.example.com
   channel-name: pharmalink
   chaincode-name: pharmalink_chaincode_main
+
+ipfs:
+  email: ipfs@example.com
+  ipfs-link: 12
+  host: 127.0.0.1
+  port: 5001

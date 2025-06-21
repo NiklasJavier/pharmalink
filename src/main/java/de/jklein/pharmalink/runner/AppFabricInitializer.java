@@ -15,10 +15,10 @@ public class AppFabricInitializer implements CommandLineRunner {
     private final FabricClient fabricClient;
     private final CurrentActorHolder actorHolder;
 
-    @Value("${user.email}")
+    @Value("${ipfs.email}")
     private String userEmail;
 
-    @Value("${user.ipfs-link}")
+    @Value("${ipfs.ipfs-link}")
     private String userIpfsLink;
 
     @Autowired
