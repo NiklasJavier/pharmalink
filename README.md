@@ -1,17 +1,9 @@
 # Pharmalink
+[![Build Status](https://img.shields.io/github/actions/workflow/status/NiklasJavier/pharmalink/release.yml?branch=main&logo=github)](https://github.com/NiklasJavier/pharmalink/actions/workflows/release.yml)
+[![Latest Release](https://img.shields.io/github/v/release/NiklasJavier/pharmalink?logo=github)](https://github.com/NiklasJavier/pharmalink/releases/latest)
+[![Docker Image](https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker)](https://github.com/NiklasJavier/pharmalink/pkgs/container/pharmalink)
 
-[](https://www.google.com/search?q=https://github.com/NiklasJavier/pharmalink/releases/latest)
-[](https://www.google.com/search?q=https://github.com/NiklasJavier/pharmalink/commits/main)
-[](https://www.google.com/search?q=./LICENSE)
-[](https://www.google.com/search?q=https://github.com/NiklasJavier/pharmalink)
-
-Dieses Repository enthält die Anwendung und die zugehörigen Smart Contracts für die Pharmalink-Plattform, eine auf Hyperledger Fabric basierende Lösung zur Nachverfolgung von Lieferketten in der Pharmaindustrie.
-
------
-
-> 👋 **Willkommen\!** Diese Anleitung führt Sie durch die Installation der notwendigen Abhängigkeiten, die Einrichtung des Projekts und die Konfiguration des lokalen Test-Netzwerks.
-
------
+> Dieses Repository enthält die Anwendung und die zugehörigen Smart Contracts für die Pharmalink-Plattform, eine auf Hyperledger Fabric basierende Lösung zur Nachverfolgung von Lieferketten in der Pharmaindustrie.
 
 ### 🏗️ 1. Architektur
 
