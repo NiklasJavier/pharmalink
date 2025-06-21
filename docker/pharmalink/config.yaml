@@ -1,6 +1,10 @@
 spring:
   application:
     name: pharmalink
+  datasource:
+    url: jdbc:postgresql://localhost:5432/pharmalinkdb
+    username: user
+    password: user
 
 fabric:
   msp-id: Org1MSP
