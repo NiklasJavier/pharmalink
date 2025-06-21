@@ -6,7 +6,7 @@ services:
     container_name: ipfs-dev
     restart: always
     volumes:
-      - ipfs_data:/data/ipfs
+      - dev_ipfs_data:/data/ipfs
     ports:
       - "127.0.0.1:5001:5001"
       - "127.0.0.1:8081:8080"
@@ -16,23 +16,23 @@ services:
       - dev-net
 
   postgres:
-    image: postgres:16
+    image: postgres:17.5-alpine
     container_name: postgres-dev
     restart: always
     environment:
-      POSTGRES_USER: entwickler
-      POSTGRES_PASSWORD: entwickler
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: user
       POSTGRES_DB: pharmalinkdb
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - dev_postgres_data:/var/lib/postgresql/data
     networks:
       - dev-net
 
 volumes:
-  postgres_data:
-  ipfs_data:
+  dev_postgres_data:
+  dev_ipfs_data:
 
 networks:
   pharmalink-net:
