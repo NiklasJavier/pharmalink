@@ -1,5 +1,4 @@
 # Pharmalink
-[![Build Status](https://img.shields.io/github/actions/workflow/status/NiklasJavier/pharmalink/release.yml?branch=main&logo=github)](https://github.com/NiklasJavier/pharmalink/actions/workflows/release.yml)
 [![Latest Release](https://img.shields.io/github/v/release/NiklasJavier/pharmalink?logo=github)](https://github.com/NiklasJavier/pharmalink/releases/latest)
 [![Docker Image](https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker)](https://github.com/NiklasJavier/pharmalink/pkgs/container/pharmalink)
 
