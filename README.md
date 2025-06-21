@@ -1,6 +1,7 @@
 # Pharmalink
-[![Latest Release](https://img.shields.io/github/v/release/NiklasJavier/pharmalink?logo=github)](https://github.com/NiklasJavier/pharmalink/releases/latest)
-[![Docker Image](https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker)](https://github.com/NiklasJavier/pharmalink/pkgs/container/pharmalink)
+
+[](https://github.com/NiklasJavier/pharmalink/releases/latest)
+[](https://github.com/NiklasJavier/pharmalink/pkgs/container/pharmalink)
 
 > Dieses Repository enthält die Anwendung und die zugehörigen Smart Contracts für die Pharmalink-Plattform, eine auf Hyperledger Fabric basierende Lösung zur Nachverfolgung von Lieferketten in der Pharmaindustrie.
 
@@ -83,7 +84,7 @@ bash ./scripts/fabric_setup_cli.sh
 
 #### c) Umgebungsvariablen für die CLI setzen
 
-Damit Sie die `peer`-Befehle direkt ausführen können, müssen die passenden Umgebungsvariablen für Ihre Rolle im Netzwerk gesetzt werden. Die Skripte dafür liegen unter [`scripts/roles/`](./scripts/roles/).
+Damit Sie die `peer`-Befehle direkt ausführen können, müssen die passenden Umgebungsvariablen für Ihre Rolle im Netzwerk gesetzt werden. Die Skripte dafür liegen unter [`scripts/roles/`](https://www.google.com/search?q=./scripts/roles/).
 
 Um beispielsweise als **Admin** zu agieren, führen Sie folgenden Befehl aus:
 
@@ -99,7 +100,17 @@ Dieser entscheidende Schritt installiert, genehmigt und committet den Chaincode 
 bash ./scripts/fabric_setup_test_consortium.sh
 ```
 
-#### e) Optional: Hyperledger Explorer starten
+#### e) Pharmalink-Anwendung starten
+
+Startet die SpringBoot-Backend-Anwendung, die die REST-API bereitstellt.
+
+```bash
+./scripts/pharmalink_setup.sh up
+```
+
+> 📲 Die API ist nach dem Start unter **`http://localhost:8080`** erreichbar.
+
+#### f) Optional: Hyperledger Explorer starten
 
 Starten Sie den Explorer, um eine Weboberfläche zur Visualisierung des Netzwerks und der Transaktionen zu erhalten.
 
@@ -130,7 +141,7 @@ Sie können die Identität in Ihrer Kommandozeile jederzeit wechseln, indem Sie 
 
 Nachdem das Netzwerk läuft und die Umgebungsvariablen gesetzt sind, können Sie mit dem `peer`-CLI direkt mit dem Smart Contract interagieren.
 
-Eine detaillierte Beschreibung aller verfügbaren Chaincode-Funktionen und deren Parameter finden Sie in der [`README` des Chaincode-Verzeichnisses](./chaincode/README.md).
+Eine detaillierte Beschreibung aller verfügbaren Chaincode-Funktionen und deren Parameter finden Sie in der [`README` des Chaincode-Verzeichnisses](https://www.google.com/search?q=./chaincode/README.md).
 
 **Beispiel: `initCall` als Hersteller ausführen**
 
@@ -146,27 +157,7 @@ peer chaincode invoke -o $ORDERER_ADDRESS --tls --cafile $ORDERER_CA -C $CHANNEL
 
 -----
 
-### ▶️ 7. Anwendung ausführen
-
-#### a) 🔨 Anwendung bauen
-
-Führen Sie den folgenden Befehl im Stammverzeichnis aus. Er kompiliert die Anwendung und baut das Docker-Image.
-
-```bash
-./gradlew build && docker build -f src/main/docker/Dockerfile.jvm -t pharmalink/app .
-```
-
-#### b) 🐳 Anwendung starten
-
-Starten Sie den erstellten Container. Wichtig ist hierbei, den Container mit dem `pharmalink_default`-Netzwerk zu verbinden, damit die Applikation die Fabric-Peers erreichen kann.
-
-```bash
-docker run -p 8080:8080 --network="pharmalink" --rm pharmalink/app
-```
-
------
-
-### 🖥️ 8. API-Endpunkte (unserer Anwendung)
+### 🖥️ 7. API-Endpunkte (unserer Anwendung)
 
 Wenn die SpringBoot-Anwendung läuft, stellt sie die folgenden REST-Endpunkte zur Verfügung:
 
@@ -179,11 +170,14 @@ Wenn die SpringBoot-Anwendung läuft, stellt sie die folgenden REST-Endpunkte zu
 
 -----
 
-### 🛑 9. Herunterfahren der Umgebung
+### 🛑 8. Herunterfahren der Umgebung
 
-Um die Docker-Container zu stoppen und das erstellte Netzwerk zu bereinigen, verwenden Sie die `down`-Befehle der Skripte:
+Um alle Docker-Container zu stoppen und das erstellte Netzwerk zu bereinigen, verwenden Sie die `down`-Befehle der jeweiligen Skripte:
 
 ```bash
+# Stoppt die Pharmalink-Anwendung
+./scripts/pharmalink_setup.sh down
+
 # Stoppt das Fabric-Netzwerk
 ./scripts/fabric_setup_test.sh down
 
