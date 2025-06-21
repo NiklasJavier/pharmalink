@@ -1,4 +1,4 @@
-# Copyright IBM Corp. All Rights Reserved.
+# Copyright IBM Corp. Alle Rechte vorbehalten.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -6,52 +6,51 @@
 ---
 ################################################################################
 #
-#   ORGANIZATIONS
+#   ORGANISATIONEN
 #
-#   This section defines the organizational identities that can be referenced
-#   in the configuration profiles.
+#   Dieser Abschnitt definiert die organisationalen Identitäten, die in den
+#   Konfigurationsprofilen referenziert werden können.
 #
 ################################################################################
 Organizations:
 
-    # SampleOrg defines an MSP using the sampleconfig. It should never be used
-    # in production but may be used as a template for other definitions.
+    # SampleOrg definiert einen MSP unter Verwendung der Beispielkonfiguration. Sie sollte niemals
+    # in einer Produktionsumgebung verwendet werden, kann aber als Vorlage für andere Definitionen dienen.
     - &SampleOrg
-        # Name is the key by which this org will be referenced in channel
-        # configuration transactions.
-        # Name can include alphanumeric characters as well as dots and dashes.
+        # Name ist der Schlüssel, über den auf diese Organisation in
+        # Kanalkonfigurationstransaktionen verwiesen wird.
+        # Name kann alphanumerische Zeichen sowie Punkte und Bindestriche enthalten.
         Name: SampleOrg
 
-        # SkipAsForeign can be set to true for org definitions which are to be
-        # inherited from the orderer system channel during channel creation.  This
-        # is especially useful when an admin of a single org without access to the
-        # MSP directories of the other orgs wishes to create a channel.  Note
-        # this property must always be set to false for orgs included in block
-        # creation.
+        # SkipAsForeign kann für Organisationsdefinitionen auf true gesetzt werden, die
+        # während der Kanalerstellung vom Orderer-Systemkanal geerbt werden sollen. Dies
+        # ist besonders nützlich, wenn ein Administrator einer einzelnen Organisation ohne Zugriff auf die
+        # MSP-Verzeichnisse der anderen Organisationen einen Kanal erstellen möchte. Beachten Sie,
+        # dass diese Eigenschaft für Organisationen, die an der Blockerstellung beteiligt sind, immer auf false gesetzt sein muss.
         SkipAsForeign: false
 
-        # ID is the key by which this org's MSP definition will be referenced.
-        # ID can include alphanumeric characters as well as dots and dashes.
+        # ID ist der Schlüssel, über den die MSP-Definition dieser Organisation referenziert wird.
+        # ID kann alphanumerische Zeichen sowie Punkte und Bindestriche enthalten.
         ID: SampleOrg
 
-        # MSPDir is the filesystem path which contains the MSP configuration.
+        # MSPDir ist der Dateisystempfad, der die MSP-Konfiguration enthält.
         MSPDir: msp
 
-        # Policies defines the set of policies at this level of the config tree
-        # For organization policies, their canonical path is usually
+        # Policies definiert die Richtlinien auf dieser Ebene des Konfigurationsbaums.
+        # Für Organisationsrichtlinien lautet ihr kanonischer Pfad normalerweise
         #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
         Policies: &SampleOrgPolicies
             Readers:
                 Type: Signature
                 Rule: "OR('SampleOrg.member')"
-                # If your MSP is configured with the new NodeOUs, you might
-                # want to use a more specific rule like the following:
+                # Wenn Ihr MSP mit den neuen NodeOUs konfiguriert ist, möchten Sie vielleicht
+                # eine spezifischere Regel wie die folgende verwenden:
                 # Rule: "OR('SampleOrg.admin', 'SampleOrg.peer', 'SampleOrg.client')"
             Writers:
                 Type: Signature
                 Rule: "OR('SampleOrg.member')"
-                # If your MSP is configured with the new NodeOUs, you might
-                # want to use a more specific rule like the following:
+                # Wenn Ihr MSP mit den neuen NodeOUs konfiguriert ist, möchten Sie vielleicht
+                # eine spezifischere Regel wie die folgende verwenden:
                 # Rule: "OR('SampleOrg.admin', 'SampleOrg.client')"
             Admins:
                 Type: Signature
@@ -60,169 +59,167 @@ Organizations:
                 Type: Signature
                 Rule: "OR('SampleOrg.member')"
 
-        # OrdererEndpoints is a list of all orderers this org runs which clients
-        # and peers may to connect to to push transactions and receive blocks respectively.
+        # OrdererEndpoints ist eine Liste aller Orderer, die diese Organisation betreibt, mit denen sich Clients
+        # und Peers verbinden können, um Transaktionen zu übermitteln bzw. Blöcke zu empfangen.
         OrdererEndpoints:
             - "127.0.0.1:7050"
 
-        # AnchorPeers defines the location of peers which can be used for
-        # cross-org gossip communication.
+        # AnchorPeers definiert den Standort von Peers, die für die
+        # organisationsübergreifende Gossip-Kommunikation verwendet werden können.
         #
-        # NOTE: this value should only be set when using the deprecated
-        # `configtxgen --outputAnchorPeersUpdate` command. It is recommended
-        # to instead use the channel configuration update process to set the
-        # anchor peers for each organization.
+        # HINWEIS: Dieser Wert sollte nur bei Verwendung des veralteten
+        # `configtxgen --outputAnchorPeersUpdate`-Befehls gesetzt werden. Es wird empfohlen,
+        # stattdessen den Prozess zur Aktualisierung der Kanalkonfiguration zu verwenden, um die
+        # Anchor-Peers für jede Organisation festzulegen.
         AnchorPeers:
             - Host: 127.0.0.1
               Port: 7051
 
 ################################################################################
 #
-#   CAPABILITIES
+#   FÄHIGKEITEN (CAPABILITIES)
 #
-#   This section defines the capabilities of fabric network. This is a new
-#   concept as of v1.1.0 and should not be utilized in mixed networks with
-#   v1.0.x peers and orderers.  Capabilities define features which must be
-#   present in a fabric binary for that binary to safely participate in the
-#   fabric network.  For instance, if a new MSP type is added, newer binaries
-#   might recognize and validate the signatures from this type, while older
-#   binaries without this support would be unable to validate those
-#   transactions.  This could lead to different versions of the fabric binaries
-#   having different world states.  Instead, defining a capability for a channel
-#   informs those binaries without this capability that they must cease
-#   processing transactions until they have been upgraded.  For v1.0.x if any
-#   capabilities are defined (including a map with all capabilities turned off)
-#   then the v1.0.x peer will deliberately crash.
+#   Dieser Abschnitt definiert die Fähigkeiten des Fabric-Netzwerks. Dies ist ein neues
+#   Konzept ab v1.1.0 und sollte nicht in gemischten Netzwerken mit
+#   v1.0.x-Peers und -Orderern verwendet werden. Fähigkeiten definieren Funktionen, die
+#   in einer Fabric-Binary vorhanden sein müssen, damit diese Binärdatei sicher am
+#   Fabric-Netzwerk teilnehmen kann. Wenn beispielsweise ein neuer MSP-Typ hinzugefügt wird,
+#   könnten neuere Binärdateien die Signaturen dieses Typs erkennen und validieren, während ältere
+#   Binärdateien ohne diese Unterstützung diese Transaktionen nicht validieren könnten.
+#   Dies könnte dazu führen, dass verschiedene Versionen der Fabric-Binärdateien
+#   unterschiedliche World States haben. Stattdessen informiert die Definition einer Fähigkeit für einen Kanal
+#   die Binärdateien ohne diese Fähigkeit, dass sie die Verarbeitung von Transaktionen einstellen müssen,
+#   bis sie aktualisiert wurden. Bei v1.0.x wird der v1.0.x-Peer absichtlich abstürzen,
+#   wenn irgendwelche Fähigkeiten definiert sind (einschließlich einer Map mit allen deaktivierten Fähigkeiten).
 #
 ################################################################################
 Capabilities:
-    # Channel capabilities apply to both the orderers and the peers and must be
-    # supported by both.
-    # Set the value of the capability to true to require it.
+    # Channel-Fähigkeiten gelten sowohl für die Orderer als auch für die Peers und müssen
+    # von beiden unterstützt werden.
+    # Setzen Sie den Wert der Fähigkeit auf true, um sie vorauszusetzen.
     Channel: &ChannelCapabilities
-        # V2.0 for Channel is a catchall flag for behavior which has been
-        # determined to be desired for all orderers and peers running at the v2.0.0
-        # level, but which would be incompatible with orderers and peers from
-        # prior releases.
-        # Prior to enabling V2.0 channel capabilities, ensure that all
-        # orderers and peers on a channel are at v2.0.0 or later.
+        # V2.0 für Channel ist ein Sammel-Flag für Verhalten, das für alle Orderer und Peers,
+        # die auf dem v2.0.0-Niveau laufen, als wünschenswert eingestuft wurde,
+        # aber mit Orderern und Peers aus früheren Versionen inkompatibel wäre.
+        # Stellen Sie vor der Aktivierung der V2.0-Kanalfähigkeiten sicher, dass alle
+        # Orderer und Peers auf einem Kanal v2.0.0 oder neuer sind.
         V2_0: true
 
-    # Orderer capabilities apply only to the orderers, and may be safely
-    # used with prior release peers.
-    # Set the value of the capability to true to require it.
+    # Orderer-Fähigkeiten gelten nur für die Orderer und können sicher
+    # mit Peers früherer Versionen verwendet werden.
+    # Setzen Sie den Wert der Fähigkeit auf true, um sie vorauszusetzen.
     Orderer: &OrdererCapabilities
-        # V1.1 for Orderer is a catchall flag for behavior which has been
-        # determined to be desired for all orderers running at the v1.1.x
-        # level, but which would be incompatible with orderers from prior releases.
-        # Prior to enabling V2.0 orderer capabilities, ensure that all
-        # orderers on a channel are at v2.0.0 or later.
+        # V1.1 für Orderer ist ein Sammel-Flag für Verhalten, das für alle Orderer,
+        # die auf dem v1.1.x-Niveau laufen, als wünschenswert eingestuft wurde,
+        # aber mit Orderern aus früheren Versionen inkompatibel wäre.
+        # Stellen Sie vor der Aktivierung der V2.0-Orderer-Fähigkeiten sicher, dass alle
+        # Orderer auf einem Kanal v2.0.0 oder neuer sind.
         V2_0: true
 
-    # Application capabilities apply only to the peer network, and may be safely
-    # used with prior release orderers.
-    # Set the value of the capability to true to require it.
+    # Application-Fähigkeiten gelten nur für das Peer-Netzwerk und können sicher
+    # mit Orderern früherer Versionen verwendet werden.
+    # Setzen Sie den Wert der Fähigkeit auf true, um sie vorauszusetzen.
     Application: &ApplicationCapabilities
-        # V2.5 for Application enables the new non-backwards compatible
-        # features of fabric v2.5, namely the ability to purge private data.
-        # Prior to enabling V2.5 application capabilities, ensure that all
-        # peers on a channel are at v2.5.0 or later.
+        # V2.5 für Application aktiviert die neuen, nicht abwärtskompatiblen
+        # Funktionen von Fabric v2.5, nämlich die Möglichkeit, private Daten zu löschen.
+        # Stellen Sie vor der Aktivierung der V2.5-Anwendungsfähigkeiten sicher, dass alle
+        # Peers auf einem Kanal v2.5.0 oder neuer sind.
         V2_5: true
 
 ################################################################################
 #
-#   APPLICATION
+#   ANWENDUNG (APPLICATION)
 #
-#   This section defines the values to encode into a config transaction or
-#   genesis block for application-related parameters.
+#   Dieser Abschnitt definiert die Werte, die für anwendungsbezogene Parameter
+#   in eine Konfigurationstransaktion oder einen Genesis-Block kodiert werden sollen.
 #
 ################################################################################
 Application: &ApplicationDefaults
     ACLs: &ACLsDefault
-        # This section provides defaults for policies for various resources
-        # in the system. These "resources" could be functions on system chaincodes
-        # (e.g., "GetBlockByNumber" on the "qscc" system chaincode) or other resources
-        # (e.g.,who can receive Block events). This section does NOT specify the resource's
-        # definition or API, but just the ACL policy for it.
+        # Dieser Abschnitt enthält Standardwerte für Richtlinien für verschiedene Ressourcen
+        # im System. Diese "Ressourcen" können Funktionen auf System-Chaincodes
+        # (z. B. "GetBlockByNumber" auf dem "qscc"-System-Chaincode) oder andere Ressourcen
+        # sein (z. B. wer Block-Events empfangen kann). Dieser Abschnitt spezifiziert NICHT die
+        # Definition oder API der Ressource, sondern nur die ACL-Richtlinie dafür.
         #
-        # Users can override these defaults with their own policy mapping by defining the
-        # mapping under ACLs in their channel definition
+        # Benutzer können diese Standardwerte mit ihrer eigenen Richtlinienzuordnung überschreiben, indem sie die
+        # Zuordnung unter ACLs in ihrer Kanaldefinition definieren.
 
-        #---New Lifecycle System Chaincode (_lifecycle) function to policy mapping for access control--#
+        #---Neue Lifecycle-System-Chaincode (_lifecycle) Funktions-zu-Richtlinien-Zuordnung für die Zugriffskontrolle--#
 
-        # ACL policy for _lifecycle's "CheckCommitReadiness" function
+        # ACL-Richtlinie für die Funktion "_lifecycle/CheckCommitReadiness"
         _lifecycle/CheckCommitReadiness: /Channel/Application/Writers
 
-        # ACL policy for _lifecycle's "CommitChaincodeDefinition" function
+        # ACL-Richtlinie für die Funktion "_lifecycle/CommitChaincodeDefinition"
         _lifecycle/CommitChaincodeDefinition: /Channel/Application/Writers
 
-        # ACL policy for _lifecycle's "QueryChaincodeDefinition" function
+        # ACL-Richtlinie für die Funktion "_lifecycle/QueryChaincodeDefinition"
         _lifecycle/QueryChaincodeDefinition: /Channel/Application/Writers
 
-        # ACL policy for _lifecycle's "QueryChaincodeDefinitions" function
+        # ACL-Richtlinie für die Funktion "_lifecycle/QueryChaincodeDefinitions"
         _lifecycle/QueryChaincodeDefinitions: /Channel/Application/Writers
 
-        #---Lifecycle System Chaincode (lscc) function to policy mapping for access control---#
+        #---Lifecycle System Chaincode (lscc) Funktions-zu-Richtlinien-Zuordnung für die Zugriffskontrolle---#
 
-        # ACL policy for lscc's "getid" function
+        # ACL-Richtlinie für die Funktion "lscc/getid"
         lscc/ChaincodeExists: /Channel/Application/Readers
 
-        # ACL policy for lscc's "getdepspec" function
+        # ACL-Richtlinie für die Funktion "lscc/getdepspec"
         lscc/GetDeploymentSpec: /Channel/Application/Readers
 
-        # ACL policy for lscc's "getccdata" function
+        # ACL-Richtlinie für die Funktion "lscc/getccdata"
         lscc/GetChaincodeData: /Channel/Application/Readers
 
-        # ACL Policy for lscc's "getchaincodes" function
+        # ACL-Richtlinie für die Funktion "lscc/getchaincodes"
         lscc/GetInstantiatedChaincodes: /Channel/Application/Readers
 
-        #---Query System Chaincode (qscc) function to policy mapping for access control---#
+        #---Query System Chaincode (qscc) Funktions-zu-Richtlinien-Zuordnung für die Zugriffskontrolle---#
 
-        # ACL policy for qscc's "GetChainInfo" function
+        # ACL-Richtlinie für die Funktion "qscc/GetChainInfo"
         qscc/GetChainInfo: /Channel/Application/Readers
 
-        # ACL policy for qscc's "GetBlockByNumber" function
+        # ACL-Richtlinie für die Funktion "qscc/GetBlockByNumber"
         qscc/GetBlockByNumber: /Channel/Application/Readers
 
-        # ACL policy for qscc's  "GetBlockByHash" function
+        # ACL-Richtlinie für die Funktion "qscc/GetBlockByHash"
         qscc/GetBlockByHash: /Channel/Application/Readers
 
-        # ACL policy for qscc's "GetTransactionByID" function
+        # ACL-Richtlinie für die Funktion "qscc/GetTransactionByID"
         qscc/GetTransactionByID: /Channel/Application/Readers
 
-        # ACL policy for qscc's "GetBlockByTxID" function
+        # ACL-Richtlinie für die Funktion "qscc/GetBlockByTxID"
         qscc/GetBlockByTxID: /Channel/Application/Readers
 
-        #---Configuration System Chaincode (cscc) function to policy mapping for access control---#
+        #---Configuration System Chaincode (cscc) Funktions-zu-Richtlinien-Zuordnung für die Zugriffskontrolle---#
 
-        # ACL policy for cscc's "GetConfigBlock" function
+        # ACL-Richtlinie für die Funktion "cscc/GetConfigBlock"
         cscc/GetConfigBlock: /Channel/Application/Readers
 
-        # ACL policy for cscc's "GetChannelConfig" function
+        # ACL-Richtlinie für die Funktion "cscc/GetChannelConfig"
         cscc/GetChannelConfig: /Channel/Application/Readers
 
-        #---Miscellaneous peer function to policy mapping for access control---#
+        #---Verschiedene Peer-Funktions-zu-Richtlinien-Zuordnungen für die Zugriffskontrolle---#
 
-        # ACL policy for invoking chaincodes on peer
+        # ACL-Richtlinie für das Aufrufen von Chaincodes auf einem Peer
         peer/Propose: /Channel/Application/Writers
 
-        # ACL policy for chaincode to chaincode invocation
+        # ACL-Richtlinie für Chaincode-zu-Chaincode-Aufrufe
         peer/ChaincodeToChaincode: /Channel/Application/Writers
 
-        #---Events resource to policy mapping for access control###---#
+        #---Ereignisressource-zu-Richtlinien-Zuordnung für die Zugriffskontrolle###---#
 
-        # ACL policy for sending block events
+        # ACL-Richtlinie für das Senden von Block-Events
         event/Block: /Channel/Application/Readers
 
-        # ACL policy for sending filtered block events
+        # ACL-Richtlinie für das Senden von gefilterten Block-Events
         event/FilteredBlock: /Channel/Application/Readers
 
-    # Organizations lists the orgs participating on the application side of the
-    # network.
+    # Organizations listet die Organisationen auf, die auf der Anwendungsseite des
+    # Netzwerks teilnehmen.
     Organizations:
 
-    # Policies defines the set of policies at this level of the config tree
-    # For Application policies, their canonical path is
+    # Policies definiert die Richtlinien auf dieser Ebene des Konfigurationsbaums.
+    # Für Anwendungsrichtlinien lautet ihr kanonischer Pfad
     #   /Channel/Application/<PolicyName>
     Policies: &ApplicationDefaultPolicies
         LifecycleEndorsement:
@@ -241,9 +238,9 @@ Application: &ApplicationDefaults
             Type: ImplicitMeta
             Rule: "MAJORITY Admins"
 
-    # Capabilities describes the application level capabilities, see the
-    # dedicated Capabilities section elsewhere in this file for a full
-    # description
+    # Capabilities beschreibt die Fähigkeiten auf Anwendungsebene, siehe den
+    # dedizierten Capabilities-Abschnitt an anderer Stelle in dieser Datei für eine vollständige
+    # Beschreibung.
     Capabilities:
         <<: *ApplicationCapabilities
 
@@ -251,81 +248,81 @@ Application: &ApplicationDefaults
 #
 #   ORDERER
 #
-#   This section defines the values to encode into a config transaction or
-#   genesis block for orderer related parameters.
+#   Dieser Abschnitt definiert die Werte, die für Orderer-bezogene Parameter
+#   in eine Konfigurationstransaktion oder einen Genesis-Block kodiert werden sollen.
 #
 ################################################################################
 Orderer: &OrdererDefaults
 
-    # Orderer Type: The orderer implementation to start.
-    # Available types are "solo", "kafka" and "etcdraft".
+    # Orderer-Typ: Die zu startende Orderer-Implementierung.
+    # Verfügbare Typen sind "solo", "kafka" und "etcdraft".
     OrdererType: solo
 
-    # Addresses used to be the list of orderer addresses that clients and peers
-    # could connect to.  However, this does not allow clients to associate orderer
-    # addresses and orderer organizations which can be useful for things such
-    # as TLS validation.  The preferred way to specify orderer addresses is now
-    # to include the OrdererEndpoints item in your org definition
+    # Addresses war früher die Liste der Orderer-Adressen, mit denen sich Clients und Peers
+    # verbinden konnten. Dies erlaubt es Clients jedoch nicht, Orderer-Adressen
+    # und Orderer-Organisationen zuzuordnen, was für Dinge wie die
+    # TLS-Validierung nützlich sein kann. Der bevorzugte Weg, Orderer-Adressen anzugeben, ist jetzt,
+    # das OrdererEndpoints-Element in Ihrer Organisationsdefinition einzufügen.
     Addresses:
-        # - 127.0.0.1:7050
+    # - 127.0.0.1:7050
 
-    # Batch Timeout: The amount of time to wait before creating a batch.
+    # Batch-Timeout: Die Zeitspanne, die gewartet wird, bevor ein Batch erstellt wird.
     BatchTimeout: 2s
 
-    # Batch Size: Controls the number of messages batched into a block.
-    # The orderer views messages opaquely, but typically, messages may
-    # be considered to be Fabric transactions.  The 'batch' is the group
-    # of messages in the 'data' field of the block.  Blocks will be a few kb
-    # larger than the batch size, when signatures, hashes, and other metadata
-    # is applied.
+    # Batch-Größe: Steuert die Anzahl der Nachrichten, die in einem Block gebündelt werden.
+    # Der Orderer betrachtet Nachrichten undurchsichtig, aber typischerweise können Nachrichten
+    # als Fabric-Transaktionen angesehen werden. Der 'Batch' ist die Gruppe
+    # von Nachrichten im 'data'-Feld des Blocks. Blöcke sind einige KB
+    # größer als die Batch-Größe, wenn Signaturen, Hashes und andere Metadaten
+    # angewendet werden.
     BatchSize:
 
-        # Max Message Count: The maximum number of messages to permit in a
-        # batch.  No block will contain more than this number of messages.
+        # Maximale Nachrichtenanzahl: Die maximale Anzahl von Nachrichten, die in einem
+        # Batch erlaubt sind. Kein Block wird mehr als diese Anzahl von Nachrichten enthalten.
         MaxMessageCount: 500
 
-        # Absolute Max Bytes: The absolute maximum number of bytes allowed for
-        # the serialized messages in a batch. The maximum block size is this value
-        # plus the size of the associated metadata (usually a few KB depending
-        # upon the size of the signing identities). Any transaction larger than
-        # this value will be rejected by ordering.
-        # It is recommended not to exceed 49 MB, given the default grpc max message size of 100 MB
-        # configured on orderer and peer nodes (and allowing for message expansion during communication).
+        # Absolute maximale Bytes: Die absolute maximale Anzahl von Bytes, die für
+        # die serialisierten Nachrichten in einem Batch erlaubt ist. Die maximale Blockgröße ist dieser Wert
+        # plus die Größe der zugehörigen Metadaten (normalerweise einige KB, abhängig
+        # von der Größe der Signaturidentitäten). Jede Transaktion, die größer als
+        # dieser Wert ist, wird vom Ordering-Dienst abgelehnt.
+        # Es wird empfohlen, 49 MB nicht zu überschreiten, angesichts der standardmäßigen grpc-Nachrichtengröße von 100 MB,
+        # die auf Orderer- und Peer-Knoten konfiguriert ist (und um eine Nachrichtenerweiterung während der Kommunikation zu ermöglichen).
         AbsoluteMaxBytes: 10 MB
 
-        # Preferred Max Bytes: The preferred maximum number of bytes allowed
-        # for the serialized messages in a batch. Roughly, this field may be considered
-        # the best effort maximum size of a batch. A batch will fill with messages
-        # until this size is reached (or the max message count, or batch timeout is
-        # exceeded).  If adding a new message to the batch would cause the batch to
-        # exceed the preferred max bytes, then the current batch is closed and written
-        # to a block, and a new batch containing the new message is created.  If a
-        # message larger than the preferred max bytes is received, then its batch
-        # will contain only that message.  Because messages may be larger than
-        # preferred max bytes (up to AbsoluteMaxBytes), some batches may exceed
-        # the preferred max bytes, but will always contain exactly one transaction.
+        # Bevorzugte maximale Bytes: Die bevorzugte maximale Anzahl von Bytes, die
+        # für die serialisierten Nachrichten in einem Batch erlaubt ist. Grob gesagt kann dieses Feld als
+        # die nach bestem Bemühen maximale Größe eines Batches betrachtet werden. Ein Batch füllt sich mit Nachrichten,
+        # bis diese Größe erreicht ist (oder die maximale Nachrichtenanzahl oder das Batch-Timeout
+        # überschritten wird). Wenn das Hinzufügen einer neuen Nachricht zum Batch dazu führen würde, dass der Batch
+        # die bevorzugten maximalen Bytes überschreitet, wird der aktuelle Batch geschlossen und
+        # in einen Block geschrieben, und ein neuer Batch, der die neue Nachricht enthält, wird erstellt. Wenn eine
+        # Nachricht empfangen wird, die größer als die bevorzugten maximalen Bytes ist, wird ihr Batch
+        # nur diese eine Nachricht enthalten. Da Nachrichten größer als
+        # die bevorzugten maximalen Bytes sein können (bis zu AbsoluteMaxBytes), können einige Batches
+        # die bevorzugten maximalen Bytes überschreiten, enthalten aber immer genau eine Transaktion.
         PreferredMaxBytes: 2 MB
 
-    # Max Channels is the maximum number of channels to allow on the ordering
-    # network. When set to 0, this implies no maximum number of channels.
+    # MaxChannels ist die maximale Anzahl von Kanälen, die im Ordering-Netzwerk
+    # erlaubt sind. Wenn auf 0 gesetzt, bedeutet dies keine maximale Anzahl von Kanälen.
     MaxChannels: 0
 
     Kafka:
-        # Brokers: A list of Kafka brokers to which the orderer connects. Edit
-        # this list to identify the brokers of the ordering service.
-        # NOTE: Use IP:port notation.
+        # Brokers: Eine Liste von Kafka-Brokern, mit denen sich der Orderer verbindet. Bearbeiten
+        # Sie diese Liste, um die Broker des Ordering-Dienstes zu identifizieren.
+        # HINWEIS: Verwenden Sie die IP:Port-Notation.
         Brokers:
             - kafka0:9092
             - kafka1:9092
             - kafka2:9092
 
-    # EtcdRaft defines configuration which must be set when the "etcdraft"
-    # orderertype is chosen.
+    # EtcdRaft definiert die Konfiguration, die festgelegt werden muss, wenn der
+    # Orderer-Typ "etcdraft" gewählt wird.
     EtcdRaft:
-        # The set of Raft replicas for this network. For the etcd/raft-based
-        # implementation, we expect every replica to also be an OSN. Therefore,
-        # a subset of the host:port items enumerated in this list should be
-        # replicated under the Orderer.Addresses key above.
+        # Die Gruppe der Raft-Replikate für dieses Netzwerk. Für die etcd/raft-basierte
+        # Implementierung erwarten wir, dass jedes Replikat auch ein OSN ist. Daher sollte
+        # eine Teilmenge der hier aufgezählten Host:Port-Elemente
+        # unter dem Orderer.Addresses-Schlüssel oben repliziert werden.
         Consenters:
             - Host: raft0.example.com
               Port: 7050
@@ -340,38 +337,38 @@ Orderer: &OrdererDefaults
               ClientTLSCert: path/to/ClientTLSCert2
               ServerTLSCert: path/to/ServerTLSCert2
 
-        # Options to be specified for all the etcd/raft nodes. The values here
-        # are the defaults for all new channels and can be modified on a
-        # per-channel basis via configuration updates.
+        # Optionen, die für alle etcd/raft-Knoten angegeben werden müssen. Die Werte hier
+        # sind die Standardwerte für alle neuen Kanäle und können pro Kanal
+        # über Konfigurationsupdates geändert werden.
         Options:
-            # TickInterval is the time interval between two Node.Tick invocations.
+            # TickInterval ist das Zeitintervall zwischen zwei Node.Tick-Aufrufen.
             TickInterval: 500ms
 
-            # ElectionTick is the number of Node.Tick invocations that must pass
-            # between elections. That is, if a follower does not receive any
-            # message from the leader of current term before ElectionTick has
-            # elapsed, it will become candidate and start an election.
-            # ElectionTick must be greater than HeartbeatTick.
+            # ElectionTick ist die Anzahl der Node.Tick-Aufrufe, die
+            # zwischen Wahlen vergehen müssen. Das heißt, wenn ein Follower keine
+            # Nachricht vom Leader der aktuellen Amtszeit erhält, bevor ElectionTick
+            # abgelaufen ist, wird er zum Kandidaten und startet eine Wahl.
+            # ElectionTick muss größer als HeartbeatTick sein.
             ElectionTick: 10
 
-            # HeartbeatTick is the number of Node.Tick invocations that must
-            # pass between heartbeats. That is, a leader sends heartbeat
-            # messages to maintain its leadership every HeartbeatTick ticks.
+            # HeartbeatTick ist die Anzahl der Node.Tick-Aufrufe, die
+            # zwischen Heartbeats vergehen müssen. Das heißt, ein Leader sendet Heartbeat-
+            # Nachrichten, um seine Führung alle HeartbeatTick-Ticks aufrechtzuerhalten.
             HeartbeatTick: 1
 
-            # MaxInflightBlocks limits the max number of in-flight append messages
-            # during optimistic replication phase.
+            # MaxInflightBlocks begrenzt die maximale Anzahl von in-flight-Append-Nachrichten
+            # während der optimistischen Replikationsphase.
             MaxInflightBlocks: 5
 
-            # SnapshotIntervalSize defines number of bytes per which a snapshot is taken
+            # SnapshotIntervalSize definiert die Anzahl der Bytes, nach denen ein Snapshot erstellt wird.
             SnapshotIntervalSize: 16 MB
 
-    # Organizations lists the orgs participating on the orderer side of the
-    # network.
+    # Organizations listet die Organisationen auf, die auf der Orderer-Seite des
+    # Netzwerks teilnehmen.
     Organizations:
 
-    # Policies defines the set of policies at this level of the config tree
-    # For Orderer policies, their canonical path is
+    # Policies definiert die Richtlinien auf dieser Ebene des Konfigurationsbaums.
+    # Für Orderer-Richtlinien lautet ihr kanonischer Pfad
     #   /Channel/Orderer/<PolicyName>
     Policies:
         Readers:
@@ -383,68 +380,67 @@ Orderer: &OrdererDefaults
         Admins:
             Type: ImplicitMeta
             Rule: "MAJORITY Admins"
-        # BlockValidation specifies what signatures must be included in the block
-        # from the orderer for the peer to validate it.
+        # BlockValidation gibt an, welche Signaturen vom Orderer im Block
+        # enthalten sein müssen, damit der Peer ihn validieren kann.
         BlockValidation:
             Type: ImplicitMeta
             Rule: "ANY Writers"
 
-    # Capabilities describes the orderer level capabilities, see the
-    # dedicated Capabilities section elsewhere in this file for a full
-    # description
+    # Capabilities beschreibt die Fähigkeiten auf Orderer-Ebene, siehe den
+    # dedizierten Capabilities-Abschnitt an anderer Stelle in dieser Datei für eine vollständige
+    # Beschreibung.
     Capabilities:
         <<: *OrdererCapabilities
 
 ################################################################################
 #
-#   CHANNEL
+#   KANAL (CHANNEL)
 #
-#   This section defines the values to encode into a config transaction or
-#   genesis block for channel related parameters.
+#   Dieser Abschnitt definiert die Werte, die für kanalbezogene Parameter
+#   in eine Konfigurationstransaktion oder einen Genesis-Block kodiert werden sollen.
 #
 ################################################################################
 Channel: &ChannelDefaults
-    # Policies defines the set of policies at this level of the config tree
-    # For Channel policies, their canonical path is
+    # Policies definiert die Richtlinien auf dieser Ebene des Konfigurationsbaums.
+    # Für Kanalrichtlinien lautet ihr kanonischer Pfad
     #   /Channel/<PolicyName>
     Policies:
-        # Who may invoke the 'Deliver' API
+        # Wer die 'Deliver'-API aufrufen darf
         Readers:
             Type: ImplicitMeta
             Rule: "ANY Readers"
-        # Who may invoke the 'Broadcast' API
+        # Wer die 'Broadcast'-API aufrufen darf
         Writers:
             Type: ImplicitMeta
             Rule: "ANY Writers"
-        # By default, who may modify elements at this config level
+        # Wer standardmäßig Elemente auf dieser Konfigurationsebene ändern darf
         Admins:
             Type: ImplicitMeta
             Rule: "MAJORITY Admins"
 
 
-    # Capabilities describes the channel level capabilities, see the
-    # dedicated Capabilities section elsewhere in this file for a full
-    # description
+    # Capabilities beschreibt die Fähigkeiten auf Kanalebene, siehe den
+    # dedizierten Capabilities-Abschnitt an anderer Stelle in dieser Datei für eine vollständige
+    # Beschreibung.
     Capabilities:
         <<: *ChannelCapabilities
 
 ################################################################################
 #
-#   PROFILES
+#   PROFILE
 #
-#   Different configuration profiles may be encoded here to be specified as
-#   parameters to the configtxgen tool. The profiles which specify consortiums
-#   are to be used for generating the orderer genesis block. With the correct
-#   consortium members defined in the orderer genesis block, channel creation
-#   requests may be generated with only the org member names and a consortium
-#   name.
+#   Verschiedene Konfigurationsprofile können hier kodiert werden, um als
+#   Parameter für das configtxgen-Tool angegeben zu werden. Die Profile, die Konsortien
+#   spezifizieren, sind für die Erstellung des Orderer-Genesis-Blocks zu verwenden. Mit den richtigen
+#   Konsortiumsmitgliedern, die im Orderer-Genesis-Block definiert sind, können Kanalerstellungsanfragen
+#   nur mit den Namen der Organisationsmitglieder und einem Konsortiumsnamen generiert werden.
 #
 ################################################################################
 Profiles:
 
-    # SampleSingleMSPSolo defines a configuration which uses the Solo orderer,
-    # and contains a single MSP definition (the MSP sampleconfig).
-    # The Consortium SampleConsortium has only a single member, SampleOrg.
+    # SampleSingleMSPSolo definiert eine Konfiguration, die den Solo-Orderer verwendet
+    # und eine einzelne MSP-Definition enthält (die MSP-Beispielkonfiguration).
+    # Das Konsortium SampleConsortium hat nur ein einziges Mitglied, SampleOrg.
     SampleSingleMSPSolo:
         <<: *ChannelDefaults
         Orderer:
@@ -456,8 +452,8 @@ Profiles:
                 Organizations:
                     - *SampleOrg
 
-    # SampleSingleMSPKafka defines a configuration that differs from the
-    # SampleSingleMSPSolo one only in that it uses the Kafka-based orderer.
+    # SampleSingleMSPKafka definiert eine Konfiguration, die sich von
+    # SampleSingleMSPSolo nur dadurch unterscheidet, dass sie den Kafka-basierten Orderer verwendet.
     SampleSingleMSPKafka:
         <<: *ChannelDefaults
         Orderer:
@@ -470,9 +466,9 @@ Profiles:
                 Organizations:
                     - *SampleOrg
 
-    # SampleInsecureSolo defines a configuration which uses the Solo orderer,
-    # contains no MSP definitions, and allows all transactions and channel
-    # creation requests for the consortium SampleConsortium.
+    # SampleInsecureSolo definiert eine Konfiguration, die den Solo-Orderer verwendet,
+    # keine MSP-Definitionen enthält und alle Transaktionen und Kanalerstellungsanfragen
+    # für das Konsortium SampleConsortium erlaubt.
     SampleInsecureSolo:
         <<: *ChannelDefaults
         Orderer:
@@ -481,8 +477,8 @@ Profiles:
             SampleConsortium:
                 Organizations:
 
-    # SampleInsecureKafka defines a configuration that differs from the
-    # SampleInsecureSolo one only in that it uses the Kafka-based orderer.
+    # SampleInsecureKafka definiert eine Konfiguration, die sich von
+    # SampleInsecureSolo nur dadurch unterscheidet, dass sie den Kafka-basierten Orderer verwendet.
     SampleInsecureKafka:
         <<: *ChannelDefaults
         Orderer:
@@ -492,11 +488,11 @@ Profiles:
             SampleConsortium:
                 Organizations:
 
-    # SampleDevModeSolo defines a configuration which uses the Solo orderer,
-    # contains the sample MSP as both orderer and consortium member, and
-    # requires only basic membership for admin privileges. It also defines
-    # an Application on the ordering system channel, which should usually
-    # be avoided.
+    # SampleDevModeSolo definiert eine Konfiguration, die den Solo-Orderer verwendet,
+    # das Beispiel-MSP sowohl als Orderer- als auch als Konsortiumsmitglied enthält und
+    # nur eine einfache Mitgliedschaft für Administratorrechte erfordert. Es definiert auch
+    # eine Anwendung auf dem Ordering-Systemkanal, was normalerweise
+    # vermieden werden sollte.
     SampleDevModeSolo:
         <<: *ChannelDefaults
         Orderer:
@@ -527,8 +523,8 @@ Profiles:
                               Type: Signature
                               Rule: "OR('SampleOrg.member')"
 
-    # SampleDevModeKafka defines a configuration that differs from the
-    # SampleDevModeSolo one only in that it uses the Kafka-based orderer.
+    # SampleDevModeKafka definiert eine Konfiguration, die sich von
+    # SampleDevModeSolo nur dadurch unterscheidet, dass sie den Kafka-basierten Orderer verwendet.
     SampleDevModeKafka:
         <<: *ChannelDefaults
         Orderer:
@@ -560,11 +556,11 @@ Profiles:
                               Type: Signature
                               Rule: "OR('SampleOrg.member')"
 
-    # SampleSingleMSPChannel defines a channel with only the sample org as a
-    # member. It is designed to be used in conjunction with SampleSingleMSPSolo
-    # and SampleSingleMSPKafka orderer profiles.   Note, for channel creation
-    # profiles, only the 'Application' section and consortium # name are
-    # considered.
+    # SampleSingleMSPChannel definiert einen Kanal mit nur der Beispielorganisation als
+    # Mitglied. Es ist für die Verwendung in Verbindung mit den Orderer-Profilen SampleSingleMSPSolo
+    # und SampleSingleMSPKafka konzipiert. Beachten Sie, dass für Kanalerstellungsprofile
+    # nur der 'Application'-Abschnitt und der Konsortiumsname
+    # berücksichtigt werden.
     SampleSingleMSPChannel:
         <<: *ChannelDefaults
         Consortium: SampleConsortium
@@ -573,8 +569,8 @@ Profiles:
             Organizations:
                 - <<: *SampleOrg
 
-    # SampleDevModeEtcdRaft defines a configuration that differs from the
-    # SampleDevModeSolo one only in that it uses the etcd/raft-based orderer.
+    # SampleDevModeEtcdRaft definiert eine Konfiguration, die sich von
+    # SampleDevModeSolo nur dadurch unterscheidet, dass sie den etcd/raft-basierten Orderer verwendet.
     SampleDevModeEtcdRaft:
         <<: *ChannelDefaults
         Orderer:
@@ -606,8 +602,8 @@ Profiles:
                               Type: Signature
                               Rule: "OR('SampleOrg.member')"
 
-    # SampleAppChannelInsecureSolo defines an application channel configuration
-    # which uses the Solo orderer and contains no MSP definitions.
+    # SampleAppChannelInsecureSolo definiert eine Anwendungskanalkonfiguration,
+    # die den Solo-Orderer verwendet und keine MSP-Definitionen enthält.
     SampleAppChannelInsecureSolo:
         <<: *ChannelDefaults
         Orderer:
@@ -615,8 +611,8 @@ Profiles:
         Application:
             <<: *ApplicationDefaults
 
-    # SampleAppChannelEtcdRaft defines an application channel configuration
-    # that uses the etcd/raft-based orderer.
+    # SampleAppChannelEtcdRaft definiert eine Anwendungskanalkonfiguration,
+    # die den etcd/raft-basierten Orderer verwendet.
     SampleAppChannelEtcdRaft:
         <<: *ChannelDefaults
         Orderer:
