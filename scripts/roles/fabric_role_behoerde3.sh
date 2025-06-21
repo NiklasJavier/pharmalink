@@ -1,9 +1,6 @@
 #!/bin/bash
 
-# =================================================================
-# Zentrale Umgebungsvariablen für das Pharmalink-Netzwerk
-# =================================================================
-
+source "$HOME/pharmalink/scripts/fabric_setEnv.sh"
 export BASE_DIR="$HOME/pharmalink/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com"
 export USER_DIR="$BASE_DIR/users/behoerde-user3@org1.example.com"
 export CORE_PEER_MSPCONFIGPATH="$USER_DIR/msp"
