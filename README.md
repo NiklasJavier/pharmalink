@@ -166,7 +166,7 @@ docker run -p 8080:8080 --network="pharmalink" --rm pharmalink/app
 
 -----
 
-### \<caption\> 🖥️ 8. API-Endpunkte \</caption\>
+### 🖥️ 8. API-Endpunkte (unserer Anwendung)
 
 Wenn die SpringBoot-Anwendung läuft, stellt sie die folgenden REST-Endpunkte zur Verfügung:
 
