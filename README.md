@@ -1,7 +1,6 @@
 # Pharmalink
-
-[](https://github.com/NiklasJavier/pharmalink/releases/latest)
-[](https://github.com/NiklasJavier/pharmalink/pkgs/container/pharmalink)
+[![Latest Release](https://img.shields.io/github/v/release/NiklasJavier/pharmalink?logo=github)](https://github.com/NiklasJavier/pharmalink/releases/latest)
+[![Docker Image](https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker)](https://github.com/NiklasJavier/pharmalink/pkgs/container/pharmalink)
 
 > Dieses Repository enthält die Anwendung und die zugehörigen Smart Contracts für die Pharmalink-Plattform, eine auf Hyperledger Fabric basierende Lösung zur Nachverfolgung von Lieferketten in der Pharmaindustrie.
 
