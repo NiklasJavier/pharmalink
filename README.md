@@ -142,16 +142,23 @@ Nachdem das Netzwerk läuft und die Umgebungsvariablen gesetzt sind, können Sie
 
 Eine detaillierte Beschreibung aller verfügbaren Chaincode-Funktionen und deren Parameter finden Sie in der [`README` des Chaincode-Verzeichnisses](./chaincode/README.md).
 
-**Beispiel: `initCall` als Hersteller ausführen**
+**Beispiel: `initCall` + `approveMedication` als Behörde ausführen**
 
 Mit dem folgenden Befehl wird die `initCall`-Funktion auf dem Chaincode aufgerufen. Zuerst wird das passende Rollen-Skript geladen, um die Identität zu setzen.
 
 ```bash
-source scripts/roles/fabric_role_hersteller.sh && \
+source scripts/roles/fabric_role_behoerde.sh && \
 peer chaincode invoke -o $ORDERER_ADDRESS --tls --cafile $ORDERER_CA -C $CHANNEL_NAME -n $CHAINCODE \
 --peerAddresses $PEER0_ORG1_ADDRESS --tlsRootCertFiles $PEER0_ORG1_CA \
 --peerAddresses $PEER0_ORG2_ADDRESS --tlsRootCertFiles $PEER0_ORG2_CA \
 -c '{"function":"initCall","Args":["max.mustermann@example.com","QmWgX..."]}'
+```
+```bash
+source scripts/roles/fabric_role_behoerde.sh && \
+peer chaincode invoke -o $ORDERER_ADDRESS --tls --cafile $ORDERER_CA -C $CHANNEL_NAME -n $CHAINCODE \
+--peerAddresses $PEER0_ORG1_ADDRESS --tlsRootCertFiles $PEER0_ORG1_CA \
+--peerAddresses $PEER0_ORG2_ADDRESS --tlsRootCertFiles $PEER0_ORG2_CA \
+-c '{"function":"approveMedication","Args":["<MEDIKAMENTEN_ID>"]}'
 ```
 
 -----
