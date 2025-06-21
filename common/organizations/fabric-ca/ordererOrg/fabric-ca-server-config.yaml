@@ -352,8 +352,8 @@ bccsp:
 # Beispiele:
 # fabric-ca-server start -b admin:adminpw --cacount 2
 #
-# fabric-ca-server start -b admin:adminpw --cafiles ca/ca1/fabric-ca-server-application.yaml
-# --cafiles ca/ca2/fabric-ca-server-application.yaml
+# fabric-ca-server start -b admin:adminpw --cafiles ca/ca1/fabric-ca-server-application.yaml.template
+# --cafiles ca/ca2/fabric-ca-server-application.yaml.template
 #
 #############################################################################
 

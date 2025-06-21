@@ -10,13 +10,30 @@ services:
       - "8080:8080"
     volumes:
       - ../fabric-samples/test-network/organizations:/fabric-crypto/organizations:ro
-      - ./pharmalink/application.yaml:/etc/pharmalink/application.yaml:ro
+      - ./pharmalink/application.yaml.template:/etc/pharmalink/application.yaml.template:ro
     networks:
       - pharmalink-net
     restart: unless-stopped
     depends_on:
       - postgres
       - ipfs
+
+  ipfs:
+    image: ipfs/go-ipfs:latest
+    container_name: app-ipfs_node
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: always
+    volumes:
+      - ./pharmalink/ipfs/ipfs_data:/data/ipfs
+      - ./pharmalink/ipfs/staging:/export
+    ports:
+      - "4001:4001/tcp"
+      - "4001:4001/udp"
+      - "5001:5001"
+      - "8081:8080"
+    networks:
+      - pharmalink-net
 
   postgres:
     image: postgres:17.5-alpine
