@@ -85,7 +85,7 @@ bash ./scripts/fabric_setup_cli.sh
 
 Damit Sie die `peer`-Befehle direkt ausführen können, müssen die passenden Umgebungsvariablen für Ihre Rolle im Netzwerk gesetzt werden. Die Skripte dafür liegen unter [`scripts/roles/`](./scripts/roles/).
 
-Um beispielsweise als **Hersteller** zu agieren, führen Sie folgenden Befehl aus:
+Um beispielsweise als **Admin** zu agieren, führen Sie folgenden Befehl aus:
 
 ```bash
 source ./scripts/fabric_setEnv.sh
