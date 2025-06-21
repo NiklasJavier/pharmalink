@@ -46,10 +46,10 @@ sdk install java 11.0.27-tem
 sdk default java 11.0.27-tem
 
 # Java 17 für die SpringBoot-Applikation installieren
-sdk install java 17.0.15-tem
+sdk install java 21.0.7-tem
 ```
 
-> 💡 **Hinweis:** Der Chaincode muss mit Java 11 gebaut werden, während die Applikation Java 17 benötigt. Wechseln Sie bei Bedarf die Version mit `sdk use java ...`.
+> 💡 **Hinweis:** Der Chaincode muss mit Java 11 gebaut werden, während die Applikation Java 21 benötigt. Wechseln Sie bei Bedarf die Version mit `sdk use java ...`.
 
 -----
 

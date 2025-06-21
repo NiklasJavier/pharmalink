@@ -1,5 +1,4 @@
-# Stage 1: Build the application
-FROM gradle:8.5.0-jdk17 AS build
+FROM gradle:8.8-jdk21 AS build
 
 WORKDIR /home/gradle/src
 
@@ -7,7 +6,7 @@ COPY . .
 
 RUN chmod +x ./gradlew && ./gradlew build --no-daemon
 
-FROM eclipse-temurin:17-jre-jammy
+FROM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app
 
