@@ -92,7 +92,7 @@ Laden Sie die Kommandozeilen-Tools für Hyperledger Fabric herunter.
 
 #### c) Umgebungsvariablen für die CLI setzen
 
-Damit Sie die `peer`-Befehle direkt ausführen können, müssen die passenden Umgebungsvariablen für Ihre Rolle im Netzwerk gesetzt werden. Die Skripte dafür liegen unter [`scripts/roles/`](https://www.google.com/search?q=scripts/roles/).
+Damit Sie die `peer`-Befehle direkt ausführen können, müssen die passenden Umgebungsvariablen für Ihre Rolle im Netzwerk gesetzt werden. Die Skripte dafür liegen unter [`scripts/roles/`](./scripts/roles/).
 
 Um beispielsweise als **Hersteller** zu agieren, führen Sie folgenden Befehl aus:
 
