@@ -7,8 +7,32 @@ services:
       dockerfile: Dockerfile
     container_name: pharmalink
     ports:
+      # API-Zugang für Ihren Rechner (Host)
       - "8080:8080"
     volumes:
       - ../fabric-samples/test-network/organizations:/fabric-crypto/organizations:ro
       - ./pharmalink/config.yaml:/etc/pharmalink/config.yaml:ro
+    networks:
+      - pharmalink-net
     restart: unless-stopped
+
+  ipfs:
+    image: ipfs/go-ipfs:latest
+    container_name: ipfs_node
+    restart: always
+    volumes:
+      - ./pharmalink/ipfs/ipfs_data:/data/ipfs
+      - ./pharmalink/ipfs/staging:/export
+    ports:
+      # Swarm-Port für die Kommunikation mit anderen IPFS-Peers im Internet
+      - "4001:4001/tcp"
+      - "4001:4001/udp"
+      - "127.0.0.1:5001:5001"
+      # Gateway-Server auf einem anderen Host-Port (8081), um Konflikt mit pharmalink-app zu vermeiden
+      - "127.0.0.1:8081:8080"
+    networks:
+      - pharmalink-net
+
+networks:
+  pharmalink-net:
+    driver: bridge

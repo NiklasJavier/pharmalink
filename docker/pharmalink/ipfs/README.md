@@ -1,0 +1,2 @@
+      - ./pharmalink/ipfs/ipfs_data:/data/ipfs
+      - ./pharmalink/ipfs/staging:/export
