@@ -32,7 +32,7 @@ public class IpfsConfig {
     public IPFS ipfs() {
         try {
             // Verwenden Sie /dns4/ für Hostnamen anstelle von /ip4/
-            String multiAddr = String.format("/dns4/%s/tcp/%d", ipfsHost, ipfsPort);
+            String multiAddr = String.format("/ip4/%s/tcp/%d", ipfsHost, ipfsPort);
             IPFS ipfsInstance = new IPFS(new MultiAddress(multiAddr));
             ipfsInstance.id(); // Test connection
             logger.info("IPFS Bean successfully initialized and connected to {}:{}", ipfsHost, ipfsPort);
