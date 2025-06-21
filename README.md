@@ -105,7 +105,7 @@ bash ./scripts/fabric_setup_test_consortium.sh
 Startet die SpringBoot-Backend-Anwendung, die die REST-API bereitstellt.
 
 ```bash
-./scripts/pharmalink_setup.sh up
+bash ./scripts/pharmalink_setup.sh up
 ```
 
 > 📲 Die API ist nach dem Start unter **`http://localhost:8080`** erreichbar.
