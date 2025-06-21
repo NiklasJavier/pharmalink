@@ -3,7 +3,7 @@ version: '3.7'
 services:
   pharmalink-app:
     image: ghcr.io/niklasjavier/pharmalink:latest
-    container_name: pharmalink
+    container_name: app-pharmalink
     ports:
       # API-Zugang für Ihren Rechner (Host)
       - "8080:8080"
@@ -18,7 +18,7 @@ services:
 
   ipfs:
     image: ipfs/go-ipfs:latest
-    container_name: ipfs_node
+    container_name: app-ipfs_node
     restart: always
     volumes:
       - ./pharmalink/ipfs/ipfs_data:/data/ipfs
@@ -34,7 +34,7 @@ services:
 
   postgres:
     image: postgres:17.5-alpine
-    container_name: postgres
+    container_name: app-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: user
