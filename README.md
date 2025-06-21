@@ -17,9 +17,9 @@ Dieses Repository enthält die Anwendung und die zugehörigen Smart Contracts f�
 
 Die Plattform besteht aus drei Hauptkomponenten:
 
-* **SpringBoot Applikation (`/src`):** Ein Java-basiertes Backend, das eine REST-API bereitstellt. Es dient als Schnittstelle für Benutzer und externe Systeme und kommuniziert per gRPC mit dem Hyperledger Fabric Netzwerk.
-* **Chaincode (`/chaincode/pharmalink_chaincode_main`):** Der Smart Contract, geschrieben in Java, der die gesamte Geschäftslogik enthält. Er definiert die Datenstrukturen (Assets) und die Regeln für deren Erstellung und Veränderung auf der Blockchain.
-* **Hyperledger Fabric Test-Netzwerk (`/docker`, `/scripts`):** Eine Sammlung von Docker-Containern und Skripten, um eine lokale Blockchain-Umgebung mit mehreren Organisationen, Peers und einem Orderer zu starten und zu verwalten.
+* **SpringBoot Applikation (`./src`):** Ein Java-basiertes Backend, das eine REST-API bereitstellt. Es dient als Schnittstelle für Benutzer und externe Systeme und kommuniziert per gRPC mit dem Hyperledger Fabric Netzwerk.
+* **Chaincode (`./chaincode/pharmalink_chaincode_main`):** Der Smart Contract, geschrieben in Java, der die gesamte Geschäftslogik enthält. Er definiert die Datenstrukturen (Assets) und die Regeln für deren Erstellung und Veränderung auf der Blockchain.
+* **Hyperledger Fabric Test-Netzwerk (`./docker`, `./scripts`):** Eine Sammlung von Docker-Containern und Skripten, um eine lokale Blockchain-Umgebung mit mehreren Organisationen, Peers und einem Orderer zu starten und zu verwalten.
 
 -----
 
@@ -125,7 +125,7 @@ Starten Sie den Explorer, um eine Weboberfläche zur Visualisierung des Netzwerk
 Das Test-Netzwerk simuliert eine Lieferkette mit den folgenden vordefinierten Rollen und Organisationen:
 
 | Akteur / Rolle | CLI-Skript |
-| :--- | :--- | :--- |
+| :--- | :--- |
 | **Hersteller** | `fabric_role_hersteller.sh` |
 | **Großhändler** | `fabric_role_grosshaendler.sh` |
 | **Apotheke** | `fabric_role_apotheke.sh` |
@@ -139,7 +139,7 @@ Sie können die Identität in Ihrer Kommandozeile jederzeit wechseln, indem Sie 
 
 Nachdem das Netzwerk läuft und die Umgebungsvariablen gesetzt sind, können Sie mit dem `peer`-CLI direkt mit dem Smart Contract interagieren.
 
-Eine detaillierte Beschreibung aller verfügbaren Chaincode-Funktionen und deren Parameter finden Sie in der [`README` des Chaincode-Verzeichnisses](https://www.google.com/search?q=./chaincode/pharmalink_chaincode_main/README.md).
+Eine detaillierte Beschreibung aller verfügbaren Chaincode-Funktionen und deren Parameter finden Sie in der [`README` des Chaincode-Verzeichnisses](./chaincode/README.md).
 
 **Beispiel: `initCall` als Hersteller ausführen**
 
