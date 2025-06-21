@@ -28,6 +28,7 @@ dependencies {
 	implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
 	implementation 'com.fasterxml.jackson.core:jackson-core:2.17.0'
 	implementation 'com.fasterxml.jackson.core:jackson-annotations:2.17.0'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	implementation 'jakarta.annotation:jakarta.annotation-api:2.1.1'
 	compileOnly 'org.projectlombok:lombok:1.18.38'
