@@ -13,12 +13,6 @@ services:
     networks:
       - pharmalink-net
     restart: unless-stopped
-    # NEU: Umgebungsvariablen für die Datenbankverbindung
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/pharmalinkdb
-      - SPRING_DATASOURCE_USERNAME=user
-      - SPRING_DATASOURCE_PASSWORD=user
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
     depends_on:
       - postgres
 
