@@ -1,5 +1,3 @@
-version: '3.7'
-
 services:
   ipfs:
     image: ipfs/go-ipfs:latest
@@ -35,5 +33,5 @@ volumes:
   dev_ipfs_data:
 
 networks:
-  pharmalink-net:
+  dev-net:
     driver: bridge
