@@ -5,7 +5,6 @@ services:
     image: ghcr.io/niklasjavier/pharmalink:latest
     container_name: app-pharmalink
     ports:
-      # API-Zugang für Ihren Rechner (Host)
       - "8080:8080"
     volumes:
       - ../fabric-samples/test-network/organizations:/fabric-crypto/organizations:ro
@@ -24,7 +23,6 @@ services:
       - ./pharmalink/ipfs/ipfs_data:/data/ipfs
       - ./pharmalink/ipfs/staging:/export
     ports:
-      # Swarm-Port für die Kommunikation mit anderen IPFS-Peers im Internet
       - "4001:4001/tcp"
       - "4001:4001/udp"
       - "127.0.0.1:5001:5001"
