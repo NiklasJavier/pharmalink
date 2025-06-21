@@ -2,9 +2,7 @@ version: '3.7'
 
 services:
   pharmalink-app:
-    build:
-      context: ../.
-      dockerfile: Dockerfile
+    image: ghcr.io/niklasjavier/pharmalink:v0.0.36
     container_name: pharmalink
     ports:
       # API-Zugang für Ihren Rechner (Host)
