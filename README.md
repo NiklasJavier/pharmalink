@@ -50,7 +50,7 @@ sdk default java 11.0.27-tem
 sdk install java 17.0.15-tem
 ```
 
-> 💡 **Hinweis:** Der Chaincode muss mit Java 11 gebaut werden, während die Applikation Java 21 benötigt. Wechseln Sie bei Bedarf die Version mit `sdk use java ...`.
+> 💡 **Hinweis:** Der Chaincode muss mit Java 11 gebaut werden, während die Applikation Java 17 benötigt. Wechseln Sie bei Bedarf die Version mit `sdk use java ...`.
 
 -----
 
