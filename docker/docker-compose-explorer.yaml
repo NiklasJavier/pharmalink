@@ -1,17 +1,13 @@
 version: '3.7'
-# Definiert benannte Volumes für Persistenz
 volumes:
   pgdata: {}
   walletstore: {}
 
-# Definiert Netzwerke
 networks:
   fabric_test:
     external: true
 
-# Definiert Dienste
 services:
-  # PostgreSQL-Datenbank für Fabric Explorer
   explorerdb:
     image: ghcr.io/hyperledger-labs/explorer-db:latest
     container_name: explorerdb
@@ -29,8 +25,7 @@ services:
       - pgdata:/var/lib/postgresql/data
     networks:
       - fabric_test
-
-  # Fabric Explorer
+      -
   explorer:
     image: ghcr.io/hyperledger-labs/explorer:latest
     container_name: explorer
