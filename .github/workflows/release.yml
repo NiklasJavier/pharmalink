@@ -36,20 +36,35 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for Docker
-        id: meta
+      - name: Extract metadata for Main App Docker
+        id: meta-app
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
 
-      - name: Build and push Docker image
+      - name: Build and push Main App Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-app.outputs.tags }}
+          labels: ${{ steps.meta-app.outputs.labels }}
+
+      - name: Extract metadata for Explorer Docker
+        id: meta-explorer
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}-explorer
+
+      - name: Build and push Explorer Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend # Annahme: Dockerfile liegt in /frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ steps.meta-explorer.outputs.tags }}
+          labels: ${{ steps.meta-explorer.outputs.labels }}
 
       - name: Set up JDK 11 for Chaincode Build
         uses: actions/setup-java@v4
@@ -113,8 +128,9 @@ jobs:
           generate_release_notes: true
           name: Release ${{ github.ref_name }}
           body: |
-            Das Docker-Image wurde erfolgreich in die GitHub Container Registry (GHCR) gepusht.
-            - **Image-Tags:** `${{ steps.meta.outputs.tags }}`
+            Die Docker-Images wurden erfolgreich in die GitHub Container Registry (GHCR) gepusht.
+            - **App Image-Tags:** `${{ steps.meta-app.outputs.tags }}`
+            - **Explorer Image-Tags:** `${{ steps.meta-explorer.outputs.tags }}`
             - **Image-Details ansehen:** [GHCR-Pakete](https://github.com/${{ github.repository }}/packages)
             
             Zusätzlich ist die `pharmalink-${{ github.ref_name }}.zip` Datei als Asset direkt an dieses Release angehängt.
