@@ -1,0 +1,36 @@
+# PharmaLink Application Configuration
+
+app:
+  name: "PharmaLink Explorer"
+  version: "v1.2.3"
+  description: "Digitale Informationen für die pharmazeutische Lieferkette"
+  environment: "production" # development | production | staging
+
+api:
+  documentation_url: "https://localost/docs"
+  backend_version_url: "https://api.ihredomäne.com/version"
+  base_url: "https://localost/v1"
+  search_url: "https://localost/v1/search"
+  history_url: "https://localost/v1/history"
+
+data:
+  source: "api" # auto | local | api
+  timeout: 10000
+  retry_attempts: 3
+  cache_duration: 300000
+
+ui:
+  theme:
+    primary_color: "emerald"
+    header_height: "20" #
+    mobile_header_height: "16"
+
+features:
+  qr_scanner: false
+  search_history: false
+  offline_mode: false
+
+links:
+  support_url: "https://pharmalink.com/support"
+  privacy_url: "https://pharmalink.com/privacy"
+  terms_url: "https://pharmalink.com/terms"

@@ -13,18 +13,17 @@ public final class Actor {
     private String actorId;
 
     @Property()
-    private String role; // hersteller, grosshaendler, apotheke, behoerde
+    private String role;
 
     @Property()
     private String email;
 
     @Property()
-    private String ipfsLink; // Optionaler IPFS Link für weitere Attribute
+    private String ipfsLink;
 
     @Property()
-    private String docType; // Hinzugefügt für CouchDB Abfragen zur Typisierung
+    private String docType;
 
-    // Leerer Konstruktor für Genson Deserialisierung
     public Actor() {
     }
 
@@ -36,7 +35,7 @@ public final class Actor {
         this.role = role;
         this.email = email;
         this.ipfsLink = ipfsLink;
-        this.docType = "actor"; // Jedem Akteur-Objekt wird der docType "actor" zugewiesen
+        this.docType = "actor";
     }
 
     public String getActorId() {

@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  pharmalink:
+    build:
+      context: ../../../../../Downloads/pharmalink-produktpass(2)
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+    volumes:
+      - ./pharmalink-explorer:/app/config:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/config"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

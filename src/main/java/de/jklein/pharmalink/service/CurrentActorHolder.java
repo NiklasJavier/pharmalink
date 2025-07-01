@@ -1,6 +1,6 @@
 package de.jklein.pharmalink.service;
 
-import de.jklein.pharmalink.client.fabric.dto.ActorDto;
+import de.jklein.pharmalink.domain.ActorDto;
 import org.springframework.stereotype.Component;
 
 /**

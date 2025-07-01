@@ -14,30 +14,29 @@ import java.util.TreeMap;
 public final class Unit {
 
     @Property()
-    private String unitId; // Eindeutige ID der Einheit (MedikamentID-Charge-Zähler)
+    private String unitId;
 
     @Property()
-    private String medId; // Referenz zur Medikamenten-ID
+    private String medId;
 
     @Property()
-    private String chargeBezeichnung; // Bezeichnung der Charge
+    private String chargeBezeichnung;
 
     @Property()
-    private String ipfsLink; // IPFS Link für die Einheit
+    private String ipfsLink;
 
     @Property()
-    private String currentOwnerActorId; // Aktueller Eigentümer der Einheit
+    private String currentOwnerActorId;
 
     @Property()
-    private List<Map<String, String>> temperatureReadings; // Liste von Temperaturmesswerten (Timestamp, Temperatur)
+    private List<Map<String, String>> temperatureReadings;
 
     @Property()
-    private List<Map<String, String>> transferHistory; // Liste zur Nachverfolgung von Besitzwechseln (from, to, timestamp)
+    private List<Map<String, String>> transferHistory;
 
     @Property()
-    private String docType; // Hinzugefügt für CouchDB Abfragen zur Typisierung
+    private String docType;
 
-    // Leerer Konstruktor für Genson Deserialisierung
     public Unit() {
         this.temperatureReadings = new ArrayList<>();
         this.transferHistory = new ArrayList<>();

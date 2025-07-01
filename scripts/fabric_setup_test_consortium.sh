@@ -22,9 +22,6 @@ echo "INFO: Alle Identitäten werden bei der zentralen CA unter $CA_SERVER_URL e
 echo -e "\n1. Einloggen als CA-Admin für Org1..."
 $FABRIC_CA_CLIENT_PATH enroll -u ${CA_SERVER_URL/https:\/\//https:\/\/admin:adminpw@} --tls.certfiles $CA_TLS_CERTFILE
 
-# HINWEIS: Pfad zum Zertifikat des Admins der Organisation.
-# Dieses Zertifikat wird benötigt, um die MSP-Struktur der neuen Benutzer zu vervollständigen.
-# Es verleiht den Benutzern selbst KEINE Admin-Rechte.
 ADMIN_CERT_PATH="$ORG_DIR/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/signcerts/cert.pem"
 
 if [ ! -f "$ADMIN_CERT_PATH" ]; then
@@ -68,11 +65,8 @@ for aff in "${AFFILIATIONS[@]}"; do
       --tls.certfiles $CA_TLS_CERTFILE
 
     echo "       -> Erstelle 'admincerts' Ordner und kopiere Admin-Zertifikat..."
-    # Erstellt das 'admincerts' Verzeichnis innerhalb des MSP-Ordners des neuen Benutzers.
     mkdir -p "$MSP_DIR/admincerts"
 
-    # Kopiert das öffentliche Zertifikat des Organisations-Admins in dieses Verzeichnis.
-    # Dies ist für die Validierung der MSP-Struktur erforderlich.
     cp "$ADMIN_CERT_PATH" "$MSP_DIR/admincerts/org1-admin-cert.pem"
 
   done

@@ -1,1 +1,0 @@
-Hier kommt meine v1 Endpoint Dokumentation zu diesem Backend hinein.

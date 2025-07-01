@@ -12,33 +12,32 @@ import java.util.TreeMap;
 public final class Medikament {
 
     @Property()
-    private String medId; // MED-SHA256(HerstellerID-Bezeichnung)
+    private String medId;
 
     @Property()
-    private String herstellerId; // ActorId des Herstellers, der das Medikament angelegt hat
+    private String herstellerId;
 
     @Property()
     private String bezeichnung;
 
     @Property()
-    private String infoblattHash; // Hash des Infoblatts (On-Chain)
+    private String infoblattHash;
 
     @Property()
-    private String ipfsLink; // Link zu weiteren Off-Chain-Informationen (Infoblatt auf IPFS)
+    private String ipfsLink;
 
     @Property()
-    private String status; // z.B. "angelegt", "freigegeben", "abgelehnt"
+    private String status;
 
     @Property()
-    private Map<String, String> tags; // Key: Rolle (hersteller, behoerde), Value: Tag-Bezeichnung
+    private Map<String, String> tags;
 
     @Property()
-    private String docType; // Für CouchDB-Abfragen
+    private String docType;
 
     @Property()
-    private String approvedById; // ActorId des Genehmigers (Behörde)
+    private String approvedById;
 
-    // Leerer Konstruktor für Genson Deserialisierung
     public Medikament() {
         this.status = "angelegt";
         this.tags = new TreeMap<>();
@@ -53,9 +52,9 @@ public final class Medikament {
         this.herstellerId = herstellerId;
         this.bezeichnung = bezeichnung;
         this.ipfsLink = ipfsLink;
-        this.status = "angelegt"; // Initialer Status
-        this.tags = new TreeMap<>(); // Initialisiere leere Map für Tags
-        this.docType = "medikament"; // Festgelegter docType
+        this.status = "angelegt";
+        this.tags = new TreeMap<>();
+        this.docType = "medikament";
     }
 
     public String getMedId() {

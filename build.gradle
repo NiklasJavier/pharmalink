@@ -19,7 +19,7 @@ repositories {
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter:3.5.0'
+	implementation 'org.springframework.boot:spring-boot-starter-web:3.5.0'
 	implementation 'org.hyperledger.fabric:fabric-gateway:1.7.0'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9'
 	implementation platform('com.google.protobuf:protobuf-bom:4.28.2')
