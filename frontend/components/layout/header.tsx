@@ -145,82 +145,72 @@ export function Header({
   const displayId = correctedId || productId
   const productInfo = displayId ? getProductInfo(displayId) : null
 
+  // Nur EINE Navbar rendern
   return (
-    <>
-      {/* Sticky Navigation Header mit verstärktem Glasmorphismus - kompakter */}
-      {showTabs && activeTab && onTabChange ? (
-        <div className="sticky top-0 z-30 py-2 bg-gray-50/30 backdrop-blur-xl border-b border-white/20">
-          {/* Zusätzlicher Blur-Overlay für bessere Trennung */}
-          <div className="absolute inset-0 bg-gradient-to-b from-gray-50/60 via-gray-50/40 to-gray-50/20 backdrop-blur-2xl"></div>
+    <div className="sticky top-0 z-30 py-2 bg-gray-50/30 backdrop-blur-xl border-b border-white/20">
+      {/* Zusätzlicher Blur-Overlay für bessere Trennung */}
+      <div className="absolute inset-0 bg-gradient-to-b from-gray-50/60 via-gray-50/40 to-gray-50/20 backdrop-blur-2xl"></div>
 
-          <div className="relative w-full max-w-7xl mx-auto px-4 md:px-8">
-            <div className="flex items-center justify-between">
-              {/* Left side - Product Information mit verstärktem Glaseffekt - kompakter */}
-              {productInfo && (
-                <div className="flex items-center gap-2 bg-white/80 backdrop-blur-xl border border-white/40 rounded-lg shadow-2xl px-3 py-2 ring-1 ring-black/5">
-                  {/* Innerer Glanz-Effekt */}
-                  <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-white/30 via-transparent to-transparent pointer-events-none"></div>
+      <div className="relative w-full max-w-7xl mx-auto px-4 md:px-8">
+        <div className="flex items-center justify-between">
+          {/* Left side - Product Information (nur wenn showTabs) */}
+          {showTabs && productInfo && (
+            <div className="flex items-center gap-2 bg-white/80 backdrop-blur-xl border border-white/40 rounded-lg shadow-2xl px-3 py-2 ring-1 ring-black/5">
+              {/* Innerer Glanz-Effekt */}
+              <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-white/30 via-transparent to-transparent pointer-events-none"></div>
 
-                  <div className="relative flex items-center gap-2">
-                    <div className="flex-shrink-0">{productInfo.icon}</div>
-                    <h1 className="text-sm font-bold text-black drop-shadow-sm">{productInfo.title}</h1>
-                    <Button
-                      onClick={copyToClipboard}
-                      variant="ghost"
-                      size="sm"
-                      className="h-auto p-0.5 hover:bg-white/60 rounded-md transition-all duration-200 group backdrop-blur-sm"
-                      title="Vollständige URL mit allen Parametern kopieren"
-                    >
-                      <span className="font-mono text-gray-800 group-hover:text-emerald-600 transition-colors text-xs font-semibold drop-shadow-sm">
-                        {displayId}
-                      </span>
-                      <div className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        {copied ? (
-                          <Check className="h-3 w-3 text-emerald-600 drop-shadow-sm" />
-                        ) : (
-                          <Copy className="h-3 w-3 text-gray-500" />
-                        )}
-                      </div>
-                    </Button>
-
-                    {/* Zeige ursprüngliche ID falls korrigiert - in derselben Zeile */}
-                    {originalId && originalId !== displayId && (
-                      <div className="text-xs text-gray-600">
-                        (urspr.: <code className="bg-white/60 px-1 rounded backdrop-blur-sm text-xs">{originalId}</code>
-                        )
-                      </div>
-                    )}
-
-                    {/* Kopiert-Bestätigung - in derselben Zeile */}
-                    {copied && (
-                      <div className="text-xs text-emerald-600 font-medium animate-in fade-in duration-200 drop-shadow-sm">
-                        ✓ Kopiert!
-                      </div>
+              <div className="relative flex items-center gap-2">
+                <div className="flex-shrink-0">{productInfo.icon}</div>
+                <h1 className="text-sm font-bold text-black drop-shadow-sm">{productInfo.title}</h1>
+                <Button
+                  onClick={copyToClipboard}
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto p-0.5 hover:bg-white/60 rounded-md transition-all duration-200 group backdrop-blur-sm"
+                  title="Vollständige URL mit allen Parametern kopieren"
+                >
+                  <span className="font-mono text-gray-800 group-hover:text-emerald-600 transition-colors text-xs font-semibold drop-shadow-sm">
+                    {displayId}
+                  </span>
+                  <div className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    {copied ? (
+                      <Check className="h-3 w-3 text-emerald-600 drop-shadow-sm" />
+                    ) : (
+                      <Copy className="h-3 w-3 text-gray-500" />
                     )}
                   </div>
-                </div>
-              )}
+                </Button>
 
-              {/* Right side - Passport Tabs mit verstärktem Glaseffekt */}
-              <div className="relative">
-                <PassportTabs
-                  activeTab={activeTab}
-                  onTabChange={onTabChange}
-                  compact={true}
-                  onSearch={onSearch || handleSearch}
-                  linkedIds={linkedIds}
-                />
+                {/* Zeige ursprüngliche ID falls korrigiert - in derselben Zeile */}
+                {originalId && originalId !== displayId && (
+                  <div className="text-xs text-gray-600">
+                    (urspr.: <code className="bg-white/60 px-1 rounded backdrop-blur-sm text-xs">{originalId}</code>)
+                  </div>
+                )}
+
+                {/* Kopiert-Bestätigung - in derselben Zeile */}
+                {copied && (
+                  <div className="text-xs text-emerald-600 font-medium animate-in fade-in duration-200 drop-shadow-sm">
+                    ✓ Kopiert!
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        </div>
-      ) : (
-        /* Fallback Search Bar für Seiten ohne Tabs mit Glaseffekt - kompakter */
-        <div className="sticky top-0 z-30 bg-gray-50/30 backdrop-blur-xl border-b border-white/20 py-2">
-          {/* Zusätzlicher Blur-Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-gray-50/60 via-gray-50/40 to-gray-50/20 backdrop-blur-2xl"></div>
+          )}
 
-          <div className="relative flex justify-end px-4 md:px-6 lg:px-8">
+          {/* Right side - Passport Tabs ODER Search Bar */}
+          {showTabs && activeTab && onTabChange ? (
+            <div className="relative">
+              <PassportTabs
+                activeTab={activeTab}
+                onTabChange={onTabChange}
+                compact={true}
+                onSearch={onSearch || handleSearch}
+                linkedIds={linkedIds}
+              />
+            </div>
+          ) : (
+            /* Search Bar für Seiten ohne Tabs */
             <form
               onSubmit={handleFormSearch}
               className="flex w-full max-w-sm md:max-w-lg items-center rounded-lg border border-white/40 bg-white/80 backdrop-blur-xl shadow-2xl focus-within:ring-2 focus-within:ring-emerald-400/50 transition-all duration-300 ring-1 ring-black/5"
@@ -268,9 +258,9 @@ export function Header({
                 </div>
               </div>
             </form>
-          </div>
+          )}
         </div>
-      )}
-    </>
+      </div>
+    </div>
   )
 }
