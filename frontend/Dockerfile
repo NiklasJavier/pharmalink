@@ -17,13 +17,18 @@ RUN \
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY ../../../../../Downloads/pharmalink-produktpass .
+COPY . .
 
-RUN mkdir -p config
-COPY config/app.yaml ./config/
+RUN mkdir -p config && \
+    if [ -f config/app.yaml ]; then \
+      echo "Config file found: config/app.yaml"; \
+    else \
+      echo "No config file found, application will use defaults"; \
+    fi
 
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_TELEMETRY_DISABLED=1
 
+# Build the application
 RUN \
   if [ -f yarn.lock ]; then yarn build; \
   elif [ -f package-lock.json ]; then npm run build; \
@@ -34,11 +39,13 @@ RUN \
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
+
+RUN apk add --no-cache wget
 
 COPY --from=builder /app/public ./public
 
@@ -54,8 +61,8 @@ USER nextjs
 
 EXPOSE 3000
 
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/config || exit 1
