@@ -21,7 +21,6 @@ class ComponentPreloader {
     this.isPreloading = true
 
     try {
-      // Verwende requestIdleCallback für Performance
       if ("requestIdleCallback" in window) {
         requestIdleCallback(() => this.processPreloadQueue(), { timeout: 5000 })
       } else {
