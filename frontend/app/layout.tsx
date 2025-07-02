@@ -1,5 +1,5 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { MobileLayoutProvider } from "@/components/layout/mobile-layout-provider"
@@ -14,29 +14,29 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "PharmaLink Explorer",
   description: "Digitale Informationen für die pharmazeutische Lieferkette",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-    viewportFit: "cover",
-  },
-  themeColor: "#10b981",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "PharmaLink",
   },
-    generator: 'v0.dev'
+}
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#10b981",
 }
 
 export default function RootLayout({
-  children,
-}: {
+                                     children,
+                                   }: {
   children: React.ReactNode
 }) {
   return (
-    <html lang="de" className="high-dpi-optimized">
+      <html lang="de" className="high-dpi-optimized">
       <head>
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
@@ -52,11 +52,11 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="//api.ihredomäne.com" />
       </head>
       <body className={`${inter.className} custom-scrollbar`}>
-        <MobileLayoutProvider>
-          {children}
-          {process.env.NODE_ENV === "development" && <PerformanceMonitor />}
-        </MobileLayoutProvider>
+      <MobileLayoutProvider>
+        {children}
+        {process.env.NODE_ENV === "development" && <PerformanceMonitor />}
+      </MobileLayoutProvider>
       </body>
-    </html>
+      </html>
   )
 }
