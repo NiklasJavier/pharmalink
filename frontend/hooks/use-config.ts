@@ -40,7 +40,7 @@ export function useConfig() {
             description: "Digitaler Produktpass für die pharmazeutische Lieferkette",
           },
           api: {
-            documentation_url: "/api-docs",
+            documentation_url: "/api/swagger",
             base_url: "/api/v1",
           },
           ui: {
@@ -56,7 +56,7 @@ export function useConfig() {
             offline_mode: false,
           },
           links: {
-            support_url: "https://vercel.com/help",
+            support_url: "https://google.com",
             privacy_url: "#",
             terms_url: "#",
           },

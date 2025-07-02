@@ -10,7 +10,7 @@ services:
       - "8080:8080"
     volumes:
       - ../fabric-samples/test-network/organizations:/fabric-crypto/organizations:ro
-      - ./pharmalink/application.yaml:/etc/pharmalink/application.yaml.template:ro
+      - ./pharmalink/application.yaml:/etc/pharmalink/application.yaml:ro
     networks:
       - pharmalink-net
     restart: unless-stopped

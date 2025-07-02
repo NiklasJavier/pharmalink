@@ -7,7 +7,7 @@ app:
   environment: "production" # development | production | staging
 
 api:
-  documentation_url: "https://api.ihredomäne.com/docs"
+  documentation_url: "https://localhost/api/swagger"
   backend_version_url: "https://api.ihredomäne.com/version"
   base_url: "https://api.ihredomäne.com/v1"
   # Einheitliche Search-URL für alle Abfragen
