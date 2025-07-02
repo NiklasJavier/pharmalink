@@ -63,62 +63,62 @@ export function PageHeader({ id, originalId, children }: PageHeaderProps) {
   const headerInfo = getHeaderInfo(id)
 
   return (
-    <div className="mb-4 md:mb-6">
-      {/* Header Card - nur halbe Breite */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 md:p-6 max-w-2xl">
-        <div className="flex items-start justify-between gap-2 md:gap-4">
-          {/* Left side - Title and ID */}
-          <div className="flex items-center gap-2 md:gap-3">
-            <div className="flex-shrink-0">{headerInfo.icon}</div>
-            <div className="flex-1">
-              <Link href="/" className="group">
-                <h1
-                  className={`text-lg md:text-xl font-bold ${headerInfo.textColor} mb-1 group-hover:text-emerald-600 transition-colors cursor-pointer`}
-                >
-                  {headerInfo.title}
-                </h1>
-              </Link>
-              <div className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-600">
-                <span className="font-medium">{headerInfo.subtitle}</span>
-                <Button
-                  onClick={copyToClipboard}
-                  variant="ghost"
-                  size="sm"
-                  className="h-auto p-1 hover:bg-gray-100 rounded-md transition-all duration-200 group"
-                  title="Vollständige URL mit allen Parametern kopieren"
-                >
+      <div className="mb-4 md:mb-6">
+        {/* Header Card - nur halbe Breite */}
+        <div className="bg-white border border-gray-200 rounded-lg p-4 md:p-6 max-w-2xl">
+          <div className="flex items-start justify-between gap-2 md:gap-4">
+            {/* Left side - Title and ID */}
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="flex-shrink-0">{headerInfo.icon}</div>
+              <div className="flex-1">
+                <Link href="/" className="group">
+                  <h1
+                      className={`text-lg md:text-xl font-bold ${headerInfo.textColor} mb-1 group-hover:text-emerald-600 transition-colors cursor-pointer`}
+                  >
+                    {headerInfo.title}
+                  </h1>
+                </Link>
+                <div className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-600">
+                  <span className="font-medium">{headerInfo.subtitle}</span>
+                  <Button
+                      onClick={copyToClipboard}
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto p-1 hover:bg-gray-100 rounded-md transition-all duration-200 group"
+                      title="Vollständige URL mit allen Parametern kopieren"
+                  >
                   <span className="font-mono text-gray-800 group-hover:text-emerald-600 transition-colors text-xs md:text-sm">
                     {id}
                   </span>
-                  <div className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    {copied ? (
-                      <Check className="h-3 w-3 text-emerald-600" />
-                    ) : (
-                      <Copy className="h-3 w-3 text-gray-500" />
-                    )}
-                  </div>
-                </Button>
+                    <div className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      {copied ? (
+                          <Check className="h-3 w-3 text-emerald-600" />
+                      ) : (
+                          <Copy className="h-3 w-3 text-gray-500" />
+                      )}
+                    </div>
+                  </Button>
+                </div>
+
+                {/* Zeige ursprüngliche ID falls korrigiert */}
+                {originalId && originalId !== id && (
+                    <div className="mt-1 text-xs text-gray-500">
+                      Ursprünglich gesucht: <code className="bg-gray-100 px-1 rounded">{originalId}</code>
+                    </div>
+                )}
+
+                {copied && (
+                    <div className="mt-1 text-xs text-emerald-600 font-medium animate-in fade-in duration-200">
+                      Vollständige URL kopiert! (inkl. Such- und Anzeigeoptionen)
+                    </div>
+                )}
               </div>
-
-              {/* Zeige ursprüngliche ID falls korrigiert */}
-              {originalId && originalId !== id && (
-                <div className="mt-1 text-xs text-gray-500">
-                  Ursprünglich gesucht: <code className="bg-gray-100 px-1 rounded">{originalId}</code>
-                </div>
-              )}
-
-              {copied && (
-                <div className="mt-1 text-xs text-emerald-600 font-medium animate-in fade-in duration-200">
-                  Vollständige URL kopiert! (inkl. Such- und Anzeigeoptionen)
-                </div>
-              )}
             </div>
-          </div>
 
-          {/* Right side - Operations */}
-          {children && <div className="flex-shrink-0">{children}</div>}
+            {/* Right side - Operations */}
+            {children && <div className="flex-shrink-0">{children}</div>}
+          </div>
         </div>
       </div>
-    </div>
   )
 }

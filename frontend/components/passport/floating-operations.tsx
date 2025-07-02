@@ -42,6 +42,7 @@ export function FloatingOperations({
   const [isMinimized, setIsMinimized] = useState(false) // Geändert von true zu false
   const [isAnimating, setIsAnimating] = useState(false)
   const [showContent, setShowContent] = useState(false)
+  const [hasAutoFocused, setHasAutoFocused] = useState(false) // Neuer State für Auto-Focus
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Entferne die automatische Desktop/Mobile-Unterscheidung
@@ -60,6 +61,20 @@ export function FloatingOperations({
       setShowContent(false)
     }
   }, [forceMinimized, isMinimized, isAnimating])
+
+  // Auto-Focus beim ersten Laden der Seite
+  useEffect(() => {
+    // Nur beim ersten Laden fokussieren, wenn Panel erweitert und Content sichtbar ist
+    if (!hasAutoFocused && showContent && !isMinimized && searchInputRef.current) {
+      // Kleine Verzögerung um sicherzustellen, dass das Element vollständig gerendert ist
+      const timeoutId = setTimeout(() => {
+        searchInputRef.current?.focus()
+        setHasAutoFocused(true)
+      }, 100)
+
+      return () => clearTimeout(timeoutId)
+    }
+  }, [showContent, isMinimized, hasAutoFocused])
 
   // Strg+F Handler
   useEffect(() => {
@@ -155,6 +170,10 @@ export function FloatingOperations({
       setTimeout(() => {
         setShowContent(true)
         setIsAnimating(false)
+        // Fokussiere das Suchfeld nach dem Erweitern
+        setTimeout(() => {
+          searchInputRef.current?.focus()
+        }, 100)
       }, 300)
     }
   }
