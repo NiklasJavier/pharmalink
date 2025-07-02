@@ -96,30 +96,29 @@ export function FloatingDeliveries({
   const totalDeliveries = deliveryChains.reduce((sum, chain) => sum + chain.totalDeliveries, 0)
   const totalChains = deliveryChains.length
 
-  // Dynamische Positionierung - reagiert auf Meldungen-Modal
+  // Ändere die getPositionStyle Funktion für Stapelung über Meldungen
   const getPositionStyle = () => {
-    const baseBottom = "1rem"
-
-    // Wenn Meldungen-Modal geöffnet ist, verschiebe nach rechts
+    // Wenn Meldungen-Modal erweitert ist, positioniere darüber
     if (meldungenModalExpanded) {
-      // Positioniere rechts neben dem erweiterten Meldungen-Modal
-      const baseLeft = "calc(1rem + 20rem + 0.5rem)" // Nach dem erweiterten Meldungen-Modal (20rem breit)
       return {
-        bottom: baseBottom,
-        left: baseLeft,
+        position: "fixed" as const,
+        bottom: "calc(5rem + 20rem + 0.5rem)", // Über dem erweiterten Meldungen-Modal
+        right: "1rem",
+        zIndex: 30,
       }
     } else {
-      // Standard-Position: Nach dem minimierten Meldungen-Button
-      const baseLeft = "calc(1rem + 3rem + 0.5rem)" // Nach dem Meldungen-Button (3rem breit)
       return {
-        bottom: baseBottom,
-        left: baseLeft,
+        position: "fixed" as const,
+        bottom: "calc(5rem + 3rem + 0.5rem)", // Über dem minimierten Meldungen-Button
+        right: "1rem",
+        zIndex: 30,
       }
     }
   }
 
-  // Zeige nur wenn Lieferketten vorhanden sind UND Meldungen-Modal nicht erweitert ist
-  if (totalChains === 0 || meldungenModalExpanded) return null
+  // Entferne die meldungenModalExpanded Bedingung aus der Sichtbarkeit
+  // Zeige nur wenn Lieferketten vorhanden sind
+  if (totalChains === 0) return null
 
   return (
     <>
@@ -128,8 +127,8 @@ export function FloatingDeliveries({
         <div className="fixed inset-0 z-25 bg-black/5 backdrop-blur-sm transition-all duration-300 animate-in fade-in" />
       )}
 
-      <div className="fixed z-30" style={getPositionStyle()}>
-        <div className="animate-in slide-in-from-left-4 duration-300">
+      <div style={getPositionStyle()}>
+        <div className="animate-in slide-in-from-right-4 duration-300">
           {isCollapsed ? (
             /* Collapsed State */
             <div className="bg-white/95 backdrop-blur-md border border-gray-200/80 rounded-xl shadow-2xl transition-all duration-300 hover:shadow-3xl w-12">

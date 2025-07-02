@@ -53,7 +53,7 @@ export function UrlParamsDisplay() {
   }
 
   return (
-    <Card className="mb-4 bg-white border-gray-200">
+    <Card className="mb-2 bg-white border-gray-200">
       <CardContent className="p-3">
         <div className="flex items-center gap-2 mb-2">
           <Link className="h-4 w-4 text-gray-700" />

@@ -125,6 +125,16 @@ export function FloatingPopups({ popups, onExpandChange }: FloatingPopupsProps) 
   const activeCount = activePopups.length
   const dismissedCount = dismissedPopups.length
 
+  // Ändere die getPositionStyle Funktion für bessere Stapelung
+  const getPositionStyle = () => {
+    return {
+      position: "fixed" as const,
+      bottom: "5rem", // Über dem JSON-Operations Panel (4rem Höhe + 1rem Abstand)
+      right: "1rem",
+      zIndex: 30,
+    }
+  }
+
   // Modal wird immer angezeigt, auch wenn keine Popups vorhanden sind
   return (
     <>
@@ -133,8 +143,8 @@ export function FloatingPopups({ popups, onExpandChange }: FloatingPopupsProps) 
         <div className="fixed inset-0 z-25 bg-black/5 backdrop-blur-sm transition-all duration-300 animate-in fade-in" />
       )}
 
-      <div className="fixed bottom-4 left-4 z-30">
-        <div className="animate-in slide-in-from-left-4 duration-300">
+      <div style={getPositionStyle()}>
+        <div className="animate-in slide-in-from-right-4 duration-300">
           {isCollapsed ? (
             /* Collapsed State - schmaler vertikaler Strip wie JSON-Operations */
             <div className="bg-white/95 backdrop-blur-md border border-gray-200/80 rounded-xl shadow-2xl transition-all duration-300 hover:shadow-3xl w-12">

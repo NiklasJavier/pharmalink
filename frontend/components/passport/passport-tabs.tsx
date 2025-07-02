@@ -23,17 +23,17 @@ const tabsConfig: Record<Tab, { label: string; icon: JSX.Element; description: s
   hersteller: {
     label: "Hersteller",
     icon: <Building className="h-3 w-3" />,
-    description: "Hersteller Informationen - Produktionsstandort, Herstellungsdatum und Chargenfreigabe",
+    description: "Produktionsstandort & Herstellungsdaten",
   },
   medikament: {
     label: "Medikament",
     icon: <Pill className="h-3 w-3" />,
-    description: "Medikamenten Informationen - Wirkstoffe, Darreichungsform und Verfallsdatum",
+    description: "Wirkstoffe & Darreichungsform",
   },
   einheit: {
     label: "Einheit",
     icon: <Box className="h-3 w-3" />,
-    description: "Unit Informationen - Lieferkette, Transportwege und Dokumentation",
+    description: "Lieferkette & Transportwege",
   },
 }
 
@@ -91,203 +91,171 @@ export function PassportTabs({ activeTab, onTabChange, compact = false, onSearch
   // Funktion zur intelligenten Tooltip-Positionierung
   const getTooltipPosition = (tabKey: Tab, tabIndex: number) => {
     if (tabKey === "einheit") {
-      return "absolute top-full right-0 mt-3 z-50"
+      // Für das letzte Element: immer nach links ausrichten um Abschneiden zu vermeiden
+      return "absolute top-full right-0 mt-2 z-50"
     } else if (tabKey === "hersteller") {
-      return "absolute top-full left-0 mt-3 z-50"
+      // Für das erste Element: nach links ausrichten
+      return "absolute top-full left-0 mt-2 z-50"
     } else {
-      return "absolute top-full left-1/2 transform -translate-x-1/2 mt-3 z-50"
+      // Für das mittlere Element: zentriert
+      return "absolute top-full left-1/2 transform -translate-x-1/2 mt-2 z-50"
     }
   }
 
   // Funktion für Bubble-Pfeil-Positionierung
   const getBubbleArrowPosition = (tabKey: Tab) => {
     if (tabKey === "einheit") {
+      // Pfeil weiter links positionieren da Tooltip rechts ausgerichtet ist
       return "absolute bottom-full right-6"
     } else if (tabKey === "hersteller") {
+      // Pfeil weiter rechts positionieren da Tooltip links ausgerichtet ist
       return "absolute bottom-full left-6"
     } else {
+      // Zentriert für mittleres Element
       return "absolute bottom-full left-1/2 transform -translate-x-1/2"
     }
   }
 
-  // Tooltip-Beschreibung
-  const getTooltipDescription = (tabKey: Tab) => {
-    const baseDescription = tabsConfig[tabKey].description
-    const isActive = activeTab === tabKey
-
-    if (isActive) {
-      return `${baseDescription} - Aktuell angezeigte Daten`
-    } else {
-      return baseDescription
-    }
-  }
-
   return (
-      <div className="relative">
-        {/* Nur die Tabs, keine Suchfunktion */}
-        <div className="flex items-center bg-white/80 backdrop-blur-xl border border-white/40 rounded-xl shadow-2xl transition-all duration-200 p-1 ring-1 ring-black/5">
-          {/* Innerer Glanz-Effekt */}
-          <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/30 via-transparent to-transparent pointer-events-none"></div>
+    <div className="relative">
+      {/* Nur die Tabs, keine Suchfunktion */}
+      <div className="flex items-center bg-white border border-gray-200 rounded-xl transition-all duration-200 p-1">
+        <div className="relative flex items-center gap-1">
+          {/* Passport Tabs */}
+          {tabOrder.map((key, index) => {
+            const isAvailable = isTabAvailable(key)
+            const isActive = activeTab === key
 
-          <div className="relative flex items-center gap-1">
-            {/* Passport Tabs */}
-            {tabOrder.map((key, index) => {
-              const isAvailable = isTabAvailable(key)
-              const isActive = activeTab === key
-
-              return (
-                  <React.Fragment key={key}>
-                    <div className="relative">
-                      <button
-                          onClick={() => handleTabClick(key)}
-                          onMouseEnter={() => setHoveredTab(key)}
-                          onMouseLeave={() => setHoveredTab(null)}
-                          className={cn(
-                              "relative flex items-center justify-center rounded-lg border transition-all duration-200 group w-8 h-8 backdrop-blur-sm",
-                              isActive
-                                  ? "bg-emerald-500 border-emerald-500 text-white shadow-lg hover:bg-emerald-600 cursor-default"
-                                  : isAvailable
-                                      ? "bg-white/60 border-gray-300/60 text-black cursor-pointer hover:bg-white/80 hover:border-gray-400/60"
-                                      : "bg-white/40 border-gray-300/40 text-gray-400 cursor-default",
-                          )}
-                          aria-current={isActive ? "page" : undefined}
-                          disabled={!isActive && !isAvailable}
-                          title={
-                            !isActive && !isAvailable
-                                ? "Nur zur Information - nicht für diese ID verfügbar"
-                                : isActive
-                                    ? "Aktuell angezeigte Daten"
-                                    : "Verfügbar"
-                          }
-                      >
-                        <div
-                            className={cn("transition-transform", isActive ? "" : isAvailable ? "group-hover:scale-110" : "")}
-                        >
-                          {tabsConfig[key].icon}
-                        </div>
-                      </button>
-
-                      {/* Tooltip */}
-                      {hoveredTab === key && (
-                          <div className={getTooltipPosition(key, index)}>
-                            <div className="relative">
-                              {/* Hauptblase */}
-                              <div
-                                  className={cn(
-                                      "text-black text-sm rounded-2xl px-6 py-4 shadow-2xl w-64 max-w-md relative ring-1 backdrop-blur-xl",
-                                      isActive
-                                          ? "bg-white/90 border-2 border-emerald-200/60 ring-emerald-100/40"
-                                          : isAvailable
-                                              ? "bg-white/90 border-2 border-gray-200/60 ring-gray-100/40"
-                                              : "bg-white/80 border-2 border-gray-200/60 ring-gray-100/40",
-                                  )}
-                              >
-                                <div
-                                    className={cn(
-                                        "font-bold mb-3 text-base",
-                                        isActive ? "text-emerald-700" : isAvailable ? "text-black" : "text-gray-600",
-                                    )}
-                                >
-                                  {tabsConfig[key].label}
-                                  {isActive && <span className="text-xs font-normal text-emerald-600 ml-2">(Aktiv)</span>}
-                                  {!isActive && !isAvailable && (
-                                      <span className="text-xs font-normal text-gray-500 ml-2">(Nur Info)</span>
-                                  )}
-                                  {isAvailable && !isActive && (
-                                      <span className="text-xs font-normal text-gray-500 ml-2">(Verfügbar)</span>
-                                  )}
-                                </div>
-                                <div
-                                    className={cn(
-                                        "text-sm leading-relaxed font-medium",
-                                        isActive ? "text-gray-700" : isAvailable ? "text-black" : "text-gray-500",
-                                    )}
-                                >
-                                  {getTooltipDescription(key)}
-                                </div>
-
-                                {/* Innerer Glanz-Effekt */}
-                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/40 via-transparent to-transparent pointer-events-none"></div>
-                              </div>
-
-                              {/* Bubble-Pfeil */}
-                              <div className={getBubbleArrowPosition(key)}>
-                                {/* Äußerer Schatten */}
-                                <div className="absolute -top-1 left-1/2 transform -translate-x-1/2">
-                                  <div className="w-0 h-0 border-l-[14px] border-r-[14px] border-b-[16px] border-l-transparent border-r-transparent border-b-gray-400/30 blur-sm"></div>
-                                </div>
-
-                                {/* Hauptpfeil */}
-                                <div className="relative">
-                                  <div
-                                      className={cn(
-                                          "w-0 h-0 border-l-[10px] border-r-[10px] border-b-[12px] border-l-transparent border-r-transparent",
-                                          isActive
-                                              ? "border-b-emerald-200/60"
-                                              : isAvailable
-                                                  ? "border-b-gray-200/60"
-                                                  : "border-b-gray-200/60",
-                                      )}
-                                  ></div>
-                                </div>
-
-                                {/* Innerer Pfeil */}
-                                <div className="absolute top-0.5 left-1/2 transform -translate-x-1/2">
-                                  <div
-                                      className={cn(
-                                          "w-0 h-0 border-l-[10px] border-r-[10px] border-b-[12px] border-l-transparent border-r-transparent",
-                                          isActive || isAvailable ? "border-b-white/95" : "border-b-white/85",
-                                      )}
-                                  ></div>
-                                </div>
-
-                                {/* Glanz-Highlight */}
-                                <div className="absolute top-1 left-1/2 transform -translate-x-1/2">
-                                  <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-l-transparent border-r-transparent border-b-white/70"></div>
-                                </div>
-                              </div>
-
-                              {/* Pulsierender Indikator für verfügbare Tabs */}
-                              {isAvailable && !isActive && (
-                                  <div
-                                      className={cn(
-                                          "absolute w-3 h-3 rounded-full animate-pulse",
-                                          key === "einheit"
-                                              ? "bottom-full right-6 mb-2"
-                                              : key === "hersteller"
-                                                  ? "bottom-full left-6 mb-2"
-                                                  : "bottom-full left-1/2 transform -translate-x-1/2 mb-2",
-                                          "bg-gray-400/60",
-                                      )}
-                                  >
-                                    <div className={cn("absolute inset-0 rounded-full animate-ping", "bg-gray-500/40")}></div>
-                                  </div>
-                              )}
-                            </div>
-                          </div>
-                      )}
-                    </div>
-
-                    {/* Arrow Separators */}
-                    {index < tabOrder.length - 1 && (
-                        <div className="flex items-center justify-center">
-                          <div
-                              className={cn(
-                                  "flex items-center justify-center rounded-full transition-all duration-200 w-5 h-5 backdrop-blur-sm",
-                                  index < activeIndex
-                                      ? "bg-emerald-100/80 text-emerald-600 shadow-sm"
-                                      : "bg-white/60 text-gray-400 border border-gray-300/50",
-                              )}
-                          >
-                            <ArrowLeft className="h-2.5 w-2.5" />
-                          </div>
-                        </div>
+            return (
+              <React.Fragment key={key}>
+                <div className="relative">
+                  <button
+                    onClick={() => handleTabClick(key)}
+                    onMouseEnter={() => setHoveredTab(key)}
+                    onMouseLeave={() => setHoveredTab(null)}
+                    className={cn(
+                      "relative flex items-center justify-center rounded-lg border transition-all duration-200 group w-8 h-8",
+                      isActive
+                        ? "bg-emerald-500 border-emerald-500 text-white hover:bg-emerald-600 cursor-default"
+                        : isAvailable
+                          ? "bg-white border-gray-300 text-black cursor-pointer hover:bg-gray-50 hover:border-gray-400"
+                          : "bg-white border-gray-300 text-gray-400 cursor-default",
                     )}
-                  </React.Fragment>
-              )
-            })}
-          </div>
+                    aria-current={isActive ? "page" : undefined}
+                    disabled={!isActive && !isAvailable}
+                    title={
+                      !isActive && !isAvailable
+                        ? "Nur zur Information - nicht für diese ID verfügbar"
+                        : isActive
+                          ? "Aktuell angezeigte Daten"
+                          : "Verfügbar"
+                    }
+                  >
+                    <div
+                      className={cn("transition-transform", isActive ? "" : isAvailable ? "group-hover:scale-110" : "")}
+                    >
+                      {tabsConfig[key].icon}
+                    </div>
+                  </button>
+
+                  {/* Kompakter Tooltip */}
+                  {hoveredTab === key && (
+                    <div className={getTooltipPosition(key, index)}>
+                      <div className="relative">
+                        {/* Kompakte Hauptblase */}
+                        <div
+                          className={cn(
+                            "text-gray-800 text-xs rounded-lg px-3 py-2 shadow-lg relative border bg-white",
+                            // Responsive Breite: kleiner auf mobilen Geräten
+                            "w-44 sm:w-48",
+                            isActive ? "border-emerald-300" : isAvailable ? "border-gray-300" : "border-gray-200",
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "font-semibold mb-1 text-xs",
+                              isActive ? "text-emerald-700" : isAvailable ? "text-gray-800" : "text-gray-600",
+                            )}
+                          >
+                            {tabsConfig[key].label}
+                            {isActive && <span className="text-xs font-normal text-emerald-600 ml-1">(Aktiv)</span>}
+                            {!isActive && !isAvailable && (
+                              <span className="text-xs font-normal text-gray-500 ml-1">(Info)</span>
+                            )}
+                          </div>
+                          <div
+                            className={cn(
+                              "text-xs leading-snug",
+                              isActive ? "text-gray-700" : isAvailable ? "text-gray-700" : "text-gray-500",
+                            )}
+                          >
+                            {tabsConfig[key].description}
+                          </div>
+                        </div>
+
+                        {/* Kompakter Bubble-Pfeil */}
+                        <div className={getBubbleArrowPosition(key)}>
+                          {/* Hauptpfeil */}
+                          <div className="relative">
+                            <div
+                              className={cn(
+                                "w-0 h-0 border-l-[8px] border-r-[8px] border-b-[8px] border-l-transparent border-r-transparent",
+                                isActive
+                                  ? "border-b-emerald-300"
+                                  : isAvailable
+                                    ? "border-b-gray-300"
+                                    : "border-b-gray-200",
+                              )}
+                            ></div>
+                          </div>
+
+                          {/* Innerer Pfeil */}
+                          <div className="absolute top-0.5 left-1/2 transform -translate-x-1/2">
+                            <div className="w-0 h-0 border-l-[7px] border-r-[7px] border-b-[7px] border-l-transparent border-r-transparent border-b-white"></div>
+                          </div>
+                        </div>
+
+                        {/* Kleiner Indikator für verfügbare Tabs */}
+                        {isAvailable && !isActive && (
+                          <div
+                            className={cn(
+                              "absolute w-2 h-2 rounded-full animate-pulse",
+                              key === "einheit"
+                                ? "bottom-full right-4 mb-1"
+                                : key === "hersteller"
+                                  ? "bottom-full left-4 mb-1"
+                                  : "bottom-full left-1/2 transform -translate-x-1/2 mb-1",
+                              "bg-emerald-400",
+                            )}
+                          >
+                            <div className="absolute inset-0 rounded-full animate-ping bg-emerald-500/40"></div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Arrow Separators */}
+                {index < tabOrder.length - 1 && (
+                  <div className="flex items-center justify-center">
+                    <div
+                      className={cn(
+                        "flex items-center justify-center rounded-full transition-all duration-200 w-5 h-5",
+                        index < activeIndex
+                          ? "bg-emerald-100 text-emerald-600"
+                          : "bg-white text-gray-400 border border-gray-300",
+                      )}
+                    >
+                      <ArrowLeft className="h-2.5 w-2.5" />
+                    </div>
+                  </div>
+                )}
+              </React.Fragment>
+            )
+          })}
         </div>
       </div>
+    </div>
   )
 }

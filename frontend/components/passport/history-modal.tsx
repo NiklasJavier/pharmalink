@@ -152,20 +152,20 @@ export function HistoryModal({
     return shortened.length > maxLength ? `${shortened.substring(0, maxLength - 3)}...` : shortened
   }
 
-  // Dynamische Positionierung basierend auf JSON-Operations Panel Zustand
+  // Ändere die getPositionStyle Funktion für bessere Positionierung neben den gestapelten Modals
   const getPositionStyle = () => {
     if (jsonOperationsPanelMinimized) {
-      // JSON-Operations Panel ist minimiert (3rem breit)
+      // JSON-Operations Panel ist minimiert - positioniere links neben dem Stack
       return {
         bottom: "1rem",
-        right: "calc(1rem + 3rem)", // 1rem Abstand + 3rem für minimiertes Panel
+        right: "calc(1rem + 3rem + 0.5rem)", // Rechts neben dem minimierten JSON-Panel
         maxHeight: "70vh",
       }
     } else {
-      // JSON-Operations Panel ist erweitert (20rem breit)
+      // JSON-Operations Panel ist erweitert - positioniere links neben dem erweiterten Panel
       return {
         bottom: "1rem",
-        right: "calc(1rem + 20rem)", // 1rem Abstand + 20rem für erweitertes Panel
+        right: "calc(1rem + 20rem + 0.5rem)", // Rechts neben dem erweiterten JSON-Panel
         maxHeight: "70vh",
       }
     }

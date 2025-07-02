@@ -1,13 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Search, Building, Pill, Box, ChevronDown } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import { Building, Pill, Box, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Footer } from "@/components/layout/footer"
-import { useConfig } from "@/hooks/use-config"
+import { ResponsiveContainer } from "@/components/layout/responsive-container"
+import { EnhancedSearchInput } from "@/components/search/enhanced-search-input"
+import { useMobileLayout } from "@/components/layout/mobile-layout-provider"
+import { useOptimizedConfig } from "@/hooks/use-optimized-config"
+import { preloader } from "@/lib/preloader-service"
+import { cn } from "@/lib/utils"
 
 const searchTypes = {
   hersteller: {
@@ -27,7 +31,6 @@ const searchTypes = {
   },
 }
 
-// Funktion zur Erkennung von Präfixen im Suchterm
 function detectPrefixInQuery(query: string): {
   hasPrefix: boolean
   detectedType?: keyof typeof searchTypes
@@ -48,15 +51,12 @@ function detectPrefixInQuery(query: string): {
   return { hasPrefix: false, cleanQuery: trimmedQuery }
 }
 
-// Funktion zur Bestimmung der finalen Suche
 function buildFinalSearch(query: string, selectedType: keyof typeof searchTypes): string {
   const detection = detectPrefixInQuery(query)
 
   if (detection.hasPrefix) {
-    // Präfix im Suchterm vorhanden - verwende direkt
     return detection.cleanQuery
   } else {
-    // Kein Präfix im Suchterm → Dropdown-Präfix hinzufügen
     const prefix = searchTypes[selectedType].prefix
     return `${prefix}${detection.cleanQuery}`
   }
@@ -64,16 +64,32 @@ function buildFinalSearch(query: string, selectedType: keyof typeof searchTypes)
 
 export default function SearchPage() {
   const router = useRouter()
-  const { config } = useConfig()
+  const { config } = useOptimizedConfig()
+  const { isMobile, isTablet, orientation } = useMobileLayout()
   const [searchQuery, setSearchQuery] = useState("")
   const [searchType, setSearchType] = useState("medikament")
 
-  const handleSearch = (e) => {
-    e.preventDefault()
-    if (!searchQuery.trim()) return
+  // Start preloading when component mounts
+  useEffect(() => {
+    preloader.startPreloading()
+  }, [])
 
-    const finalQuery = buildFinalSearch(searchQuery, searchType)
-    // Nur der Pfad, keine Query-Parameter
+  // Preload on search input change (debounced)
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const timeoutId = setTimeout(() => {
+        const finalQuery = buildFinalSearch(searchQuery, searchType)
+        preloader.queuePreload(finalQuery)
+      }, 500)
+
+      return () => clearTimeout(timeoutId)
+    }
+  }, [searchQuery, searchType])
+
+  const handleSearchSubmit = (query: string) => {
+    if (!query.trim()) return
+
+    const finalQuery = buildFinalSearch(query, searchType)
     router.push(`/${finalQuery}`)
   }
 
@@ -82,58 +98,82 @@ export default function SearchPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <div className="flex flex-col items-center justify-center flex-1 p-4">
-        <div className="w-full max-w-3xl text-center">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">{appName}</h1>
-          <p className="text-gray-500 mb-10">{appDescription}</p>
-
-          <form
-            onSubmit={handleSearch}
-            className="flex items-center bg-white shadow-lg rounded-2xl border border-gray-200 focus-within:ring-2 focus-within:ring-emerald-400/50 p-1 transition-all gap-1"
+      <div className="flex flex-col items-center justify-center flex-1">
+        <ResponsiveContainer maxWidth="lg" padding="lg" centerContent={false} className="text-center">
+          <h1
+            className={cn(
+              "font-bold text-gray-800 mb-2 transition-all duration-300",
+              isMobile ? "text-2xl sm:text-3xl" : "text-4xl",
+            )}
           >
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="flex-shrink-0 h-12 text-base px-3 md:px-4 rounded-xl border-gray-300 hover:bg-gray-50 bg-transparent"
-                >
-                  {searchTypes[searchType].icon}
-                  <span className="hidden md:inline">{searchTypes[searchType].label}</span>
-                  <ChevronDown className="ml-2 h-5 w-5 text-gray-500" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="start">
-                {Object.entries(searchTypes).map(([key, { label, icon }]) => (
-                  <DropdownMenuItem key={key} className="text-base py-2" onSelect={() => setSearchType(key)}>
-                    {icon}
-                    <span>{label}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {appName}
+          </h1>
 
-            <div className="relative flex-grow">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <Input
-                type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="z.B. MED-1, UNIT-1..."
-                className="w-full h-12 text-sm md:text-base bg-white border-gray-300 rounded-xl shadow-none focus:ring-1 focus:ring-emerald-500 focus-visible:ring-offset-0 pl-12"
-                autoFocus
-              />
+          <p
+            className={cn(
+              "text-gray-500 mb-8 transition-all duration-300",
+              isMobile ? "text-sm mb-6 px-2" : "mb-10",
+              isTablet && orientation === "landscape" ? "mb-6" : "",
+            )}
+          >
+            {appDescription}
+          </p>
+
+          <div
+            className={cn(
+              "flex items-center bg-white shadow-lg rounded-2xl border border-gray-200 focus-within:ring-2 focus-within:ring-emerald-400/50 p-1 transition-all gap-1",
+              isMobile ? "flex-col sm:flex-row w-full" : "flex-row max-w-4xl mx-auto",
+            )}
+          >
+            <div className="flex-shrink-0 basis-1/4">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "flex-shrink-0 text-base px-3 md:px-4 rounded-xl border-gray-300 hover:bg-gray-50 bg-transparent touch-target",
+                      isMobile ? "w-full h-12 justify-between sm:w-auto sm:justify-center" : "h-12",
+                    )}
+                  >
+                    <div className="flex items-center">
+                      {searchTypes[searchType].icon}
+                      <span className={cn(isMobile ? "block sm:hidden md:inline" : "hidden md:inline")}>
+                        {searchTypes[searchType].label}
+                      </span>
+                    </div>
+                    <ChevronDown className="ml-2 h-5 w-5 text-gray-500" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="start">
+                  {Object.entries(searchTypes).map(([key, { label, icon }]) => (
+                    <DropdownMenuItem
+                      key={key}
+                      className="text-base py-3 touch-target"
+                      onSelect={() => setSearchType(key)}
+                    >
+                      {icon}
+                      <span>{label}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
-            <Button
-              type="submit"
-              size="icon"
-              className="h-12 w-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 flex-shrink-0"
-            >
-              <Search className="h-5 w-5 text-white" />
-              <span className="sr-only">Suchen</span>
-            </Button>
-          </form>
-        </div>
+            <div className={cn("relative basis-3/4", isMobile ? "w-full sm:flex-1" : "flex-1")}>
+              <EnhancedSearchInput
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onSubmit={handleSearchSubmit}
+                placeholder="z.B. Aspirin, name:aspirin, MED-1..."
+                className={cn(
+                  "w-full bg-white border-gray-300 rounded-xl shadow-none focus:ring-1 focus:ring-emerald-500 focus-visible:ring-offset-0 mobile-input",
+                  isMobile ? "h-12 text-base" : "h-12 text-sm md:text-base",
+                )}
+                autoFocus={!isMobile}
+              />
+            </div>
+          </div>
+        </ResponsiveContainer>
       </div>
 
       <Footer />

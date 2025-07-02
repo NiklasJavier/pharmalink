@@ -28,6 +28,7 @@ import { useState, useRef, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { useRouter, useSearchParams } from "next/navigation"
 import { buildKeyIdentifier } from "@/lib/history-service"
+import { useMobileLayout } from "@/components/layout/mobile-layout-provider"
 
 type JsonValue = string | number | boolean | null | JsonObject | JsonArray
 type JsonObject = { [key: string]: JsonValue }
@@ -263,6 +264,7 @@ function JsonItem({
 }: JsonItemProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { isMobile, isTablet } = useMobileLayout()
   const [isExpanded, setIsExpanded] = useState(depth < 2)
   const itemRef = useRef<HTMLDivElement>(null)
 
@@ -375,17 +377,17 @@ function JsonItem({
             href={formattedText}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline transition-colors group"
+            className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline transition-colors group break-all"
             title={`Öffne ${formattedText}`}
           >
-            <span>{highlightText(formattedText, false)}</span>
-            <ExternalLink className="h-3 w-3 opacity-60 group-hover:opacity-100 transition-opacity" />
+            <span className="break-all">{highlightText(formattedText, false)}</span>
+            <ExternalLink className="h-3 w-3 opacity-60 group-hover:opacity-100 transition-opacity flex-shrink-0" />
           </a>
           <Button
             onClick={(e) => handleHistoryClick(keyName, formattedText, e)}
             variant="ghost"
             size="sm"
-            className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 hover:bg-gray-100 rounded transition-all duration-200"
+            className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 hover:bg-gray-100 rounded transition-all duration-200 flex-shrink-0"
             title={`Historie für ${keyName}`}
           >
             <History className="h-2.5 w-2.5 text-gray-400 hover:text-gray-600" />
@@ -400,17 +402,17 @@ function JsonItem({
         <div className="flex items-center gap-2 group">
           <button
             onClick={() => onNavigateToId(formattedText)}
-            className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-800 hover:underline transition-colors group font-mono"
+            className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-800 hover:underline transition-colors group font-mono break-all text-left"
             title={`Navigiere zu ${formattedText}`}
           >
-            <span>{highlightText(formattedText, false)}</span>
-            <MousePointer className="h-3 w-3 opacity-60 group-hover:opacity-100 transition-opacity" />
+            <span className="break-all">{highlightText(formattedText, false)}</span>
+            <MousePointer className="h-3 w-3 opacity-60 group-hover:opacity-100 transition-opacity flex-shrink-0" />
           </button>
           <Button
             onClick={(e) => handleHistoryClick(keyName, formattedText, e)}
             variant="ghost"
             size="sm"
-            className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 hover:bg-gray-100 rounded transition-all duration-200"
+            className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 hover:bg-gray-100 rounded transition-all duration-200 flex-shrink-0"
             title={`Historie für ${keyName}`}
           >
             <History className="h-2.5 w-2.5 text-gray-400 hover:text-gray-600" />
@@ -422,12 +424,12 @@ function JsonItem({
     // Standard-Text mit Highlighting und History-Button für ALLE Datentypen
     return (
       <div className="flex items-center gap-2 group">
-        <span>{highlightText(formattedText, false)}</span>
+        <span className="break-words">{highlightText(formattedText, false)}</span>
         <Button
           onClick={(e) => handleHistoryClick(keyName, formattedText, e)}
           variant="ghost"
           size="sm"
-          className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 hover:bg-gray-100 rounded transition-all duration-200"
+          className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 hover:bg-gray-100 rounded transition-all duration-200 flex-shrink-0"
           title={`Historie für ${keyName}`}
         >
           <History className="h-2.5 w-2.5 text-gray-400 hover:text-gray-600" />
@@ -459,7 +461,7 @@ function JsonItem({
               : "border-gray-200 bg-white",
         )}
       >
-        <div className="p-2 md:p-3">
+        <div className={cn("transition-all duration-200", isMobile ? "p-2" : "p-2 md:p-3")}>
           <div className="flex items-start gap-2">
             {/* Expand/Collapse Button */}
             {isExpandable && hasContent ? (
@@ -489,11 +491,17 @@ function JsonItem({
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 mb-1">
-                <span className="font-semibold text-gray-900 text-xs">{highlightText(displayKey, true)}</span>
+              {/* Mobile-optimized header layout */}
+              <div className={cn("flex flex-col gap-1 mb-1", !isMobile && "sm:flex-row sm:items-center sm:gap-1.5")}>
+                <span className={cn("font-semibold text-gray-900 break-words", isMobile ? "text-xs" : "text-xs")}>
+                  {highlightText(displayKey, true)}
+                </span>
                 <Badge
                   variant="secondary"
-                  className="text-xs px-1 py-0 h-auto bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  className={cn(
+                    "px-1 py-0 h-auto bg-gray-100 text-gray-600 hover:bg-gray-200 flex-shrink-0 w-fit",
+                    isMobile ? "text-xs" : "text-xs",
+                  )}
                 >
                   {getValueTypeLabel(value)}
                 </Badge>
@@ -501,14 +509,14 @@ function JsonItem({
 
               {/* Value display for primitives */}
               {!isExpandable && (
-                <div className="text-gray-800 font-medium break-words text-sm">
+                <div className={cn("text-gray-800 font-medium break-words", isMobile ? "text-sm" : "text-sm")}>
                   {renderInteractiveValue(formatValue(value))}
                 </div>
               )}
 
               {/* Preview for collapsed complex values */}
               {isExpandable && !isExpanded && hasContent && (
-                <div className="text-sm text-gray-500">
+                <div className={cn("text-gray-500", isMobile ? "text-xs" : "text-sm")}>
                   {Array.isArray(value)
                     ? `${value.length} ${value.length === 1 ? "item" : "items"}`
                     : `${Object.keys(value as JsonObject).length} ${Object.keys(value as JsonObject).length === 1 ? "property" : "properties"}`}
@@ -519,7 +527,7 @@ function JsonItem({
 
           {/* Expanded content */}
           {isExpandable && isExpanded && hasContent && (
-            <div className="mt-2 pl-6">
+            <div className={cn("mt-2", isMobile ? "pl-4" : "pl-6")}>
               <div className="space-y-2">
                 {Array.isArray(value)
                   ? // Array rendering
@@ -594,15 +602,17 @@ function OperationsControls({
   currentResultIndex: number
   onNavigateSearch: (direction: "next" | "prev") => void
 }) {
+  const { isMobile } = useMobileLayout()
+
   return (
-    <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border">
+    <div className={cn("flex items-center gap-2 p-2 bg-gray-50 rounded-lg border", isMobile && "flex-col gap-3")}>
       {/* Navigation Controls */}
       <div className="flex items-center gap-1">
         <Button
           onClick={onCollapseAll}
           variant="outline"
           size="sm"
-          className="flex items-center justify-center w-8 h-8 p-0 hover:bg-gray-100 bg-transparent"
+          className="flex items-center justify-center w-8 h-8 p-0 hover:bg-gray-100 bg-transparent touch-target"
           title="Alle einklappen"
         >
           <ChevronUp className="h-4 w-4" />
@@ -612,32 +622,32 @@ function OperationsControls({
           onClick={onExpandAll}
           variant="outline"
           size="sm"
-          className="flex items-center justify-center w-8 h-8 p-0 hover:bg-gray-100 bg-transparent"
+          className="flex items-center justify-center w-8 h-8 p-0 hover:bg-gray-100 bg-transparent touch-target"
           title="Alle ausklappen"
         >
           <ChevronDown className="h-4 w-4" />
         </Button>
       </div>
 
-      <div className="h-4 w-px bg-gray-300" />
+      {!isMobile && <div className="h-4 w-px bg-gray-300" />}
 
       {/* Search Controls */}
-      <div className="flex items-center gap-2">
-        <div className="relative">
+      <div className={cn("flex items-center gap-2", isMobile && "w-full flex-col gap-2")}>
+        <div className={cn("relative", isMobile && "w-full")}>
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
           <Input
             type="text"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Suche: 'key:value' oder 'text'"
-            className="pl-7 pr-7 h-8 w-80 text-sm"
+            className={cn("pl-7 pr-7 h-8 text-sm mobile-input", isMobile ? "w-full" : "w-80")}
           />
           {searchTerm && (
             <Button
               onClick={onClearSearch}
               variant="ghost"
               size="sm"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 p-0"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 p-0 touch-target"
               title="Suche löschen"
             >
               <X className="h-2 w-2" />
@@ -648,7 +658,7 @@ function OperationsControls({
         {searchResults.length > 0 && (
           <div className="flex items-center gap-1">
             <span
-              className="text-xs text-gray-600 px-2"
+              className="text-xs text-gray-600 px-2 whitespace-nowrap"
               title={`Suchergebnis ${currentResultIndex + 1} von ${searchResults.length}`}
             >
               {currentResultIndex + 1}/{searchResults.length}
@@ -657,7 +667,7 @@ function OperationsControls({
               onClick={() => onNavigateSearch("prev")}
               variant="outline"
               size="sm"
-              className="h-6 w-6 p-0"
+              className="h-6 w-6 p-0 touch-target"
               title="Vorheriges Suchergebnis"
             >
               <ArrowUp className="h-2 w-2" />
@@ -666,7 +676,7 @@ function OperationsControls({
               onClick={() => onNavigateSearch("next")}
               variant="outline"
               size="sm"
-              className="h-6 w-6 p-0"
+              className="h-6 w-6 p-0 touch-target"
               title="Nächstes Suchergebnis"
             >
               <ArrowDown className="h-2 w-2" />
