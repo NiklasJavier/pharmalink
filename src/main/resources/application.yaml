@@ -12,17 +12,13 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
-  mvc:
-    view:
-      prefix: classpath:/templates/
-      suffix: .html
   thymeleaf:
     cache: false
+    prefix: classpath:/templates/
+    suffix: .html
     mode: HTML
     encoding: UTF-8
     enabled: true
-    prefix: classpath:/templates/
-    suffix: .html 
 
 app:
   initial-users:
@@ -31,10 +27,6 @@ app:
       roles:
         - ROLE_USER
         - ROLE_ADMIN
-    - username: user
-      password: $2a$10$k0HGgX7388bJEtWUAhfAwOaAexCUBuM20q8LgiWBgdpJLpDn3t.Na
-      roles:
-        - ROLE_USER
 
 springdoc:
   info:
