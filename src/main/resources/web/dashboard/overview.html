@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="de" xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{layouts/default-layout}"> <head>
+      layout:decorate="~{layouts/default-layout}">
+<head>
     <title>Dashboard</title>
 
     <th:block layout:fragment="pageCss">
@@ -11,7 +12,23 @@
 <body>
 <div layout:fragment="content">
     <h1>Willkommen auf Ihrem Dashboard, <span th:text="${#authentication.name}"></span>!</h1>
-    <p>Ihre Initial Actor ID: <span th:text="${initialActorId}"></span></p>
+
+    <div class="actor-info">
+        <p>Ihre Actor ID: <strong th:text="${initialActorId}">[Ihre Actor ID wird hier angezeigt]</strong></p>
+
+        <div th:if="${initialActorId}">
+            <p>Sie sind angemeldet als:
+                <span th:if="${initialActorId.startsWith('hersteller-')}" class="actor-type-label">Hersteller</span>
+                <span th:if="${initialActorId.startsWith('grosshaendler-')}" class="actor-type-label">Großhändler</span>
+                <span th:if="${initialActorId.startsWith('apotheke-')}" class="actor-type-label">Apotheke</span>
+                <span th:if="${initialActorId.startsWith('behoerde-')}" class="actor-type-label">Behörde</span>
+            </p>
+        </div>
+        <div th:unless="${initialActorId}">
+            <p class="warning-message">Ihre Initial Actor ID konnte nicht geladen werden.</p>
+        </div>
+    </div>
+
     <p>Dies ist der Inhalt der Dashboard-Übersicht.</p>
     <p>Hier können Diagramme, Statistiken oder Schnellzugriffe platziert werden.</p>
 </div>
@@ -19,5 +36,24 @@
 <th:block layout:fragment="pageJs">
     <script th:src="@{/js/dashboard.js}"></script>
 </th:block>
+
+<style>
+    .actor-info {
+        margin-top: 1.5em;
+        padding: 1em;
+        background-color: #e9f5ff;
+        border: 1px solid #cce5ff;
+        border-radius: 5px;
+        color: #004085;
+    }
+    .actor-type-label {
+        font-weight: bold;
+        color: #28a745; /* Grüne Farbe für bekannte Typen */
+    }
+    .warning-message {
+        color: #dc3545;
+        font-weight: bold;
+    }
+</style>
 </body>
 </html>
