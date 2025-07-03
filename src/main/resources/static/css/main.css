@@ -1,0 +1,247 @@
+/* Globale Resets und Basis-Layout */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* Sorgt dafür, dass der Footer am unteren Rand bleibt */
+    background-color: #f8f8f8; /* Leichter Hintergrund für die Seite */
+    color: #333; /* Standard-Textfarbe */
+}
+
+/* Hauptinhaltsbereich, damit der Footer nach unten gedrückt wird */
+main {
+    flex-grow: 1;
+    padding: 2em;
+    max-width: 1200px; /* Max. Breite für den Inhalt */
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+
+/* --- Header Styling (Weiß mit schwarzen Schriftzügen, korrekte Ausrichtung) --- */
+.main-header {
+    background-color: #ffffff; /* Hintergrund des Headers auf Weiß setzen */
+    color: #222; /* Standard-Textfarbe im Header, etwas dunkler */
+    padding: 0.8em 2em; /* Vertikales Padding angepasst, um die Höhe zu kontrollieren */
+    box-shadow: none; /* Schatten entfernen */
+    border-bottom: 1px solid #eee; /* Trennlinie unten */
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between; /* Elemente an den Rändern ausrichten */
+    align-items: center; /* **WICHTIG: Vertikale Zentrierung der Flex-Elemente** */
+    max-width: 1200px; /* Maximale Breite des Inhalts im Header */
+    margin: 0 auto; /* Zentrierung des Inhalts im Header */
+    flex-wrap: wrap; /* Erlaubt Umbruch auf kleineren Bildschirmen */
+}
+
+.logo {
+    flex-shrink: 0; /* Verhindert, dass das Logo schrumpft */
+    height: 100%; /* Stellt sicher, dass das Logo die volle Höhe des Containers nutzt */
+    display: flex; /* Auch hier Flexbox, um a-Tag zu zentrieren */
+    align-items: center; /* Vertikale Zentrierung des a-Tags */
+}
+
+.logo a {
+    color: #333; /* Logo-Textfarbe auf dunkel setzen (fast schwarz) */
+    text-decoration: none;
+    font-size: 1.8em; /* Etwas größer für bessere Sichtbarkeit */
+    font-weight: bold;
+    white-space: nowrap; /* Verhindert Zeilenumbruch im Logo */
+    padding: 0; /* Wichtig: Standard-Padding entfernen, um die Höhe zu vereinheitlichen */
+    line-height: 1; /* Vertikale Ausrichtung sicherstellen */
+    display: flex; /* Für präzise vertikale Ausrichtung des Textes */
+    align-items: center; /* Zentriert den Text innerhalb des Links */
+}
+
+.main-nav {
+    flex-grow: 1; /* Erlaubt der Navigation, verfügbaren Platz einzunehmen */
+    text-align: right; /* Navigation rechtsbündig ausrichten */
+}
+
+.main-nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: flex-end; /* Navigationspunkte rechtsbündig */
+    gap: 1.5em; /* Abstand zwischen den Navigationspunkten */
+    flex-wrap: wrap; /* Erlaubt Umbruch auf kleineren Bildschirmen */
+    align-items: center; /* **WICHTIG: Vertikale Zentrierung der Listenelemente** */
+    height: 100%; /* Stellt sicher, dass die Liste die volle Höhe des Nav-Containers nutzt */
+}
+
+.main-nav li {
+    display: flex; /* **WICHTIG: Für individuelle Zentrierung der Links innerhalb der Li** */
+    align-items: center; /* Vertikale Zentrierung */
+    height: 100%; /* Stellt sicher, dass das Listenelement die volle Höhe nutzt */
+}
+
+.main-nav a {
+    color: #333; /* Navigationslinks dunkel */
+    text-decoration: none;
+    padding: 0.5em 1em; /* Konsistentes Padding für alle Links */
+    border-radius: 4px;
+    transition: none; /* Hover-Effekt entfernen */
+    white-space: nowrap; /* Verhindert Zeilenumbruch in Nav-Links */
+    display: flex; /* Auch hier Flexbox für präzise vertikale Ausrichtung */
+    align-items: center; /* Zentriert den Text innerhalb des Links */
+    height: 100%; /* Stellt sicher, dass der Link die volle Höhe des Listenelements nutzt */
+}
+
+.main-nav a:hover {
+    background-color: transparent; /* Hintergrund beim Hover transparent machen */
+    color: #333; /* Farbe beim Hover beibehalten */
+}
+
+.logout-button {
+    background: none;
+    border: none;
+    padding: 0.5em 1em; /* Konsistentes Padding */
+    color: #dc3545; /* Rote Farbe für Logout */
+    cursor: pointer;
+    font-size: 1em;
+    font-family: inherit;
+    border-radius: 4px;
+    transition: none; /* Hover-Effekt entfernen */
+    white-space: nowrap;
+    display: flex; /* Flexbox für Ausrichtung */
+    align-items: center; /* Vertikale Zentrierung */
+    height: 100%; /* Stellt sicher, dass der Button die volle Höhe nutzt */
+}
+
+.logout-button:hover {
+    background-color: transparent; /* Hintergrund beim Hover transparent machen */
+    color: #dc3545; /* Farbe beim Hover beibehalten */
+}
+
+
+/* --- Footer Styling --- */
+.main-footer {
+    background-color: #ffffff; /* Hintergrund des Footers auf Weiß setzen */
+    color: #333; /* Textfarbe im Footer auf dunkel setzen */
+    padding: 1em 2em; /* Innenabstand */
+    border-top: 1px solid #eee; /* Dezenter Rahmen oben */
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between; /* Links und Rechts verteilen, Mitte wird leer */
+    align-items: center; /* Vertikale Zentrierung */
+    max-width: 1200px; /* Wie im Header */
+    margin: 0 auto;
+    flex-wrap: wrap; /* Erlaubt Umbruch auf kleineren Bildschirmen */
+    gap: 1em; /* Abstand zwischen den Spalten bei Umbruch */
+}
+
+.footer-left {
+    display: flex; /* Damit die Links nebeneinander stehen */
+    align-items: center; /* Vertikale Zentrierung der Links */
+    gap: 0.8em; /* Abstand zwischen den Links */
+    flex-grow: 1; /* Erlaubt diesem Bereich zu wachsen */
+    justify-content: flex-start; /* Links ausrichten */
+}
+
+.footer-center {
+    /* Dieser Bereich ist jetzt leer, aber wir behalten die Klasse falls sie später nützlich ist */
+    flex: 0 0 auto; /* Verhindert, dass dieser leere Bereich Platz wegnimmt */
+    width: 0; /* Optional: explizit 0 Breite */
+    padding: 0; /* Optional: explizit 0 Padding */
+    margin: 0; /* Optional: explizit 0 Margin */
+}
+
+.footer-right {
+    display: flex; /* Für vertikale Zentrierung des Inhalts */
+    align-items: center;
+    justify-content: flex-end; /* Rechts ausrichten */
+    flex-shrink: 0; /* Verhindert, dass dieser Bereich schrumpft */
+    white-space: nowrap; /* Verhindert Umbruch des Versions-Textes */
+}
+
+.main-footer a {
+    color: #333; /* Links im Footer auf dunkel setzen */
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.main-footer a:hover {
+    text-decoration: underline;
+    color: #0056b3; /* Dezenter blauer Hover für Links */
+}
+
+.footer-right strong {
+    color: #333; /* Versionstext auf dunkel setzen */
+}
+
+.footer-left .separator {
+    color: #666; /* Farbe des Trennzeichens */
+}
+
+/* Responsive Anpassungen (Beispiel) */
+@media (max-width: 768px) {
+    .main-header {
+        padding: 1em 1em;
+    }
+
+    .header-content {
+        flex-direction: column; /* Stapelt Logo und Navigation untereinander */
+        align-items: flex-start;
+    }
+
+    .logo {
+        margin-bottom: 1em; /* Abstand nach unten */
+        margin-right: 0;
+    }
+
+    .main-nav {
+        width: 100%; /* Navigation nimmt volle Breite ein */
+        text-align: left; /* Links ausrichten */
+    }
+
+    .main-nav ul {
+        flex-direction: column; /* Navigationspunkte untereinander */
+        align-items: flex-start;
+        gap: 0.5em;
+    }
+
+    .main-nav li {
+        width: 100%; /* Jeder Navigationspunkt volle Breite */
+    }
+
+    .main-nav a, .logout-button {
+        display: block; /* Links füllen die gesamte Breite des Listenelements aus */
+        width: 100%;
+        text-align: left;
+    }
+
+    .main-footer {
+        padding: 1em; /* Reduziertes Padding für mobile */
+    }
+
+    .footer-content {
+        flex-direction: column; /* Footer-Inhalt untereinander stapeln */
+        align-items: center; /* Elemente zentral ausrichten */
+        text-align: center;
+        gap: 0.5em; /* Kleinerer Abstand bei gestapelten Elementen */
+    }
+
+    .footer-left,
+    .footer-center,
+    .footer-right {
+        justify-content: center; /* Einzelne Elemente auch zentral */
+        width: 100%; /* Volle Breite für gestapelte Elemente */
+        text-align: center; /* Text auch zentral ausrichten */
+    }
+
+    .footer-left .separator {
+        display: none; /* Trennzeichen auf Mobilgeräten ausblenden */
+    }
+
+    .footer-left a {
+        padding: 0.2em 0; /* Minimales Padding für gestapelte Links */
+    }
+}

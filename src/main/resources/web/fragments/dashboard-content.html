@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="dashboardContent">
+    <h1>Willkommen auf Ihrem Dashboard, <span th:text="${#authentication.name}"></span>!</h1>
+
+    <div class="actor-info">
+        <p>Ihre Actor ID: <strong th:text="${initialActorId}">[Ihre Actor ID wird hier angezeigt]</strong></p>
+
+        <div th:if="${initialActorId}">
+            <p>Sie sind angemeldet als:
+                <span th:if="${initialActorId.startsWith('hersteller-')}" class="actor-type-label">Hersteller</span>
+                <span th:if="${initialActorId.startsWith('grosshaendler-')}" class="actor-type-label">Großhändler</span>
+                <span th:if="${initialActorId.startsWith('apotheke-')}" class="actor-type-label">Apotheke</span>
+                <span th:if="${initialActorId.startsWith('behoerde-')}" class="actor-type-label">Behörde</span>
+            </p>
+        </div>
+        <div th:unless="${initialActorId}">
+            <p class="warning-message">Ihre Initial Actor ID konnte nicht geladen werden.</p>
+        </div>
+    </div>
+
+    <p>Dies ist der Hauptinhalt der Dashboard-Übersicht.</p>
+    <p>Hier können Diagramme, Statistiken oder Schnellzugriffe platziert werden.</p>
+</div>
+
+</body>
+</html>

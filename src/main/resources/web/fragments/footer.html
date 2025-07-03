@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Footer Fragment</title>
+</head>
+<body>
+
+<footer th:fragment="footer" class="main-footer">
+    <div class="footer-content">
+        <div class="footer-left">
+            <a th:href="@{/api/swagger-ui.html}" target="_blank" rel="noopener noreferrer">API Dokumentation</a>
+        </div>
+        <div class="footer-center">
+        </div>
+        <div class="footer-right">
+            <span th:if="${backendVersion}">Version: <strong th:text="${backendVersion}">N/A</strong></span>
+            <span th:unless="${backendVersion}">Version: N/A</span>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>

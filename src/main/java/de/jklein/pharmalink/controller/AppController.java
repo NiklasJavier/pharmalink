@@ -22,8 +22,15 @@ public class AppController {
         this.systemStateService = systemStateService;
     }
 
+    // Hilfsmethode, um globale Model-Attribute hinzuzufügen
+    private void addGlobalAttributes(Model model) {
+        String backendVersion = "1.0.0"; // Ersetzen Sie dies durch Ihre tatsächliche Versionslogik
+        model.addAttribute("backendVersion", backendVersion);
+    }
+
     @GetMapping("/login")
     public String showLoginForm(Model model) {
+        addGlobalAttributes(model);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication != null && authentication.isAuthenticated() &&
@@ -43,6 +50,8 @@ public class AppController {
 
     @GetMapping("/dashboard")
     public String showDashboard(Model model, RedirectAttributes redirectAttributes) {
+        addGlobalAttributes(model);
+
         String initialActorId = systemStateService.getInitialActorId();
 
         if (initialActorId == null) {
@@ -62,11 +71,20 @@ public class AppController {
         }
 
         model.addAttribute("initialActorId", initialActorId);
+        model.addAttribute("pageTitle", "Dashboard");
         return "dashboard/overview";
+    }
+
+    @GetMapping("/manage")
+    public String showManagePage(Model model) {
+        addGlobalAttributes(model);
+        model.addAttribute("pageTitle", "Manage");
+        return "manage/overview";
     }
 
     @GetMapping("/errors/unknown-actor")
     public String showUnknownActorErrorPage(Model model) {
+        addGlobalAttributes(model);
         return "errors/unknown-actor";
     }
 }

@@ -1,36 +1,23 @@
 <!DOCTYPE html>
 <html lang="de" xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"> <head>
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title layout:title-pattern="$CONTENT_TITLE - $LAYOUT_TITLE">PharmaLink</title> <link rel="stylesheet" th:href="@{/css/main.css}">
+    <title layout:title-pattern="$CONTENT_TITLE - $LAYOUT_TITLE">PharmaLink</title>
+    <link rel="stylesheet" th:href="@{/css/main.css}">
     <th:block layout:fragment="pageCss"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/header :: header}"></div>
 
-<nav>
-    <ul>
-        <li><a th:href="@{/app/dashboard}">Dashboard</a></li>
-        <li><a th:href="@{/medikamente}">Medikamente</a></li>
-        <li><a th:href="@{/units}">Einheiten</a></li>
-        <li>
-            <form th:action="@{/logout}" method="post" style="display: inline;">
-                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                <button type="submit" style="background: none; border: none; padding: 0; color: inherit; cursor: pointer; font: inherit;">Logout</button>
-            </form>
-        </li>
-    </ul>
-</nav>
+<div th:replace="~{fragments/header :: header}"></div>
 
 <main>
     <div layout:fragment="content">
     </div>
 </main>
 
-<footer>
-    <p>&copy; 2025 PharmaLink. Alle Rechte vorbehalten.</p>
-</footer>
+<div th:replace="~{fragments/footer :: footer}"></div>
 
 <script th:src="@{/js/main.js}"></script>
 <th:block layout:fragment="pageJs"></th:block>
