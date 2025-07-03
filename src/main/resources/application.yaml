@@ -14,8 +14,15 @@ spring:
     show-sql: true
   mvc:
     view:
-      prefix: /WEB-INF/jsp/
-    suffix: .jsp
+      prefix: classpath:/templates/
+      suffix: .html
+  thymeleaf:
+    cache: false
+    mode: HTML
+    encoding: UTF-8
+    enabled: true
+    prefix: classpath:/templates/
+    suffix: .html 
 
 app:
   initial-users:

@@ -10,12 +10,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 public class AppController {
 
     @GetMapping("/login")
-    public String showDashboard(Model model) {
-        return "login";
+    public String showLogin(Model model) { // Umbenannt, um klarer zu sein
+        // Gibt den Namen des Thymeleaf-Templates zurück (z.B. "login.html" in src/main/resources/templates/)
+        return "login"; // Sucht nach src/main/resources/templates/login.html
     }
 
     @GetMapping("/dashboard")
-    public String showProfile(Model model) {
-        return "dashboard";
+    public String showDashboard(Model model) { // Umbenannt, um klarer zu sein
+        // Gibt den Namen des Thymeleaf-Templates zurück (z.B. "dashboard.html" in src/main/resources/templates/)
+        return "dashboard"; // Sucht nach src/main/resources/templates/dashboard.html
     }
 }
