@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+</head>
+<body>
+<header th:fragment="header" class="main-header">
+    <div class="header-content">
+        <div class="header-left">
+            <span class="app-title">PharmaLink</span>
+        </div>
+        <div class="header-right">
+            <button class="action-button" title="Aktionen">
+                <img th:src="@{/images/settings-icon.png}" alt="Settings Icon" class="settings-icon"/>
+            </button>
+        </div>
+    </div>
+</header>
+
+<style>
+    .main-header {
+        background-color: #ffffff; /* Weißer Hintergrund */
+        border-bottom: 1px solid #e0e0e0; /* Leichte Trennlinie */
+        padding: 1em 2em;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 1200px; /* Maximale Breite des Inhalts */
+        margin: 0 auto;
+    }
+
+    .header-left .app-title {
+        font-size: 1.8em;
+        font-weight: bold;
+        color: #333333; /* Dunkler Text für den Titel */
+        text-decoration: none;
+    }
+
+    .header-right .action-button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0.5em;
+        border-radius: 50%; /* Rund um das Icon */
+        transition: background-color 0.3s ease;
+    }
+
+    .header-right .action-button:hover {
+        background-color: #f0f0f0; /* Leichter Hover-Effekt */
+    }
+
+    .settings-icon {
+        width: 24px; /* Größe des Zahnrad-Icons */
+        height: 24px;
+        vertical-align: middle;
+        color: #555555; /* Farbe des Icons, falls es ein SVG oder Font-Icon ist */
+    }
+
+    /* Responsive Anpassungen */
+    @media (max-width: 768px) {
+        .main-header {
+            padding: 0.8em 1em;
+        }
+        .header-left .app-title {
+            font-size: 1.5em;
+        }
+        .settings-icon {
+            width: 20px;
+            height: 20px;
+        }
+    }
+</style>
+</body>
+</html>

@@ -27,6 +27,4 @@ public class Role {
 
     @ManyToMany(mappedBy = "roles")
     private Set<User> users;
-
-    // Kein manueller Konstruktor oder Getter/Setter mehr nötig
 }

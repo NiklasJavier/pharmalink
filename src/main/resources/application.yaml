@@ -14,7 +14,7 @@ spring:
     show-sql: true
   thymeleaf:
     cache: false
-    prefix: classpath:/templates/
+    prefix: classpath:/web/
     suffix: .html
     mode: HTML
     encoding: UTF-8

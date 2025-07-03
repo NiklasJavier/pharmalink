@@ -35,12 +35,4 @@ public class User {
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     private Set<Role> roles;
-
-    // Manuell hinzugefügter Konstruktor, falls @AllArgsConstructor nicht 100% passt
-    // Oder wenn du einen spezifischen Konstruktor für die Geschäftslogik benötigst
-    // public User(String username, String password, Set<Role> roles) {
-    //     this.username = username;
-    //     this.password = password;
-    //     this.roles = roles;
-    // }
 }

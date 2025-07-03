@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/default-layout}"> <head>
+    <title>Dashboard</title>
+
+    <th:block layout:fragment="pageCss">
+        <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    </th:block>
+</head>
+<body>
+<div layout:fragment="content">
+    <h1>Willkommen auf Ihrem Dashboard, <span th:text="${#authentication.name}"></span>!</h1>
+    <p>Ihre Initial Actor ID: <span th:text="${initialActorId}"></span></p>
+    <p>Dies ist der Inhalt der Dashboard-Übersicht.</p>
+    <p>Hier können Diagramme, Statistiken oder Schnellzugriffe platziert werden.</p>
+</div>
+
+<th:block layout:fragment="pageJs">
+    <script th:src="@{/js/dashboard.js}"></script>
+</th:block>
+</body>
+</html>

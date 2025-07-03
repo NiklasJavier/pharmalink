@@ -20,12 +20,14 @@ public class AppController {
 
     @GetMapping("/login")
     public String showLoginForm() {
-        return "auth/login";
+        return "auth/login"; // Verweist auf src/main/resources/templates/auth/login.html (kein Layout für Login-Seite)
     }
 
     @GetMapping("/dashboard")
     public String showDashboard(Model model) {
         model.addAttribute("initialActorId", systemStateService.getInitialActorId());
-        return "dashboard/overview";
+        // Sie können hier einen Seitentitel für das Layout übergeben, wenn Sie möchten
+        // model.addAttribute("pageTitle", "Mein Dashboard");
+        return "dashboard/overview"; // Verweist direkt auf das Inhaltstemplate
     }
 }

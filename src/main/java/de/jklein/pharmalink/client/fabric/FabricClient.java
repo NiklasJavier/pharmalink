@@ -23,21 +23,6 @@ public class FabricClient {
     private final Gson gson = new Gson();
 
     /**
-     * Führt eine schreibende Transaktion aus, die ein Objekt als JSON-String erwartet.
-     * @param functionName Der Name der Chaincode-Funktion.
-     * @param assetId Die ID des Assets.
-     * @param asset Das zu erstellende Asset-Objekt.
-     */
-    public void submitCreateTransaction(String functionName, String assetId, Object asset) throws Exception {
-        String assetJson = gson.toJson(asset);
-        logger.info("--> Submitting Create Transaction: '{}' for asset ID '{}'", functionName, assetId);
-        // NEU: Loggt den genauen JSON-Payload, der gesendet wird.
-        logger.info("    Payload JSON: {}", assetJson);
-        contract.submitTransaction(functionName, assetId, assetJson);
-        logger.info("*** Create Transaction '{}' committed successfully", functionName);
-    }
-
-    /**
      * Führt eine lesende Abfrage aus und wandelt das Ergebnis in ein Java-Objekt um.
      * @param functionName Der Name der Chaincode-Funktion.
      * @param assetId Die ID des zu lesenden Assets.

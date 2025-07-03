@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"> <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title layout:title-pattern="$CONTENT_TITLE - $LAYOUT_TITLE">PharmaLink</title> <link rel="stylesheet" th:href="@{/css/main.css}">
+    <th:block layout:fragment="pageCss"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+
+<nav>
+    <ul>
+        <li><a th:href="@{/app/dashboard}">Dashboard</a></li>
+        <li><a th:href="@{/medikamente}">Medikamente</a></li>
+        <li><a th:href="@{/units}">Einheiten</a></li>
+        <li><a th:href="@{/logout}">Logout</a></li>
+    </ul>
+</nav>
+
+<main>
+    <div layout:fragment="content">
+    </div>
+</main>
+
+<footer>
+    <p>&copy; 2025 PharmaLink. Alle Rechte vorbehalten.</p>
+</footer>
+
+<script th:src="@{/js/main.js}"></script>
+<th:block layout:fragment="pageJs"></th:block>
+</body>
+</html>
