@@ -1,19 +1,27 @@
 package de.jklein.pharmalink.controller;
 
+import org.springframework.security.core.Authentication; // Import Authentication
+import org.springframework.security.core.context.SecurityContextHolder; // Import SecurityContextHolder
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
-/**
- * Controller für die Root-URL der Anwendung.
- * Leitet unauthentifizierte Benutzer zur Login-Seite um.
- */
 @Controller
 public class RootController {
 
     @GetMapping("/")
-    public String redirectToDashboard() {
-        // Leitet auf das Thymeleaf-Template "index.html" um
-        // Alternativ: return "redirect:/dashboard"; wenn du eine spezielle Dashboard-URL hast
-        return "auth/login"; // Verweist auf src/main/resources/web/index.html
+    public String redirectToAppropriatePage() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // Check if the user is authenticated and not an anonymous user
+        // An anonymous user is considered authenticated by Spring Security,
+        // but it's typically used for public access and not a real user.
+        if (authentication != null && authentication.isAuthenticated() &&
+                !(authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
+            // If authenticated, redirect to the dashboard
+            return "redirect:/app/dashboard";
+        } else {
+            // If not authenticated (or anonymous), redirect to the login page
+            return "redirect:/app/login";
+        }
     }
 }

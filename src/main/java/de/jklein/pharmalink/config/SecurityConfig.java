@@ -10,6 +10,9 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.logout.CookieClearingLogoutHandler;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 @Configuration
 @EnableWebSecurity
@@ -41,7 +44,8 @@ public class SecurityConfig {
                         // Für statische Ressourcen und öffentlich zugängliche Seiten:
                         // requestMatchers kann Ant-Style Pfadmuster direkt als String verarbeiten.
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico").permitAll()
-                        .requestMatchers("/app/login", "/").permitAll()
+                        .requestMatchers("/app/login").access(new org.springframework.security.web.access.expression.WebExpressionAuthorizationManager("isAuthenticated() ? redirect('/app/dashboard') : permitAll()"))
+                        .requestMatchers("/app/login**").permitAll() // Redundant with above for /app/login, but good for params
                         // Für den Login-Processing-Endpunkt:
                         // explizite Angabe der HTTP-Methode POST und des Pfades als String.
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/authenticate").permitAll()
@@ -56,12 +60,20 @@ public class SecurityConfig {
                         .permitAll()
                 )
                 .logout(logout -> logout
-                        // Für den Logout-Endpunkt:
-                        // logoutUrl() ist der empfohlene Weg und benötigt keinen AntPathRequestMatcher.
-                        .logoutUrl("/logout") // URL für den Logout-Request
-                        .logoutSuccessUrl("/app/login?logout") // URL nach erfolgreichem Logout
-                        .permitAll()
-                );
+                        .logoutUrl("/logout") // The URL that triggers the logout (must be POST by default)
+                        .logoutSuccessUrl("/app/login?logout") // The URL to redirect to after successful logout
+                        .invalidateHttpSession(true) // Invalidate the HTTP session
+                        .deleteCookies("JSESSIONID") // Delete the session cookie
+                        .addLogoutHandler(new SecurityContextLogoutHandler()) // Clear SecurityContextHolder
+                        .addLogoutHandler(new CookieClearingLogoutHandler("remember-me")) // Clear other cookies if you use "remember-me"
+                        .permitAll() // Allow everyone to access the logout URL
+                )
+                .csrf(csrf -> {
+                    // Ensure CSRF token is available for Thymeleaf
+                    CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
+                    requestHandler.setCsrfRequestAttributeName(null); // By default, Spring Security makes CSRF token available as '_csrf'
+                    csrf.csrfTokenRequestHandler(requestHandler);
+                });
 
         return http.build();
     }
