@@ -14,6 +14,6 @@ public class RootController {
     public String redirectToDashboard() {
         // Leitet auf das Thymeleaf-Template "index.html" um
         // Alternativ: return "redirect:/dashboard"; wenn du eine spezielle Dashboard-URL hast
-        return "index"; // Verweist auf src/main/resources/web/index.html
+        return "auth/login"; // Verweist auf src/main/resources/web/index.html
     }
 }
