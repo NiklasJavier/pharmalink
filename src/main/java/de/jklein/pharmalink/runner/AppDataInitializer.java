@@ -35,9 +35,7 @@ public class AppDataInitializer implements CommandLineRunner {
             Actor initializedActor = fabricClient.getGson().fromJson(actorJson, Actor.class);
             String actorIdFromChaincode = initializedActor.getActorId();
             log.info("Chaincode initialization returned Actor ID: {}", actorIdFromChaincode);
-
             systemStateService.reconcileAndCacheActorId(actorIdFromChaincode);
-
         } catch (Exception e) {
             log.error("Failed to initialize application data from chaincode.", e);
             systemStateService.loadFromDatabaseOnFailure();
