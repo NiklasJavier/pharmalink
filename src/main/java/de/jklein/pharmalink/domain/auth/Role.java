@@ -15,15 +15,15 @@ import lombok.EqualsAndHashCode;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString(exclude = {"users"}) // Schließt die 'users'-Sammlung aus, um zyklische Abhängigkeiten in toString zu vermeiden
-@EqualsAndHashCode(exclude = {"users"}) // Schließt die 'users'-Sammlung aus
+@ToString(exclude = {"users"})
+@EqualsAndHashCode(exclude = {"users"})
 public class Role {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(unique = true, nullable = false)
-    private String name; // z.B. "ROLE_USER", "ROLE_ADMIN"
+    private String name;
 
     @ManyToMany(mappedBy = "roles")
     private Set<User> users;

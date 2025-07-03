@@ -23,13 +23,6 @@ public class IpfsConfig {
     @Value("${ipfs.port}")
     private int ipfsPort;
 
-    /**
-     * Definiert und konfiguriert die IPFS-Client-Instanz als Spring Bean.
-     * Diese Bean wird automatisch von Spring initialisiert und kann in
-     * anderen Komponenten (wie IpfsClient) injiziert werden.
-     *
-     * @return Eine konfigurierte IPFS-Instanz.
-     */
     @Bean
     public IPFS ipfs() {
         try {

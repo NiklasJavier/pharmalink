@@ -2,9 +2,9 @@ package de.jklein.pharmalink.controller;
 
 import de.jklein.pharmalink.service.system.SystemStateService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication; // Import Authentication
-import org.springframework.security.core.context.SecurityContextHolder; // Import SecurityContextHolder
-import org.springframework.security.authentication.AnonymousAuthenticationToken; // Import AnonymousAuthenticationToken
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,13 +26,11 @@ public class AppController {
     public String showLoginForm(Model model) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        // If the user is already authenticated (and not anonymous), redirect to dashboard
         if (authentication != null && authentication.isAuthenticated() &&
                 !(authentication instanceof AnonymousAuthenticationToken)) {
             return "redirect:/app/dashboard";
         }
 
-        // Add error/logout messages from query parameters if present
         if (model.containsAttribute("error")) {
             model.addAttribute("error", true);
         }
@@ -40,8 +38,7 @@ public class AppController {
             model.addAttribute("logout", true);
         }
 
-        // Return the login page for unauthenticated users
-        return "auth/login"; // Verweist auf src/main/resources/web/auth/login.html
+        return "auth/login";
     }
 
     @GetMapping("/dashboard")
@@ -50,7 +47,7 @@ public class AppController {
 
         if (initialActorId == null) {
             redirectAttributes.addFlashAttribute("error", "Ihre Actor ID konnte nicht geladen werden.");
-            return "redirect:/app/errors/unknown-actor"; // Corrected redirect path
+            return "redirect:/app/errors/unknown-actor";
         }
 
         boolean isKnownActorType = initialActorId.startsWith("hersteller-") ||
@@ -60,18 +57,16 @@ public class AppController {
 
         if (!isKnownActorType) {
             redirectAttributes.addFlashAttribute("error", "Unbekannter Akteurstyp für ID: " + initialActorId);
-            redirectAttributes.addFlashAttribute("initialActorId", initialActorId); // Pass ID as flash attribute
-            return "redirect:/app/errors/unknown-actor"; // Corrected redirect path
+            redirectAttributes.addFlashAttribute("initialActorId", initialActorId);
+            return "redirect:/app/errors/unknown-actor";
         }
 
         model.addAttribute("initialActorId", initialActorId);
-        return "dashboard/overview"; // Verweist auf src/main/resources/web/dashboard/overview.html
+        return "dashboard/overview";
     }
 
     @GetMapping("/errors/unknown-actor")
     public String showUnknownActorErrorPage(Model model) {
-        // Flash attributes are automatically added to the model
-        // No explicit retrieval needed, just ensure your template uses them
-        return "errors/unknown-actor"; // Zeigt die Fehlerseite an
+        return "errors/unknown-actor";
     }
 }

@@ -23,10 +23,6 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Konfiguriert und erstellt die Verbindung zum Hyperledger Fabric Netzwerk.
- * Stellt den Gateway und den Contract als verwaltete Spring Beans bereit.
- */
 @Configuration
 @ConfigurationProperties(prefix = "fabric")
 public class FabricConfig {
@@ -54,11 +50,6 @@ public class FabricConfig {
     @Value("${fabric.peer.override-auth}")
     private String overrideAuth;
 
-    /**
-     * Erstellt das Gateway-Objekt als Singleton-Bean.
-     * Dies wird nur einmal beim Start der Anwendung ausgeführt.
-     * @return Ein verbundenes Gateway-Objekt.
-     */
     @Bean
     public Gateway gateway() throws IOException, CertificateException, InvalidKeyException {
         System.out.println("--> Initialisiere Hyperledger Fabric Gateway...");
@@ -78,19 +69,11 @@ public class FabricConfig {
         return gateway;
     }
 
-    /**
-     * Erstellt das Contract-Objekt als Bean, abhängig vom Gateway.
-     * Macht den Contract direkt für die Injektion in Services verfügbar.
-     */
     @Bean
     public Contract contract(Gateway gateway, @Value("${fabric.channel-name}") String channelName, @Value("${fabric.chaincode-name}") String chaincodeName) {
         return gateway.getNetwork(channelName).getContract(chaincodeName);
     }
 
-    /**
-     * Diese Methode wird von Spring automatisch aufgerufen, wenn die Anwendung herunterfährt,
-     * um die gRPC-Verbindung sauber zu schließen.
-     */
     @PreDestroy
     public void closeConnection() throws InterruptedException {
         if (this.grpcChannel != null) {

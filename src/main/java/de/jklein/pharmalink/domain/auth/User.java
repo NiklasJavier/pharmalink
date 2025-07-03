@@ -11,12 +11,12 @@ import lombok.EqualsAndHashCode;
 
 @Entity
 @Table(name = "users")
-@Getter // Generiert alle Getter-Methoden
-@Setter // Generiert alle Setter-Methoden
-@NoArgsConstructor // Generiert einen Konstruktor ohne Argumente
-@AllArgsConstructor // Generiert einen Konstruktor mit allen Feldern als Argumenten
-@ToString(exclude = {"password"}) // Generiert eine toString-Methode, schließt 'password' aus Sicherheitsgründen aus
-@EqualsAndHashCode(exclude = {"password", "roles"}) // Generiert equals() und hashCode(), schließt sensitive/zyklische Felder aus
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@ToString(exclude = {"password"})
+@EqualsAndHashCode(exclude = {"password", "roles"})
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,7 +26,7 @@ public class User {
     private String username;
 
     @Column(nullable = false)
-    private String password; // Passwort muss gehasht gespeichert werden
+    private String password;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
