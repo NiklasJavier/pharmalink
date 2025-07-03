@@ -13,6 +13,9 @@ public final class Actor {
     private String actorId;
 
     @Property()
+    private String bezeichnung;
+
+    @Property()
     private String role;
 
     @Property()
@@ -28,10 +31,12 @@ public final class Actor {
     }
 
     public Actor(@JsonProperty("actorId") final String actorId,
+                 @JsonProperty("bezeichnung") final String bezeichnung,
                  @JsonProperty("role") final String role,
                  @JsonProperty("email") final String email,
                  @JsonProperty("ipfsLink") final String ipfsLink) {
         this.actorId = actorId;
+        this.bezeichnung = bezeichnung;
         this.role = role;
         this.email = email;
         this.ipfsLink = ipfsLink;
@@ -45,6 +50,12 @@ public final class Actor {
     public void setActorId(final String newActorId) {
         this.actorId = newActorId;
     }
+
+    public String getBezeichnung() {
+        return bezeichnung; }
+
+    public void setBezeichnung(final String newBezeichnung) {
+        this.bezeichnung = newBezeichnung; }
 
     public String getRole() {
         return role;

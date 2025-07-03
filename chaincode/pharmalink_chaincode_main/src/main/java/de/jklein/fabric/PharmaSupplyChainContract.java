@@ -123,14 +123,14 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * Example: {"function":"createActor","Args":["actor1","hersteller","test@example.com","Qm..."]}
      */
     @Transaction()
-    public String createActor(final Context ctx, final String actorId, final String role, final String email, final String ipfsLink) {
+    public String createActor(final Context ctx, final String actorId, final String bezeichnung, final String role, final String email, final String ipfsLink) {
         if (actorExists(ctx, actorId)) {
             throw new ChaincodeException(String.format("Akteur %s existiert bereits", actorId), PharmaSupplyChainErrors.ACTOR_ALREADY_EXISTS.toString());
         }
 
         verifyCallingActorRole(ctx, "behoerde");
 
-        Actor actor = new Actor(actorId, role, email, ipfsLink);
+        Actor actor = new Actor(actorId, bezeichnung, role, email, ipfsLink);
         ctx.getStub().putState(actorId, JsonUtil.toJson(actor).getBytes(StandardCharsets.UTF_8));
         return JsonUtil.toJson(actor);
     }
@@ -166,7 +166,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * Example: {"function":"updateActor","Args":["actor1","hersteller","new_email@example.com","newQm..."]}
      */
     @Transaction()
-    public String updateActor(final Context ctx, final String actorId, final String newRole, final String newEmail, final String newIpfsLink) {
+    public String updateActor(final Context ctx, final String actorId, final String newBezeichnung, final String newRole, final String newEmail, final String newIpfsLink) {
         byte[] actorStateBytes = ctx.getStub().getState(actorId);
 
         if (actorStateBytes == null || actorStateBytes.length == 0) {
@@ -180,6 +180,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
             throw new ChaincodeException("Nicht autorisiert, diesen Akteur zu aktualisieren.", PharmaSupplyChainErrors.UNAUTHORIZED_ACCESS.toString());
         }
 
+        existingActor.setBezeichnung(newBezeichnung);
         existingActor.setRole(newRole);
         existingActor.setEmail(newEmail);
         existingActor.setIpfsLink(newIpfsLink);
@@ -248,7 +249,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * {"function":"initCall","Args":["erika.musterfrau@example.com",""]}
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public String initCall(final Context ctx, final String email, final String ipfsLink) {
+    public String initCall(final Context ctx, final String bezeichnung, final String email, final String ipfsLink) {
         final ChaincodeStub stub = ctx.getStub();
         final String mspId = ctx.getClientIdentity().getMSPID();
         final String clientId = ctx.getClientIdentity().getId();
@@ -294,7 +295,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
             return actorState;
         }
 
-        final Actor newActor = new Actor(actorId, actualRoleFromCert.toLowerCase(), email, ipfsLink);
+        final Actor newActor = new Actor(actorId, bezeichnung, actualRoleFromCert.toLowerCase(), email, ipfsLink);
         final String newActorJson = JsonUtil.toJson(newActor);
         stub.putStringState(actorId, newActorJson);
 
@@ -926,5 +927,61 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         } catch (final Exception e) {
             throw new ChaincodeException("Fehler beim Generieren des SHA-256 Hashs: " + e.getMessage(), e.getClass().getSimpleName());
         }
+    }
+
+    /**
+     * Sucht nach Medikamenten, deren Bezeichnung einen bestimmten Text enthält (case-insensitive).
+     * Erfordert einen Index auf 'docType' und 'bezeichnung' in CouchDB für gute Performance.
+     *
+     * @param ctx Der Smart Contract Kontext.
+     * @param bezeichnungQuery Der Suchtext.
+     * @return Eine Liste von passenden Medikamenten als JSON-Array.
+     */
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String queryMedikamenteByBezeichnung(final Context ctx, final String bezeichnungQuery) {
+        final ChaincodeStub stub = ctx.getStub();
+        final List<Medikament> medikamentList = new ArrayList<>();
+
+        // Diese Abfrage nutzt einen regulären Ausdruck, um nach einem Teilstring zu suchen.
+        // Das "(?i)" am Anfang macht die Suche case-insensitive (ignoriert Groß-/Kleinschreibung).
+        final String queryString = String.format(
+                "{\"selector\":{\"docType\":\"medikament\",\"bezeichnung\":{\"$regex\":\"(?i)%s\"}}}", bezeichnungQuery);
+
+        final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = stub.getQueryResult(queryString);
+
+        for (final org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
+            final Medikament medikament = JsonUtil.fromJson(kv.getStringValue(), Medikament.class);
+            medikamentList.add(medikament);
+        }
+
+        return JsonUtil.toJson(medikamentList);
+    }
+
+    /**
+     * Sucht nach Akteuren, deren Bezeichnung einen bestimmten Text enthält (case-insensitive).
+     * Erfordert einen Index auf 'docType' und 'bezeichnung' in CouchDB für gute Performance.
+     *
+     * @param ctx Der Smart Contract Kontext.
+     * @param bezeichnungQuery Der Suchtext, nach dem in der Bezeichnung gesucht wird.
+     * @return Eine Liste von passenden Akteuren als JSON-Array.
+     */
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String queryActorsByBezeichnung(final Context ctx, final String bezeichnungQuery) {
+        final ChaincodeStub stub = ctx.getStub();
+        final List<Actor> actorList = new ArrayList<>();
+
+        // Diese Abfrage nutzt einen regulären Ausdruck, um nach einem Teilstring zu suchen.
+        // Das "(?i)" am Anfang macht die Suche case-insensitive.
+        final String queryString = String.format(
+                "{\"selector\":{\"docType\":\"actor\",\"bezeichnung\":{\"$regex\":\"(?i)%s\"}}}", bezeichnungQuery);
+
+        final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = stub.getQueryResult(queryString);
+
+        for (final org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
+            final Actor actor = JsonUtil.fromJson(kv.getStringValue(), Actor.class);
+            actorList.add(actor);
+        }
+
+        return JsonUtil.toJson(actorList);
     }
 }

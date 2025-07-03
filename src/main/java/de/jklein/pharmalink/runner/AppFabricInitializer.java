@@ -2,7 +2,7 @@
 package de.jklein.pharmalink.runner;
 
 import de.jklein.pharmalink.client.fabric.FabricClient;
-import de.jklein.pharmalink.domain.ActorDto;
+import de.jklein.pharmalink.domain.Actor;
 import de.jklein.pharmalink.service.CurrentActorHolder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,7 +32,7 @@ public class AppFabricInitializer implements CommandLineRunner {
         try {
             String actorJson = fabricClient.submitGenericTransaction("initCall", userEmail, userIpfsLink);
 
-            ActorDto initializedActor = fabricClient.getGson().fromJson(actorJson, ActorDto.class);
+            Actor initializedActor = fabricClient.getGson().fromJson(actorJson, Actor.class);
             actorHolder.setCurrentActor(initializedActor);
 
             System.out.println("\ninitCall erfolgreich ausgeführt. Initialisierter Akteur:");

@@ -1,6 +1,6 @@
 package de.jklein.pharmalink.service;
 
-import de.jklein.pharmalink.domain.ActorDto;
+import de.jklein.pharmalink.domain.Actor;
 import org.springframework.stereotype.Component;
 
 /**
@@ -10,13 +10,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class CurrentActorHolder {
 
-    private ActorDto currentActor;
+    private Actor currentActor;
 
-    public ActorDto getCurrentActor() {
+    public Actor getCurrentActor() {
         return currentActor;
     }
 
-    public void setCurrentActor(ActorDto currentActor) {
+    public void setCurrentActor(Actor currentActor) {
         this.currentActor = currentActor;
     }
 
