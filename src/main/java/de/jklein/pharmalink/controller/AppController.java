@@ -9,9 +9,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping("/app")
 public class AppController {
 
-    @GetMapping("/dashboard")
+    @GetMapping("/auth")
     public String showDashboard(Model model) {
-        return "dashboard";
+        return "auth";
     }
 
     @GetMapping("/profile")

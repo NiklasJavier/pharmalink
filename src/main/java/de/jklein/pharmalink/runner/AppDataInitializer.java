@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 public class AppDataInitializer implements CommandLineRunner {
 
     private final FabricClient fabricClient;
-    private final SystemStateService systemStateService; // Injizierung des neuen Service
+    private final SystemStateService systemStateService;
 
     @Value("${ipfs.email}")
     private String userEmail;
@@ -36,12 +36,10 @@ public class AppDataInitializer implements CommandLineRunner {
             String actorIdFromChaincode = initializedActor.getActorId();
             log.info("Chaincode initialization returned Actor ID: {}", actorIdFromChaincode);
 
-            // Delegiere die gesamte Logik an den State Service
             systemStateService.reconcileAndCacheActorId(actorIdFromChaincode);
 
         } catch (Exception e) {
             log.error("Failed to initialize application data from chaincode.", e);
-            // Rufe die Fallback-Methode im Service auf
             systemStateService.loadFromDatabaseOnFailure();
         }
     }

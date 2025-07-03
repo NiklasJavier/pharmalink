@@ -3,11 +3,6 @@ package de.jklein.pharmalink.domain;
 import lombok.Data;
 import java.util.Map;
 
-/**
- * Domain-Objekt, das ein Medikament im Kern der Anwendung repräsentiert.
- * Diese Klasse enthält alle internen Felder und die Geschäftslogik, die zu einem Medikament gehört.
- * Sie wird von der Service-Schicht verwendet.
- */
 @Data
 public class Medikament {
 
@@ -18,7 +13,7 @@ public class Medikament {
     private String ipfsLink;
     private String status;
     private Map<String, String> tags;
-    private String docType; // Internes Feld, wird nicht in der API gezeigt
+    private String docType;
     private String approvedById;
 
 }

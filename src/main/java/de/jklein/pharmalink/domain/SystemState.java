@@ -8,11 +8,6 @@ import jakarta.persistence.Id;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * Eine Entity, die einen globalen Zustand der Applikation repräsentiert,
- * z.B. die ID des initialisierten Akteurs aus dem Chaincode.
- * Es sollte immer nur einen einzigen Eintrag dieser Art in der DB geben.
- */
 @Entity
 @Data
 @NoArgsConstructor

@@ -17,6 +17,14 @@ spring:
       prefix: /WEB-INF/jsp/
     suffix: .jsp
 
+springdoc:
+  info:
+    title: Pharmalink API
+    description: API-Dokumentation für die Pharmalink Lieferkettenanwendung auf Hyperledger Fabric.
+    path: /api/swagger
+  api-docs:
+    path: /api/api-docs
+
 actor:
   bezeichnung: company2
 

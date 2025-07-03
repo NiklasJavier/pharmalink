@@ -4,10 +4,6 @@ import lombok.Data;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Domain-Objekt, das eine einzelne, verfolgbare Einheit (Unit) repräsentiert.
- * Diese Klasse ist die interne "Wahrheit" des Systems für eine Unit.
- */
 @Data
 public class Unit {
 
