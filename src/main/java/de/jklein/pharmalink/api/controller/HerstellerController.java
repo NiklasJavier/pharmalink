@@ -5,7 +5,7 @@ import de.jklein.pharmalink.api.dto.MedikamentResponseDto;
 import de.jklein.pharmalink.api.mapper.ActorMapper;
 import de.jklein.pharmalink.service.ActorService;
 import de.jklein.pharmalink.service.MedicationService;
-import de.jklein.pharmalink.service.SystemStateService; // NEU: Import des SystemStateService
+import de.jklein.pharmalink.service.system.SystemStateService; // NEU: Import des SystemStateService
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

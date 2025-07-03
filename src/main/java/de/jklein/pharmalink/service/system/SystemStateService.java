@@ -1,7 +1,7 @@
-package de.jklein.pharmalink.service;
+package de.jklein.pharmalink.service.system;
 
-import de.jklein.pharmalink.domain.SystemState;
-import de.jklein.pharmalink.repository.SystemStateRepository;
+import de.jklein.pharmalink.domain.system.SystemState;
+import de.jklein.pharmalink.repository.system.SystemStateRepository;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +20,7 @@ public class SystemStateService {
 
     private final SystemStateRepository systemStateRepository;
 
-    @Getter // Lombok-Getter für das Feld
+    @Getter
     private String initialActorId;
 
     /**

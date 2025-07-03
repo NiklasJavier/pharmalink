@@ -1,4 +1,4 @@
-package de.jklein.pharmalink.domain;
+package de.jklein.pharmalink.domain.system;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

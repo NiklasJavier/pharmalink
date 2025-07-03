@@ -17,6 +17,18 @@ spring:
       prefix: /WEB-INF/jsp/
     suffix: .jsp
 
+app:
+  initial-users:
+    - username: admin
+      password: $2a$10$nZYgNvdSmcF6Nw.AtWBwLeapUQrLxRTZSkXWlOaD/xZyvFw8DkBke
+      roles:
+        - ROLE_USER
+        - ROLE_ADMIN
+    - username: user
+      password: $2a$10$k0HGgX7388bJEtWUAhfAwOaAexCUBuM20q8LgiWBgdpJLpDn3t.Na
+      roles:
+        - ROLE_USER
+
 springdoc:
   info:
     title: Pharmalink API

@@ -14,6 +14,6 @@ public class Unit {
     private String currentOwnerActorId;
     private List<Map<String, String>> temperatureReadings;
     private List<Map<String, String>> transferHistory;
-    private String docType; // Internes Feld für die Datenbankabfrage
+    private String docType;
 
 }

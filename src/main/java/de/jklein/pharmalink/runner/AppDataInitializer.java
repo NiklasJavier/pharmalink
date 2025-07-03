@@ -2,7 +2,7 @@ package de.jklein.pharmalink.runner;
 
 import de.jklein.pharmalink.client.fabric.FabricClient;
 import de.jklein.pharmalink.domain.Actor;
-import de.jklein.pharmalink.service.SystemStateService; // Import des neuen Service
+import de.jklein.pharmalink.service.system.SystemStateService; // Import des neuen Service
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

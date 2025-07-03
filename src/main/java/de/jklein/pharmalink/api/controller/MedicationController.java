@@ -2,7 +2,7 @@ package de.jklein.pharmalink.api.controller;
 
 import de.jklein.pharmalink.api.dto.*;
 import de.jklein.pharmalink.service.MedicationService;
-import de.jklein.pharmalink.service.SystemStateService;
+import de.jklein.pharmalink.service.system.SystemStateService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

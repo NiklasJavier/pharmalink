@@ -7,6 +7,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class RootController {
     @GetMapping("/")
     public String redirectToDashboard() {
-        return "redirect:/app/auth";
+        return "redirect:/app/login";
     }
 }

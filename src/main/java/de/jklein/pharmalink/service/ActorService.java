@@ -25,9 +25,8 @@ public class ActorService {
     private static final Logger logger = LoggerFactory.getLogger(ActorService.class);
 
     private final FabricClient fabricClient;
-    private final IpfsClient ipfsClient;     // NEU: Feld für den IpfsClient
-    private final ActorMapper actorMapper;   // NEU: Feld für den ActorMapper
-
+    private final IpfsClient ipfsClient;
+    private final ActorMapper actorMapper;
     @Autowired
     public ActorService(FabricClient fabricClient, IpfsClient ipfsClient, ActorMapper actorMapper) { // NEU: Im Konstruktor hinzugefügt
         this.fabricClient = fabricClient;
