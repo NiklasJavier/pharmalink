@@ -105,4 +105,29 @@ public class ActorService {
             return Collections.emptyList();
         }
     }
+
+    /**
+     * Sucht nach Herstellern, deren Bezeichnung einen bestimmten Text enthält.
+     *
+     * @param searchQuery Der Suchtext.
+     * @return Eine Liste von passenden Hersteller-DTOs.
+     */
+    public List<ActorResponseDto> searchHerstellerByBezeichnung(String searchQuery) {
+        try {
+            // 1. Rufe die Chaincode-Funktion auf, die alle passenden Akteure zurückgibt.
+            String resultJson = fabricClient.evaluateGenericTransaction("queryActorsByBezeichnung", searchQuery);
+            Type listType = new TypeToken<List<Actor>>() {}.getType();
+            List<Actor> actors = fabricClient.getGson().fromJson(resultJson, listType);
+
+            // 2. Filtere die Liste im Java-Code, um nur Hersteller zu behalten.
+            return actors.stream()
+                    .filter(actor -> "hersteller".equalsIgnoreCase(actor.getRole()))
+                    .map(actorMapper::toDto) // Wandle die gefilterten Akteure in DTOs um
+                    .collect(Collectors.toList());
+
+        } catch (Exception e) {
+            logger.error("Fehler bei der Suche nach Herstellern mit Query '{}'", searchQuery, e);
+            return Collections.emptyList();
+        }
+    }
 }

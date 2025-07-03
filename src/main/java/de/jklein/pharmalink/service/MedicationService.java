@@ -19,10 +19,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -244,5 +241,31 @@ public class MedicationService {
 
         // 3. Mappe das Domain-Objekt zu einem DTO für die Antwort.
         return medikamentMapper.toDto(updatedMedikament);
+    }
+
+    /**
+     * Sucht nach Medikamenten anhand eines Teils ihrer Bezeichnung.
+     * Jedes gefundene Medikament wird mit IPFS-Daten angereichert.
+     *
+     * @param searchQuery Der Suchtext.
+     * @return Eine Liste von passenden, angereicherten Medikament-DTOs.
+     */
+    public List<MedikamentResponseDto> searchMedicationsByBezeichnung(String searchQuery) {
+        try {
+            // Ruft die Chaincode-Funktion über den FabricClient auf.
+            String resultJson = fabricClient.evaluateGenericTransaction("queryMedikamenteByBezeichnung", searchQuery);
+            Type listType = new TypeToken<List<Medikament>>() {}.getType();
+            List<Medikament> medikamente = fabricClient.getGson().fromJson(resultJson, listType);
+
+            // Reichert jedes gefundene Medikament an.
+            return medikamente.stream()
+                    .map(medikament -> this.getEnrichedMedikamentById(medikament.getMedId()).orElse(null))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+        } catch (Exception e) {
+            logger.error("Fehler bei der Suche nach Medikamenten mit Query '{}'", searchQuery, e);
+            return Collections.emptyList();
+        }
     }
 }

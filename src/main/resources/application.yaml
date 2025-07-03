@@ -12,6 +12,13 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+  mvc:
+    view:
+      prefix: /WEB-INF/jsp/
+    suffix: .jsp
+
+actor:
+  bezeichnung: company2
 
 fabric:
   msp-id: Org1MSP

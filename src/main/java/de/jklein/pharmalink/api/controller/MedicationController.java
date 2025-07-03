@@ -135,4 +135,17 @@ public class MedicationController {
                     .body(Map.of("error", "Fehler bei der Statusänderung: " + e.getMessage()));
         }
     }
+
+    /**
+     * Sucht nach Medikamenten, deren Bezeichnung einen bestimmten Text enthält.
+     * Endpunkt: GET /api/v1/medications?search=Aspirin
+     *
+     * @param searchQuery Der Text, nach dem in der Bezeichnung gesucht wird.
+     * @return Eine Liste von passenden Medikamenten als DTOs.
+     */
+    @GetMapping("/search")
+    public ResponseEntity<List<MedikamentResponseDto>> searchMedications(@RequestParam(name = "search") final String searchQuery) {
+        List<MedikamentResponseDto> medikamente = medicationService.searchMedicationsByBezeichnung(searchQuery);
+        return ResponseEntity.ok(medikamente);
+    }
 }

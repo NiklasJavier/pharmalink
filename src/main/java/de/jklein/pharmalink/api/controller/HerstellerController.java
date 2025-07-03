@@ -9,10 +9,7 @@ import de.jklein.pharmalink.service.SystemStateService; // NEU: Import des Syste
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
@@ -113,5 +110,18 @@ public class HerstellerController {
 
         // 3. Die ID wird in einem einfachen JSON-Objekt zurückgegeben.
         return ResponseEntity.ok(Map.of("actorId", actorId));
+    }
+
+    /**
+     * Sucht nach Herstellern, deren Bezeichnung einen bestimmten Text enthält.
+     * Endpunkt: GET /api/v1/hersteller/search?name=PharmaCorp
+     *
+     * @param nameQuery Der Text, nach dem in der Bezeichnung gesucht wird.
+     * @return Eine Liste von passenden Herstellern als DTOs.
+     */
+    @GetMapping("/search")
+    public ResponseEntity<List<ActorResponseDto>> searchHersteller(@RequestParam(name = "search") final String nameQuery) {
+        List<ActorResponseDto> hersteller = actorService.searchHerstellerByBezeichnung(nameQuery);
+        return ResponseEntity.ok(hersteller);
     }
 }

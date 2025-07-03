@@ -18,6 +18,9 @@ public class AppFabricInitializer implements CommandLineRunner {
     @Value("${ipfs.email}")
     private String userEmail;
 
+    @Value("${actor.bezeichnung}")
+    private String actorDescription;
+
     @Value("${ipfs.ipfs-link}")
     private String userIpfsLink;
 
@@ -30,7 +33,7 @@ public class AppFabricInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
-            String actorJson = fabricClient.submitGenericTransaction("initCall", userEmail, userIpfsLink);
+            String actorJson = fabricClient.submitGenericTransaction("initCall", actorDescription, userEmail, userIpfsLink);
 
             Actor initializedActor = fabricClient.getGson().fromJson(actorJson, Actor.class);
             actorHolder.setCurrentActor(initializedActor);
@@ -38,6 +41,7 @@ public class AppFabricInitializer implements CommandLineRunner {
             System.out.println("\ninitCall erfolgreich ausgeführt. Initialisierter Akteur:");
             System.out.println("   ID: " + initializedActor.getActorId());
             System.out.println("   Rolle: " + initializedActor.getRole());
+            System.out.println("   Bezeichnung: " + initializedActor.getBezeichnung());
             System.out.println("   E-Mail: " + initializedActor.getEmail());
             System.out.println("   IPFS Link: " + (initializedActor.getIpfsLink() != null && !initializedActor.getIpfsLink().isEmpty() ? initializedActor.getIpfsLink() : "N/A"));
 

@@ -6,6 +6,7 @@ import java.util.Map; // Import für Map
 @Data
 public class ActorResponseDto {
     private String actorId;
+    private String bezeichnung;
     private String role;
     private String email;
     private String ipfsLink;
