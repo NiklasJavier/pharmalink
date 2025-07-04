@@ -13,12 +13,13 @@ spring:
       ddl-auto: update
     show-sql: true
   thymeleaf:
-    cache: false
     prefix: classpath:/web/
     suffix: .html
     mode: HTML
-    encoding: UTF-8
+    cache: true
+    check-template-location: true
     enabled: true
+    encoding: UTF-8
 
 app:
   initial-users:
