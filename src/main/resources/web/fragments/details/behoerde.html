@@ -3,34 +3,18 @@
 <body>
 
 <div th:fragment="behoerdeDetails">
-    <h2>Behörden-Übersicht</h2>
-    <p>Als Behörde haben Sie hier eine Übersicht über die registrierten Akteure im System.</p>
-
-    <div th:if="${allActors}">
-        <hr class="section-divider">
-        <h3>Registrierte Hersteller</h3>
-
-        <div th:if="${!#lists.isEmpty(allActors)}">
-            <table>
-                <thead>
-                <tr>
-                    <th>Akteur-ID</th>
-                    <th>Bezeichnung</th>
-                    <th>Rolle</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="actor : ${allActors}">
-                    <td th:text="${actor.actorId}" class="id-text">actor-123...</td>
-                    <td th:text="${actor.bezeichnung}">Musterfirma GmbH</td>
-                    <td th:text="${actor.getRolle()}">hersteller</td>
-                </tr>
-                </tbody>
-            </table>
+    <div class="card" th:if="${medikamenteAsJsonList != null and !medikamenteAsJsonList.isEmpty()}">
+        <div class="card-header">
+            <h3>Medikamente</h3>
         </div>
-
-        <div th:if="${#lists.isEmpty(allActors)}">
-            <p>Es sind keine Akteure für diese Ansicht vorhanden.</p>
+        <div class="card-body">
+            <div class="flex-container">
+                <div th:each="jsonString, iterStat : ${medikamenteAsJsonList}"
+                     th:id="'json-container-' + ${iterStat.index}"
+                     class="json-container-item">
+                    <script th:id="'json-data-' + ${iterStat.index}" type="application/json" th:utext="${jsonString}"></script>
+                </div>
+            </div>
         </div>
     </div>
 </div>
