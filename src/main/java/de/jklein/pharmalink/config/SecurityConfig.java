@@ -53,7 +53,7 @@ public class SecurityConfig {
                         .requestMatchers("/error", "/web/error/**").permitAll()
                         .requestMatchers("/app/login").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/authenticate").permitAll()
-                        .requestMatchers("/").permitAll() // **DIESE ZEILE HINZUFÜGEN**
+                        .requestMatchers("/").permitAll()
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form

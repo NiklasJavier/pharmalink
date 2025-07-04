@@ -28,7 +28,7 @@ public class IpfsConfig {
         try {
             String multiAddr = String.format("/dns4/%s/tcp/%d", ipfsHost, ipfsPort);
             IPFS ipfsInstance = new IPFS(new MultiAddress(multiAddr));
-            ipfsInstance.id(); // Test connection
+            ipfsInstance.id();
             logger.info("IPFS Bean successfully initialized and connected to {}:{}", ipfsHost, ipfsPort);
             return ipfsInstance;
         } catch (IOException e) {

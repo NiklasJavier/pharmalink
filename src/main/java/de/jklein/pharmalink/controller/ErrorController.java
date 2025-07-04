@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 public class ErrorController implements org.springframework.boot.web.servlet.error.ErrorController {
 
     private void addGlobalAttributesForErrorPage(Model model) {
-        String backendVersion = "1.0.0";
+        String backendVersion = "1.0.1";
         model.addAttribute("backendVersion", backendVersion);
     }
 
@@ -109,7 +109,6 @@ public class ErrorController implements org.springframework.boot.web.servlet.err
             model.addAttribute("pageTitle", "Fehler " + code);
             model.addAttribute("errorMessage", "Ein spezifischer Fehler ist aufgetreten.");
         }
-
         return "errors/error";
     }
 }
