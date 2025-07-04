@@ -78,25 +78,18 @@ public class AppController {
         try {
             switch (currentActor.getRolle()) {
                 case "hersteller":
-                    // 1. Die Liste der Medikamenten-Objekte abrufen
                     var medikamente = medicationService.getMedikamenteByHerstellerId(initialActorId);
-
-                    // 2. JEDES Medikament in der Liste in einen eigenen JSON-String umwandeln
                     List<String> medikamenteAsJsonList = medikamente.stream()
                             .map(med -> {
                                 try {
                                     return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(med);
                                 } catch (Exception e) {
-                                    // Fallback, falls ein einzelnes Objekt nicht konvertiert werden kann
                                     return "{\"error\": \"Konnte Medikament nicht in JSON umwandeln.\"}";
                                 }
                             })
                             .collect(Collectors.toList());
-
-                    // 3. Die LISTE der JSON-Strings an das Model übergeben
                     model.addAttribute("medikamenteAsJsonList", medikamenteAsJsonList);
                     break;
-
                 case "grosshaendler":
                 case "apotheke":
                     model.addAttribute("units", unitService.getUnitsByOwner(initialActorId));
@@ -108,7 +101,6 @@ public class AppController {
         } catch (Exception e) {
             model.addAttribute("dashboardError", "Fehler beim Laden der Dashboard-Daten: " + e.getMessage());
         }
-
         return "dashboard/overview";
     }
 
