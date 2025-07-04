@@ -53,6 +53,8 @@ public class AppController {
         return "auth/login";
     }
 
+// In src/main/java/de/jklein/pharmalink/controller/AppController.java
+
     @GetMapping("/dashboard")
     public String showDashboard(Model model, RedirectAttributes redirectAttributes) {
         String initialActorId = systemStateService.getInitialActorId();
@@ -60,14 +62,13 @@ public class AppController {
             redirectAttributes.addFlashAttribute("error", "Ihre Actor ID konnte nicht geladen werden.");
             return "redirect:/app/errors/unknown-actor";
         }
-        
+
         model.addAttribute("initialActorId", initialActorId);
 
         Optional<ActorResponseDto> actorOpt = actorService.getEnrichedActorById(initialActorId);
 
         if (actorOpt.isEmpty()) {
             redirectAttributes.addFlashAttribute("error", "Unbekannter Akteurstyp für ID: " + initialActorId);
-            redirectAttributes.addFlashAttribute("initialActorId", initialActorId);
             return "redirect:/app/errors/unknown-actor";
         }
 
@@ -75,19 +76,19 @@ public class AppController {
         model.addAttribute("currentActorInfo", currentActor);
         model.addAttribute("pageTitle", "Dashboard");
 
-        // Lade Dashboard-Daten basierend auf der Rolle des Akteurs
         try {
-            switch (currentActor.getRolle()) {
-                case "hersteller":
-                    model.addAttribute("medicationsByHersteller", medicationService.getMedikamenteByHerstellerId(initialActorId));
-                    break;
-                case "grosshaendler":
-                case "apotheke":
-                    model.addAttribute("units", unitService.getUnitsByOwner(initialActorId));
-                    break;
-                case "behoerde":
-                    model.addAttribute("allActors", actorService.getActorsByRole("hersteller"));
-                    break;
+            if ("hersteller".equals(currentActor.getRolle())) {
+                // Die Liste der Medikamente abrufen
+                var medikamente = medicationService.getMedikamenteByHerstellerId(initialActorId);
+                // NEU: Die Liste in einen formatierten JSON-String umwandeln
+                String medikamenteAsJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(medikamente);
+                // Den JSON-String an das Model übergeben
+                model.addAttribute("medicationsAsJson", medikamenteAsJson);
+
+            } else if ("grosshaendler".equals(currentActor.getRolle()) || "apotheke".equals(currentActor.getRolle())) {
+                model.addAttribute("units", unitService.getUnitsByOwner(initialActorId));
+            } else if ("behoerde".equals(currentActor.getRolle())) {
+                model.addAttribute("allActors", actorService.getActorsByRole("hersteller"));
             }
         } catch (Exception e) {
             model.addAttribute("dashboardError", "Fehler beim Laden der Dashboard-Daten: " + e.getMessage());

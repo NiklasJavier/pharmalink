@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="grosshaendlerDetails">
+    <h2>Großhändler-Übersicht</h2>
+    <p>Hier sehen Sie eine Übersicht aller pharmazeutischen Einheiten in Ihrem Lager.</p>
+
+    <div th:if="${units}">
+        <hr class="section-divider">
+        <h3>Ihr Inventar</h3>
+
+        <div th:if="${!#lists.isEmpty(units)}">
+            <table>
+                <thead>
+                <tr>
+                    <th>Einheiten-ID</th>
+                    <th>Medikamenten-ID</th>
+                    <th>Charge</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="unit : ${units}">
+                    <td th:text="${unit.unitId}" class="id-text">unit-123...</td>
+                    <td th:text="${unit.medId}" class="id-text">med-456...</td>
+                    <td th:text="${unit.chargeBezeichnung}">CH-2025</td>
+                    <td>
+                             <span th:text="${unit.status}" class="status-badge"
+                                   th:classappend="${unit.status == 'im_transit'} ? 'status-transit' : 'status-instock'">
+                                Im Bestand
+                            </span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${#lists.isEmpty(units)}">
+            <p>Sie haben derzeit keine pharmazeutischen Einheiten in Ihrem Lager.</p>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

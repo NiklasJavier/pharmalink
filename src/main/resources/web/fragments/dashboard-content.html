@@ -1,29 +1,33 @@
-<!DOCTYPE html>
-<html lang="de" xmlns:th="http://www.thymeleaf.org">
-<body>
-
 <div th:fragment="dashboardContent">
     <h1>Willkommen auf Ihrem Dashboard, <span th:text="${#authentication.name}"></span>!</h1>
-
-    <div class="actor-info">
-        <p>Ihre Actor ID: <strong th:text="${initialActorId}">[Ihre Actor ID wird hier angezeigt]</strong></p>
-
-        <div th:if="${initialActorId}">
-            <p>Sie sind angemeldet als:
-                <span th:if="${initialActorId.startsWith('hersteller-')}" class="actor-type-label">Hersteller</span>
-                <span th:if="${initialActorId.startsWith('grosshaendler-')}" class="actor-type-label">Großhändler</span>
-                <span th:if="${initialActorId.startsWith('apotheke-')}" class="actor-type-label">Apotheke</span>
-                <span th:if="${initialActorId.startsWith('behoerde-')}" class="actor-type-label">Behörde</span>
-            </p>
-        </div>
-        <div th:unless="${initialActorId}">
-            <p class="warning-message">Ihre Initial Actor ID konnte nicht geladen werden.</p>
-        </div>
+    <div class="actor-info" th:if="${currentActorInfo}">
+        <p>Ihre Actor ID: <strong th:text="${currentActorInfo.actorId}"></strong></p>
+        <p>Angemeldet als: <strong th:text="${currentActorInfo.bezeichnung}"></strong></p>
+        <p>Rolle: <strong th:text="${currentActorInfo.getRolle()}"></strong></p>
     </div>
 
-    <p>Dies ist der Hauptinhalt der Dashboard-Übersicht.</p>
-    <p>Hier können Diagramme, Statistiken oder Schnellzugriffe platziert werden.</p>
-</div>
+    <hr class="section-divider">
 
-</body>
-</html>
+    <div th:if="${currentActorInfo}" th:switch="${currentActorInfo.getRolle()}">
+
+        <th:block th:case="'hersteller'">
+            <div th:replace="~{fragments/details/hersteller :: herstellerDetails}"></div>
+        </th:block>
+
+        <th:block th:case="'grosshaendler'">
+            <div th:replace="~{fragments/details/grosshaendler :: grosshaendlerDetails}"></div>
+        </th:block>
+
+        <th:block th:case="'apotheke'">
+            <div th:replace="~{fragments/details/apotheke :: apothekeDetails}"></div>
+        </th:block>
+
+        <th:block th:case="'behoerde'">
+            <div th:replace="~{fragments/details/behoerde :: behoerdeDetails}"></div>
+        </th:block>
+
+        <th:block th:case="*">
+            <p>Für Ihre Rolle ist keine spezifische Dashboard-Ansicht konfiguriert.</p>
+        </th:block>
+    </div>
+</div>
