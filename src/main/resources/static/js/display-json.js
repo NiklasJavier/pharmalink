@@ -1,17 +1,9 @@
-// ===================================================================
-//  ZENTRALE KONFIGURATION (MIT STEUERUNG FÜR ZEILE, KEY & VALUE)
-//  Hier definieren Sie alle Ausnahmen.
-// ===================================================================
 const clickableRules = [
     {
         type: 'key',
         value: 'status',
         label: 'Status',
-        styles: {
-            row: 'row-layout-status',   // Eigene Klasse für die Zeile (Layout)
-            key: 'key-style-status',    // Eigene Klasse für den Key
-            value: 'value-style-status' // Eigene Klasse für den Value
-        },
+        styles: { value: 'value-style-status' },
         action: (currentValue, label) => {
             const options = ['geliefert', 'in Bearbeitung', 'storniert'];
             const selection = prompt(`Neuen ${label} wählen:\n(${options.join(', ')})`, currentValue);
@@ -19,43 +11,35 @@ const clickableRules = [
         }
     },
     {
+        type: 'key',
+        value: 'versiegelt',
+        label: 'Versiegelungs-Status',
+        styles: { value: 'value-style-boolean' },
+        action: (currentValue, label) => {
+            const isSealed = JSON.parse(currentValue);
+            return confirm(`Soll der ${label} umgeschaltet werden? Aktuell: ${isSealed}`) ? !isSealed : null;
+        }
+    },
+    {
         type: 'prefix',
-        value: 'MED-',
+        value: 'med-',
         label: 'Medizinische ID',
-        styles: {
-            // Hier wird nur der Wert hervorgehoben
-            value: 'value-style-med-id'
-        },
+        styles: { value: 'value-style-med-id' },
         action: (currentValue, label) => prompt(`Aktion für ${label} "${currentValue}":`, currentValue)
     },
     {
         type: 'prefix',
         value: 'hersteller-',
         label: 'Hersteller-ID',
-        styles: {
-            // Hier bekommen Key und Value einen Stil
-            key: 'key-style-hersteller',
-            value: 'value-style-hersteller'
-        },
+        styles: { key: 'key-style-hersteller', value: 'value-style-hersteller' },
         action: (currentValue, label) => prompt(`Aktion für ${label} "${currentValue}":`, currentValue)
     }
 ];
 
-
-// ===================================================================
-//  HAUPTLOGIK (muss nicht mehr geändert werden)
-// ===================================================================
-
-/**
- * Startet den Prozess, sobald das HTML-Dokument geladen ist.
- */
 document.addEventListener('DOMContentLoaded', () => {
     renderAllJsonContainers();
 });
 
-/**
- * Findet alle JSON-Container, rendert ihren Inhalt und macht Elemente interaktiv.
- */
 function renderAllJsonContainers() {
     const containers = document.querySelectorAll('.json-container-item:not(.json-rendered)');
     containers.forEach(container => {
@@ -64,10 +48,16 @@ function renderAllJsonContainers() {
             try {
                 const jsonObj = JSON.parse(jsonDataScript.textContent);
                 if (typeof JSONFormatter !== 'undefined') {
-                    const formatter = new JSONFormatter(jsonObj, 2, { theme: 'light-mode' });
+                    const formatter = new JSONFormatter(jsonObj, 2, { theme: 'viewer-theme' });
                     container.innerHTML = '';
                     container.appendChild(formatter.render());
+
+                    // Bestehende Funktionen
                     makeValuesInteractive(container);
+
+                    // NEU HINZUGEFÜGT: Entfernt die Anführungszeichen nach dem Rendern
+                    removeQuotesFromValues(container);
+
                     container.classList.add('json-rendered');
                 } else {
                     container.textContent = 'Fehler: Renderer-Bibliothek fehlt.';
@@ -80,9 +70,6 @@ function renderAllJsonContainers() {
     });
 }
 
-/**
- * Wendet das universelle Regelwerk an und steuert das Design von Zeile, Key und Value.
- */
 function makeValuesInteractive(container) {
     const valueElements = container.querySelectorAll('.json-formatter-string, .json-formatter-number, .json-formatter-boolean');
     let idCounter = 0;
@@ -98,29 +85,38 @@ function makeValuesInteractive(container) {
                 (rule.type === 'prefix' && typeof valueText === 'string' && valueText.startsWith(rule.value));
 
             if (match) {
-                // Prüfe, ob ein styles-Objekt in der Regel existiert
                 if (rule.styles) {
-                    // Wende die Klassen auf die jeweiligen Elemente an
                     if (rule.styles.row && parentRow) parentRow.classList.add(rule.styles.row);
-                    if (rule.styles.key && keyEl) keyEl.classList.add(rule.styles.key);
-                    if (rule.styles.value) valueEl.classList.add(rule.styles.value);
+                    if (rule.styles.key && keyEl) keyEl.classList.add('styled-key', rule.styles.key);
+                    if (rule.styles.value) valueEl.classList.add('styled-value', rule.styles.value);
                 }
-
-                // Fügt die Klick-Funktionalität zum Value-Element hinzu
-                valueEl.classList.add('clickable-value'); // Basis-Klasse für Klickbarkeit
+                valueEl.classList.add('clickable-value');
                 valueEl.id = `interactive-${rule.value}-${idCounter++}`;
-
                 valueEl.addEventListener('click', () => {
+                    // Wichtig: Hier holen wir den Wert erneut, falls er sich geändert hat
                     const currentValue = valueEl.textContent.replace(/"/g, '');
                     const updatedValue = rule.action(currentValue, rule.label);
-
                     if (updatedValue !== null) {
-                        valueEl.textContent = (typeof updatedValue === 'string') ? `"${updatedValue}"` : updatedValue;
+                        // Da die Quotes jetzt immer entfernt werden, fügen wir sie hier für die Anzeige nicht wieder hinzu
+                        valueEl.textContent = updatedValue;
                     }
                 });
-
                 break;
             }
+        }
+    });
+}
+
+/**
+ * NEU HINZUGEFÜGT
+ * Entfernt die umschließenden Anführungszeichen von allen String-Werten.
+ * @param {HTMLElement} container Der Container, in dem gesucht werden soll.
+ */
+function removeQuotesFromValues(container) {
+    const stringElements = container.querySelectorAll('.json-formatter-string');
+    stringElements.forEach(el => {
+        if (el.textContent.startsWith('"') && el.textContent.endsWith('"')) {
+            el.textContent = el.textContent.slice(1, -1);
         }
     });
 }

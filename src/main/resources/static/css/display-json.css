@@ -1,164 +1,141 @@
 /*
-  ============================================================
-      MODERNES THEME FÜR DEN JSON-RENDERER (KOMPLETTÜBERARBEITUNG)
-  ============================================================
+====================================================================
+    1. LOKALE VARIABLEN & BASIS-STILE FÜR DEN JSON-VIEWER
+====================================================================
 */
+/* KORREKTUR: Der Klassenname wurde zu .json-formatter-viewer-theme geändert */
+.json-formatter-viewer-theme {
+    /* -- Definierte Variablen für dieses Bauteil -- */
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --radius-sm: 6px;
+    --spacing-2: 0.5rem;
+    --spacing-3: 0.8rem;
+    --spacing-5: 1.5rem;
+    --color-bg-content: #ffffff;
+    --color-bg-subtle: #f8fafc; /* Hellgrau für Value-Boxen */
+    --color-border: #eef2f7;
+    --color-text-key: #475569;
+    --color-lineage: #1B1B1B;
 
-/* Container für mehrere JSON-Viewer nebeneinander */
-.flex-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2rem; /* Etwas mehr Abstand zwischen den Boxen */
-}
+    /* Syntax-Farben */
+    --syntax-string: #222;
+    --syntax-number: #8b5cf6;
+    --syntax-boolean: #ec4899;
+    --syntax-null: #ef4444;
 
-/* Der Haupt-Container für einen einzelnen JSON-Viewer */
-.json-formatter-modern-theme {
-    flex: 1 1 450px;
-    min-width: 450px;
-    font-family: 'Fira Code', 'Operator Mono', 'Source Code Pro', monospace;
+    /* Interaktive Themen-Farben */
+    --theme-status-bg: #ecfdf5;
+    --theme-status-text: #10b981;
+    --theme-hersteller-bg: #fffbeb;
+    --theme-hersteller-text: #f59e0b;
+    --theme-med-id-bg: #eff6ff;
+    --theme-med-id-text: #3b82f6;
+    --theme-boolean-bg: #fdf2f8;
+    --theme-boolean-text: #ec4899;
+
+    font-family: var(--font-mono);
     font-size: 14px;
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0; /* Dezenter Rand */
-    border-radius: 0.75rem;     /* Weichere Kanten */
-    overflow: hidden;         /* Stellt sicher, dass die Kanten rund bleiben */
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
-/* Styling für jede einzelne Key-Value-Zeile */
-.json-formatter-modern-theme .json-formatter-row {
+/*
+====================================================================
+    2. NEUES DESIGN: KEY/VALUE ALS SEPARATE BOXEN
+====================================================================
+*/
+
+.json-formatter-viewer-theme .json-formatter-row {
     display: flex;
-    align-items: baseline; /* Richtet Key und Value an ihrer Schrift-Basislinie aus */
-    padding: 0.6rem 1.25rem; /* Vertikaler und horizontaler Abstand */
-    border-bottom: 1px solid #f1f5f9; /* Sehr feine Trennlinie */
-    transition: background-color 0.2s ease-in-out;
+    align-items: stretch;
+    gap: var(--spacing-3);
+    margin-bottom: var(--spacing-3);
 }
 
-/* Entfernt die Trennlinie bei der letzten Zeile */
-.json-formatter-modern-theme .json-formatter-row:last-child {
-    border-bottom: none;
-}
-
-/* Zebra-Streifen für bessere Lesbarkeit bei langen Objekten */
-.json-formatter-modern-theme .json-formatter-row:nth-child(even) {
-    background-color: #f8fafc; /* Sehr helles Grau für jede zweite Zeile */
-}
-
-/* Hover-Effekt für Interaktivität */
-.json-formatter-modern-theme .json-formatter-row:hover {
-    background-color: #f0f5ff;
-}
-
-/* Styling für den Schlüssel (Key) */
-.json-formatter-modern-theme .json-formatter-key {
-    color: #475569;      /* Ein professionelles Schiefergrau */
-    font-weight: 500;     /* Etwas fetter für mehr Betonung */
-    padding-right: 0.5rem;/* Abstand zum Doppelpunkt */
-    flex-shrink: 0;       /* Verhindert, dass der Key bei Platzmangel schrumpft */
-}
-
-/* Styling für die verschiedenen Wert-Typen (Values) */
-.json-formatter-modern-theme .json-formatter-string {
-    color: #059669; /* Ein sattes Grün */
-    word-break: break-all; /* Lange Strings ohne Leerzeichen umbrechen */
-}
-
-.json-formatter-modern-theme .json-formatter-number {
-    color: #7c3aed; /* Lebhaftes Violett */
-}
-
-.json-formatter-modern-theme .json-formatter-boolean {
-    color: #db2777; /* Kräftiges Pink/Magenta */
+.json-formatter-viewer-theme .json-formatter-key {
+    background-color: var(--color-bg-content);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-2) var(--spacing-3);
+    color: var(--color-text-key);
     font-weight: 500;
+    flex-shrink: 0;
+    flex-basis: 200px;
+    text-transform: uppercase;
 }
 
-.json-formatter-modern-theme .json-formatter-null {
-    color: #e11d48; /* Deutliches Rot */
-    font-weight: 500;
+.json-formatter-viewer-theme .json-formatter-string,
+.json-formatter-viewer-theme .json-formatter-number,
+.json-formatter-viewer-theme .json-formatter-boolean,
+.json-formatter-viewer-theme .json-formatter-null {
+    background-color: var(--color-bg-subtle);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-2) var(--spacing-3);
+    flex-grow: 1;
+    word-break: break-all;
 }
 
-/* Styling für einklappbare Bereiche (Object/Array) */
-.json-formatter-modern-theme .json-formatter-toggler-link {
-    text-decoration: none;
-}
-
-.json-formatter-modern-theme .json-formatter-object-header {
-    font-style: italic;
-    color: #64748b;
-}
-
+.json-formatter-viewer-theme .json-formatter-string { color: var(--syntax-string); }
+.json-formatter-viewer-theme .json-formatter-number { color: var(--syntax-number); }
+.json-formatter-viewer-theme .json-formatter-boolean { color: var(--syntax-boolean); }
+.json-formatter-viewer-theme .json-formatter-null { color: var(--syntax-null); }
 
 /*
-  ============================================================
-           STYLE FÜR INTERAKTIVE, KLICKBARE IDs
-  ============================================================
+====================================================================
+    3. VERSCHACHTELTE OBJEKTE
+====================================================================
 */
 
-/*
-  ============================================================
-           INDIVIDUELLE STILE FÜR KEYS, VALUES & LAYOUT
-  ============================================================
-*/
+.json-formatter-viewer-theme .json-formatter-children {
+    position: relative;
+    margin-top: var(--spacing-3);
+    padding-left: var(--spacing-5);
+}
 
-/* Basis-Stil für alle klickbaren Werte (optional) */
-.clickable-value {
+.json-formatter-viewer-theme .json-formatter-children::before {
+    content: '';
+    position: absolute;
+    left: 18px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: var(--color-lineage);
+    border-radius: 2px;
+}
+
+.json-formatter-row .json-formatter-key {
+    color: #475569;
+    padding-right: 0.2rem;
+}
+
+.json-formatter-row .json-formatter-string,
+.json-formatter-row .json-formatter-stringifiable {
+    color: black;
+    white-space: pre;
+    word-wrap: break-word;
+}
+
+.json-formatter-row .json-formatter-toggler {
+    line-height: 1.2rem;
+    font-size: 0.9rem;
+    vertical-align: middle;
+    opacity: 0.6;
     cursor: pointer;
-    text-decoration: underline;
-    text-decoration-style: dotted;
-    transition: all 0.2s ease-in-out;
+    padding-right: 0.3rem;
 }
 
-/* --- Regel: status --- */
-.row-layout-status {
-    /* Layout der Zeile: z.B. mehr Abstand */
-    gap: 1.5rem;
-    align-items: center; /* Vertikal zentrieren */
-}
-.key-style-status {
-    /* Design des Keys: z.B. feste Breite und anderer Hintergrund */
-    flex-basis: 120px; /* Feste Breite für den Key */
-    font-style: italic;
-    background-color: #eef2ff;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    text-align: right;
-}
-.value-style-status {
-    /* Design des Values */
-    background-color: #dcfce7;
-    color: #16a34a;
-    font-weight: bold;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-}
-.value-style-status:hover {
-    background-color: #bbf7d0;
+/*
+====================================================================
+    4. INTERAKTIVE STILE (überschreiben das Standard-Design)
+====================================================================
+*/
+
+.clickable-value { cursor: pointer; }
+.styled-key, .styled-value {
+    /* Basis-Klasse ohne Stile, nur als Haken für JS */
 }
 
-
-/* --- Regel: med-id --- */
-.value-style-med-id {
-    background-color: #e7f5ff;
-    color: #0d6efd;
-    font-weight: bold;
-    padding: 2px 5px;
-    border-radius: 4px;
-}
-.value-style-med-id:hover {
-    background-color: #d1eaff;
-}
-
-
-/* --- Regel: hersteller-id --- */
-.key-style-hersteller {
-    color: #fd7e14;
-    font-weight: bold;
-}
-.value-style-hersteller {
-    background-color: #fff0e7;
-    color: #fd7e14;
-    padding: 2px 5px;
-    border-radius: 4px;
-}
-.value-style-hersteller:hover {
-    background-color: #ffe8d9;
-}
+.key-style-status, .value-style-status { background-color: var(--theme-status-bg); color: var(--theme-status-text); border-color: #bbf7d0; }
+.key-style-hersteller { color: var(--theme-hersteller-text); }
+.value-style-hersteller { background-color: var(--theme-hersteller-bg); color: var(--theme-hersteller-text); border-color: #fedfcf;}
+.value-style-med-id { background-color: var(--theme-med-id-bg); color: var(--theme-med-id-text); border-color: #dbeafe;}
+.value-style-boolean { background-color: var(--theme-boolean-bg); color: var(--theme-boolean-text); border-color: #f2d3ff;}

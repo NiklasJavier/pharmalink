@@ -3,14 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <title>Header Fragment</title>
-    <link rel="stylesheet" th:href="@{/css/main.css}">
 </head>
 <body>
 
 <header th:fragment="header" class="main-header">
     <div class="header-content">
         <div class="logo">
-            <a th:href="@{/app/dashboard}">PharmaLink</a>
+            <a th:href="@{/app/dashboard}" class="logo-link">
+                <span class="logo-title">PharmaLink</span>
+                <span class="logo-subtitle">Backend</span>
+            </a>
         </div>
         <nav class="main-nav">
             <ul>

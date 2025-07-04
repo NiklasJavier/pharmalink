@@ -1,66 +1,177 @@
-/* Globale Resets und Basis-Layout */
-body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh; /* Sorgt dafür, dass der Footer am unteren Rand bleibt */
-    background-color: #f8f8f8; /* Leichter Hintergrund für die Seite */
-    color: #333; /* Standard-Textfarbe */
+/*
+====================================================================
+    1. GLOBALE VARIABLEN & BASIS-STILE
+====================================================================
+*/
+
+:root {
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --spacing-2: 0.5rem;
+    --spacing-3: 0.8rem;
+    --spacing-4: 1.25rem;
+    --spacing-5: 2rem;
+    --color-bg-page: #f8fafc;
+    --color-bg-content: #ffffff;
+    --color-border: #eef2f7;
+    --color-text-primary: #222;
+    --color-text-secondary: #475569;
+
+    /* Header & Footer Farben */
+    --color-header-bg: #1B1B1B;
+    --color-header-text: #ffffff;
+    --color-nav-hover-bg: rgba(255, 255, 255, 0.1);
+    --color-nav-active-bg: #3b82f6;
+
+    /* Akzentfarben */
+    --color-accent-red: #e74c3c;
+    --color-accent-red-dark: #c0392b;
+    --color-accent-green-dark: #16a34a;
 }
 
-/* Hauptinhaltsbereich, damit der Footer nach unten gedrückt wird */
+body {
+    font-family: var(--font-sans);
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-page);
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
 main {
     flex-grow: 1;
-    padding: 2em;
-    max-width: 1200px; /* Max. Breite für den Inhalt */
+    width: 100%;
+    max-width: 1200px;
     margin: 0 auto;
+    padding: var(--spacing-4) var(--spacing-5);
+    box-sizing: border-box;
+}
+
+hr.section-divider {
+    border: 0;
+    border-top: 1px solid var(--color-border);
+    margin: var(--spacing-5) 0;
+}
+
+
+/*
+====================================================================
+    2. STANDARD-KOMPONENTEN
+====================================================================
+*/
+
+.card {
+    background-color: var(--color-bg-content);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-4);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
+    overflow: hidden;
+}
+
+.card-header {
+    padding: var(--spacing-3) var(--spacing-4);
+    border-bottom: 1px solid transparent;
+    background-color: #1B1B1B;
+    color: #ffffff;
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.card-body {
+    padding: var(--spacing-4);
+}
+
+.info-section {
+    color: var(--color-text-secondary);
+}
+
+.info-section:not(:last-child) {
+    margin-bottom: var(--spacing-3);
+    padding-bottom: var(--spacing-3);
+    border-bottom: 1px dashed var(--color-border);
+}
+
+.info-section p {
+    margin: 0;
+}
+
+.info-section p strong {
+    color: var(--color-text-primary);
+    font-weight: 600;
+}
+
+.actor-details {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--spacing-2) var(--spacing-4);
+}
+
+.logo-link {
+    display: flex;
+    flex-direction: column; /* Stellt Titel und Untertitel untereinander dar */
+    text-decoration: none;
+}
+
+.logo-title {
+    font-size: 1.5rem; /* Etwas kleiner als vorher */
+    font-weight: 600;  /* Semibold für einen modernen Look */
+    color: var(--color-header-text);
+    line-height: 1.1;  /* Zeilenhöhe für kompakte Darstellung */
+}
+
+.logo-subtitle {
+    font-size: 0.65rem; /* Sehr kleiner Text */
+    font-weight: 400;
+    text-transform: uppercase; /* In Großbuchstaben für einen "technischen" Look */
+    letter-spacing: 0.1em;     /* Mehr Abstand zwischen den Buchstaben */
+    color: var(--color-header-text);
+    opacity: 0.7; /* Leicht transparent, um untergeordnet zu wirken */
+}
+
+/*
+====================================================================
+    3. HEADER & FOOTER
+====================================================================
+*/
+
+.main-header,
+.main-footer {
+    background-color: var(--color-header-bg);
+    color: var(--color-header-text);
+    padding: 0 var(--spacing-5);
     width: 100%;
     box-sizing: border-box;
 }
 
-
-/* --- Header Styling (Weiß mit schwarzen Schriftzügen, korrekte Ausrichtung) --- */
-.main-header {
-    background-color: #ffffff; /* Hintergrund des Headers auf Weiß setzen */
-    color: #222; /* Standard-Textfarbe im Header, etwas dunkler */
-    padding: 0.8em 2em; /* Vertikales Padding angepasst, um die Höhe zu kontrollieren */
-    box-shadow: none; /* Schatten entfernen */
-    border-bottom: 1px solid #eee; /* Trennlinie unten */
-}
-
-.header-content {
+.header-content,
+.footer-content {
     display: flex;
-    justify-content: space-between; /* Elemente an den Rändern ausrichten */
-    align-items: center; /* **WICHTIG: Vertikale Zentrierung der Flex-Elemente** */
-    max-width: 1200px; /* Maximale Breite des Inhalts im Header */
-    margin: 0 auto; /* Zentrierung des Inhalts im Header */
-    flex-wrap: wrap; /* Erlaubt Umbruch auf kleineren Bildschirmen */
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    flex-wrap: wrap;
 }
 
-.logo {
-    flex-shrink: 0; /* Verhindert, dass das Logo schrumpft */
-    height: 100%; /* Stellt sicher, dass das Logo die volle Höhe des Containers nutzt */
-    display: flex; /* Auch hier Flexbox, um a-Tag zu zentrieren */
-    align-items: center; /* Vertikale Zentrierung des a-Tag */
+.main-header .header-content {
+    min-height: 64px;
 }
 
-.logo a {
-    color: #333; /* Logo-Textfarbe auf dunkel setzen (fast schwarz) */
-    text-decoration: none;
-    font-size: 1.8em; /* Etwas größer für bessere Sichtbarkeit */
-    font-weight: bold;
-    white-space: nowrap; /* Verhindert Zeilenumbruch im Logo */
-    padding: 0; /* Wichtig: Standard-Padding entfernen, um die Höhe zu vereinheitlichen */
-    line-height: 1; /* Vertikale Ausrichtung sicherstellen */
-    display: flex; /* Für präzise vertikale Ausrichtung des Textes */
-    align-items: center; /* Zentriert den Text innerhalb des Links */
+.main-footer {
+    padding-top: var(--spacing-4);
+    padding-bottom: var(--spacing-4);
+    border-top: none;
 }
 
-.main-nav {
-    flex-grow: 1; /* Erlaubt der Navigation, verfügbaren Platz einzunehmen */
-    text-align: right; /* Navigation rechtsbündig ausrichten */
+.footer-content {
+    gap: var(--spacing-4);
 }
 
 .main-nav ul {
@@ -68,182 +179,121 @@ main {
     margin: 0;
     padding: 0;
     display: flex;
-    justify-content: flex-end; /* Navigationspunkte rechtsbündig */
-    gap: 0.8em; /* Abstand zwischen den Boxen reduzieren */
-    flex-wrap: wrap; /* Erlaubt Umbruch auf kleineren Bildschirmen */
     align-items: center;
-    height: 100%;
-}
-
-.main-nav li {
-    display: flex; /* Für individuelle Box-Darstellung der Links */
-    align-items: center; /* Vertikale Zentrierung */
-    height: 100%; /* Stellt sicher, dass das Listenelement die volle Höhe nutzt */
+    gap: var(--spacing-3);
 }
 
 .main-nav a {
-    background-color: #333; /* Hintergrundfarbe der Box auf Schwarz */
-    color: white; /* Weißer Text */
+    background-color: transparent;
+    color: var(--color-header-text);
     text-decoration: none;
-    padding: 0.5em 1em; /* Konsistentes Padding für alle Links */
-    border-radius: 4px; /* Abgerundete Ecken */
-    transition: background-color 0.3s ease, color 0.3s ease; /* Übergang für Hover */
-    white-space: nowrap; /* Verhindert Zeilenumbruch in Nav-Links */
-    display: flex;
-    align-items: center;
-    height: 100%;
+    padding: var(--spacing-2) var(--spacing-4);
+    border-radius: var(--radius-sm);
+    transition: background-color 0.2s ease;
+    white-space: nowrap;
 }
 
 .main-nav a:hover {
-    background-color: #555; /* Dunkleres Grau für den Hover-Effekt */
-    color: white; /* Text bleibt weiß */
+    background-color: var(--color-nav-hover-bg);
+}
+
+.main-nav a.active {
+    background-color: var(--color-nav-active-bg);
 }
 
 .logout-button {
-    background-color: #ffffff; /* **Weißer Hintergrund für die Logout-Box** */
-    color: #e74c3c; /* **Roter Text** */
-    border: 1px solid #e74c3c; /* **Rote Umrandung** */
-    padding: 0.5em 1em; /* Konsistentes Padding */
-    border-radius: 4px; /* Abgerundete Ecken */
+    background-color: transparent;
+    color: var(--color-header-text);
+    border: 1px solid var(--color-header-text);
+    padding: var(--spacing-2) var(--spacing-4);
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    font-size: 1em;
+    font-size: 1rem;
     font-family: inherit;
-    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease; /* Übergang für alle Eigenschaften */
+    transition: all 0.2s ease;
     white-space: nowrap;
-    display: flex;
-    align-items: center;
-    height: 100%;
 }
 
 .logout-button:hover {
-    background-color: #fbe9e7; /* **Leicht hellroter Hintergrund beim Hover** */
-    color: #c0392b; /* **Dunkleres Rot für den Text beim Hover** */
-    border-color: #c0392b; /* **Dunklerer Rot-Rand beim Hover** */
-}
-
-
-/* --- Footer Styling --- */
-.main-footer {
-    background-color: #ffffff; /* Hintergrund des Footers auf Weiß setzen */
-    color: #333; /* Textfarbe im Footer auf dunkel setzen */
-    padding: 1em 2em; /* Innenabstand */
-    border-top: 1px solid #eee; /* Dezenter Rahmen oben */
-}
-
-.footer-content {
-    display: flex;
-    justify-content: space-between; /* Links und Rechts verteilen, Mitte wird leer */
-    align-items: center; /* Vertikale Zentrierung */
-    max-width: 1200px; /* Wie im Header */
-    margin: 0 auto;
-    flex-wrap: wrap; /* Erlaubt Umbruch auf kleineren Bildschirmen */
-    gap: 1em; /* Abstand zwischen den Spalten bei Umbruch */
+    background-color: var(--color-accent-red);
+    border-color: var(--color-accent-red);
 }
 
 .footer-left {
-    display: flex; /* Damit die Links nebeneinander stehen */
-    align-items: center; /* Vertikale Zentrierung der Links */
-    gap: 0.8em; /* Abstand zwischen den Links */
-    flex-grow: 1; /* Erlaubt diesem Bereich zu wachsen */
-    justify-content: flex-start; /* Links ausrichten */
-}
-
-.footer-center {
-    /* Dieser Bereich ist jetzt leer, aber wir behalten die Klasse falls sie später nützlich ist */
-    flex: 0 0 auto; /* Verhindert, dass dieser leere Bereich Platz wegnimmt */
-    width: 0; /* Optional: explizit 0 Breite */
-    padding: 0; /* Optional: explizit 0 Padding */
-    margin: 0; /* Optional: explizit 0 Margin */
-}
-
-.footer-right {
-    display: flex; /* Für vertikale Zentrierung des Inhalts */
+    display: flex;
     align-items: center;
-    justify-content: flex-end; /* Rechts ausrichten */
-    flex-shrink: 0; /* Verhindert, dass dieser Bereich schrumpft */
-    white-space: nowrap; /* Verhindert Umbruch des Versions-Textes */
+    gap: var(--spacing-3);
 }
 
 .main-footer a {
-    color: #333; /* Links im Footer auf dunkel setzen */
+    color: var(--color-header-text);
     text-decoration: none;
-    transition: color 0.3s ease;
+    transition: opacity 0.2s ease;
+    opacity: 0.8;
 }
 
 .main-footer a:hover {
-    text-decoration: underline;
-    color: #0056b3; /* Dezenter blauer Hover für Links */
+    text-decoration: none;
+    opacity: 1;
 }
 
-.footer-right strong {
-    color: #333; /* Versionstext auf dunkel setzen */
+/*
+====================================================================
+    4. HELFER-KLASSEN
+====================================================================
+*/
+
+.copy-on-click {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border-radius: 4px;
+    padding: 2px 4px;
+    margin: -2px -4px;
 }
 
-.footer-left .separator {
-    color: #666; /* Farbe des Trennzeichens */
+.copy-on-click:hover {
+    background-color: var(--color-border);
 }
 
-/* Responsive Anpassungen (Beispiel) */
+.copied-feedback {
+    box-shadow: 0 0 0 2px var(--color-accent-green-dark);
+    background-color: transparent !important;
+}
+
+/*
+====================================================================
+    5. RESPONSIVE ANPASSUNGEN
+====================================================================
+*/
+
 @media (max-width: 768px) {
-    .main-header {
-        padding: 1em 1em;
+    main, .main-header, .main-footer {
+        padding-left: var(--spacing-4);
+        padding-right: var(--spacing-4);
+    }
+
+    .header-content,
+    .footer-content {
+        flex-direction: column;
+        align-items: center;
+        gap: var(--spacing-4);
+        padding: var(--spacing-4) 0;
+        text-align: center;
     }
 
     .header-content {
-        flex-direction: column; /* Stapelt Logo und Navigation untereinander */
         align-items: flex-start;
-    }
-
-    .logo {
-        margin-bottom: 1em; /* Abstand nach unten */
-        margin-right: 0;
-    }
-
-    .main-nav {
-        width: 100%; /* Navigation nimmt volle Breite ein */
-        text-align: left; /* Links ausrichten */
     }
 
     .main-nav ul {
-        flex-direction: column; /* Navigationspunkte untereinander */
-        align-items: flex-start;
-        gap: 0.5em;
-    }
-
-    .main-nav li {
-        width: 100%; /* Jeder Navigationspunkt volle Breite */
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
     }
 
     .main-nav a, .logout-button {
-        display: block; /* Links füllen die gesamte Breite des Listenelements aus */
-        width: 100%;
-        text-align: left;
-    }
-
-    .main-footer {
-        padding: 1em; /* Reduziertes Padding für mobile */
-    }
-
-    .footer-content {
-        flex-direction: column; /* Footer-Inhalt untereinander stapeln */
-        align-items: center; /* Elemente zentral ausrichten */
+        display: block;
         text-align: center;
-        gap: 0.5em; /* Kleinerer Abstand bei gestapelten Elementen */
-    }
-
-    .footer-left,
-    .footer-center,
-    .footer-right {
-        justify-content: center; /* Einzelne Elemente auch zentral */
-        width: 100%; /* Volle Breite für gestapelte Elemente */
-        text-align: center; /* Text auch zentral ausrichten */
-    }
-
-    .footer-left .separator {
-        display: none; /* Trennzeichen auf Mobilgeräten ausblenden */
-    }
-
-    .footer-left a {
-        padding: 0.2em 0; /* Minimales Padding für gestapelte Links */
     }
 }
+

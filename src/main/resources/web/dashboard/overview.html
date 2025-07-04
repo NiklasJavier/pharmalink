@@ -11,6 +11,9 @@
 </head>
 <body>
 <div layout:fragment="content">
+    <head>
+        <link rel="stylesheet" th:href="@{/css/display-json.css}">
+    </head>
     <div th:replace="~{fragments/dashboard-content :: dashboardContent}"></div>
 </div>
 

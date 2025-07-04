@@ -1,21 +1,25 @@
 <!DOCTYPE html>
 <html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+    <link rel="stylesheet" th:href="@{/css/display-json.css}">
+</head>
 <body>
 
 <div th:fragment="herstellerDetails">
-    <h2>Hersteller-Übersicht</h2>
-    <p>Hier sehen Sie eine interaktive Ansicht Ihrer erstellten Medikamente.</p>
-
-    <div th:if="${medikamenteAsJsonList != null and !medikamenteAsJsonList.isEmpty()}">
-        <hr class="section-divider">
-        <h3>Ihre Medikamente</h3>
-
+    <div class="card" th:if="${medikamenteAsJsonList != null and !medikamenteAsJsonList.isEmpty()}">
+        <div class="card-header">
+            <h3>Medikamente</h3>
+        </div>
+        <div class="card-body">
         <div class="flex-container">
             <div th:each="jsonString, iterStat : ${medikamenteAsJsonList}"
                  th:id="'json-container-' + ${iterStat.index}"
                  class="json-container-item">
                 <script th:id="'json-data-' + ${iterStat.index}" type="application/json" th:utext="${jsonString}"></script>
             </div>
+        </div>
         </div>
     </div>
 </div>

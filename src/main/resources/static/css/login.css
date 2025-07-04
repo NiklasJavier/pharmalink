@@ -2,68 +2,95 @@
 
 body {
     font-family: Arial, sans-serif;
-    background-color: #f0f0f0; /* Hintergrundfarbe wie im Bild */
+    background-color: #f0f0f0;
     display: flex;
-    justify-content: center; /* Horizontale Zentrierung der Box */
-    align-items: center; /* Vertikale Zentrierung der Box */
-    min-height: 100vh; /* Sorgt dafür, dass der Body die volle Viewport-Höhe ausfüllt */
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
     margin: 0;
     padding: 0;
-    box-sizing: border-box; /* Padding wird in die Breite/Höhe einberechnet */
+    box-sizing: border-box;
 }
 
 .login-box {
-    background-color: #ffffff; /* Weißer Hintergrund für die Box */
-    padding: 2.2em 2.5em; /* Padding der Box leicht reduzieren */
-    border-radius: 8px; /* Leicht abgerundete Ecken */
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* Deutlicherer, aber weicherer Schatten */
+    background-color: #ffffff;
+    padding: 2.2em 2.5em;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     width: 100%;
-    max-width: 400px; /* Definierte maximale Breite der Box */
+    max-width: 400px;
     box-sizing: border-box;
-    text-align: left; /* Standardmäßig Text linksbündig */
+    text-align: left;
 }
 
-.login-title {
-    font-size: 1.8em; /* Größere Überschrift */
-    color: #333; /* Dunkle Schriftfarbe */
-    margin-bottom: 0.8em; /* **Abstand nach der Überschrift reduzieren** */
-    font-weight: bold;
-    text-align: center; /* Überschrift zentrieren */
+/* --- NEU: Logo-Styling für Login-Seite --- */
+.logo-container {
+    text-align: center;
+    margin-bottom: 1.5em;
 }
 
-/* Meldungen (Erfolg/Fehler) - **Farblich schöner und kompakter** */
+.login-intro-text {
+    display: block;
+    font-size: 1em;
+    color: #666;
+    margin-bottom: 0.5em;
+}
+
+.logo {
+    display: inline-flex; /* Damit es sich im Container zentriert */
+    flex-direction: column;
+    align-items: center;
+}
+
+.logo-title {
+    font-size: 2.2rem; /* Größer für den Login-Titel */
+    font-weight: 700;
+    color: #333;
+    line-height: 1.1;
+}
+
+.logo-subtitle {
+    font-size: 0.7rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #555;
+    opacity: 0.8;
+}
+
+/* --- RESTLICHES FORMULAR-STYLING --- */
+
 .message {
-    padding: 0.6em 0.8em; /* Padding der Meldung reduzieren */
-    margin-bottom: 0.8em; /* **Abstand nach der Meldung reduzieren** */
+    padding: 0.6em 0.8em;
+    margin-bottom: 1em;
     border-radius: 4px;
-    font-size: 0.85em; /* Schriftgröße der Meldung leicht verkleinern */
+    font-size: 0.85em;
     text-align: center;
     border: 1px solid transparent;
     line-height: 1.4;
 }
 
 .success-message {
-    background-color: #e8f5e9; /* Helleres, sanfteres Grün */
-    color: #388e3c; /* Dunkleres Grün für besseren Kontrast */
+    background-color: #e8f5e9;
+    color: #388e3c;
     border-color: #c8e6c9;
 }
 
 .error-message {
-    background-color: #fbe9e7; /* Helleres, sanfteres Rot */
-    color: #d32f2f; /* Dunkleres Rot für besseren Kontrast */
+    background-color: #fbe9e7;
+    color: #d32f2f;
     border-color: #ffccbc;
 }
 
 .form-group {
-    margin-bottom: 0.8em; /* **Abstand zwischen Formulargruppen reduzieren** */
+    margin-bottom: 1em;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 0.4em; /* Abstand zwischen Label und Input reduzieren */
+    margin-bottom: 0.4em;
     color: #555;
     font-size: 0.95em;
-    font-weight: normal;
 }
 
 .form-group input[type="text"],
@@ -87,7 +114,7 @@ body {
 .form-group input[type="submit"] {
     width: 100%;
     padding: 14px 20px;
-    background-color: #12B981; /* **Der Button hat die grüne Farbe** */
+    background-color: #1B1B1B;
     color: white;
     border: none;
     border-radius: 6px;
@@ -95,35 +122,20 @@ body {
     font-weight: bold;
     cursor: pointer;
     transition: background-color 0.3s ease;
-    margin-top: 1.5em; /* **Abstand zum Button reduzieren** */
+    margin-top: 1.5em;
 }
 
 .form-group input[type="submit"]:hover {
-    background-color: #10a876; /* Dunklerer Grünton für Hover-Effekt */
+    background-color: #333; /* Etwas heller im Hover für Feedback */
 }
 
-/* Responsive Anpassungen (für kleine Bildschirme) */
+/* --- RESPONSIVE ANPASSUNGEN --- */
 @media (max-width: 480px) {
     .login-box {
         padding: 1.8em 2em;
         margin: 15px;
     }
-    .login-title {
-        font-size: 1.5em;
-        margin-bottom: 1em;
-    }
-    .form-group label {
-        font-size: 0.85em;
-    }
-    .form-group input {
-        padding: 10px;
-    }
-    .form-group input[type="submit"] {
-        padding: 12px;
-        font-size: 1em;
-        margin-top: 1.2em;
-    }
-    .message {
-        font-size: 0.8em;
+    .logo-title {
+        font-size: 1.8rem;
     }
 }

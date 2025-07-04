@@ -1,33 +1,34 @@
 <div th:fragment="dashboardContent">
-    <h1>Willkommen auf Ihrem Dashboard, <span th:text="${#authentication.name}"></span>!</h1>
-    <div class="actor-info" th:if="${currentActorInfo}">
-        <p>Ihre Actor ID: <strong th:text="${currentActorInfo.actorId}"></strong></p>
-        <p>Angemeldet als: <strong th:text="${currentActorInfo.bezeichnung}"></strong></p>
-        <p>Rolle: <strong th:text="${currentActorInfo.getRolle()}"></strong></p>
+    <div class="card" th:if="${currentActorInfo}">
+        <div class="card-header">
+            <h3>Generelle Informationen</h3>
+        </div>
+        <div class="card-body">
+            <div class="info-section">
+                <p>ActorID: <strong class="copy-on-click" th:text="${currentActorInfo.actorId}"></strong></p>
+            </div>
+            <div class="info-section actor-details">
+                <p>Benutzer: <strong class="copy-on-click" th:text="${#authentication.name}"></strong></p>
+                <p>Company: <strong class="copy-on-click" th:text="${currentActorInfo.bezeichnung}"></strong></p>
+                <p>Rolle: <strong class="copy-on-click" th:text="${currentActorInfo.getRolle()}"></strong></p>
+            </div>
+        </div>
     </div>
-
-    <hr class="section-divider">
-
     <div th:if="${currentActorInfo}" th:switch="${currentActorInfo.getRolle()}">
-
         <th:block th:case="'hersteller'">
             <div th:replace="~{fragments/details/hersteller :: herstellerDetails}"></div>
         </th:block>
-
         <th:block th:case="'grosshaendler'">
             <div th:replace="~{fragments/details/grosshaendler :: grosshaendlerDetails}"></div>
         </th:block>
-
         <th:block th:case="'apotheke'">
             <div th:replace="~{fragments/details/apotheke :: apothekeDetails}"></div>
         </th:block>
-
         <th:block th:case="'behoerde'">
             <div th:replace="~{fragments/details/behoerde :: behoerdeDetails}"></div>
         </th:block>
-
         <th:block th:case="*">
-            <p>Für Ihre Rolle ist keine spezifische Dashboard-Ansicht konfiguriert.</p>
+            <p>Für Ihre Rolle ist keine Ansicht hinterlegt.</p>
         </th:block>
     </div>
 </div>

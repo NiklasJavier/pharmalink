@@ -8,7 +8,12 @@
 </head>
 <body>
 <div class="login-box">
-    <h1 class="login-title">Anmeldung bei PharmaLink</h1>
+    <div class="logo-container">
+        <div class="logo">
+            <span class="logo-title">PharmaLink</span>
+            <span class="logo-subtitle">Backend</span>
+        </div>
+    </div>
 
     <div th:if="${param.error}" class="message error-message">
         Ungültiger Benutzername oder Passwort.
