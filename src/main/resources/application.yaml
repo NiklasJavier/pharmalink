@@ -1,3 +1,7 @@
+logging:
+  level:
+    root: INFO
+    de.jklein.pharmalink: INFO
 spring:
   application:
     name: pharmalink
@@ -19,7 +23,6 @@ spring:
     mode: HTML
     encoding: UTF-8
     enabled: true
-
 app:
   initial-users:
     - username: admin
@@ -27,7 +30,6 @@ app:
       roles:
         - ROLE_USER
         - ROLE_ADMIN
-
 springdoc:
   info:
     title: Pharmalink API
@@ -35,10 +37,8 @@ springdoc:
     path: /api/swagger
   api-docs:
     path: /api/api-docs
-
 actor:
   bezeichnung: company2
-
 fabric:
   msp-id: Org1MSP
   crypto-path: /Users/niklas/pharmalink/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com
@@ -50,7 +50,6 @@ fabric:
     override-auth: peer0.org1.example.com
   channel-name: pharmalink
   chaincode-name: pharmalink_chaincode_main
-
 ipfs:
   email: ipfs@example.com
   ipfs-link: 12

@@ -3,10 +3,9 @@ package de.jklein.pharmalink.controller;
 import de.jklein.pharmalink.service.system.SystemStateService;
 import de.jklein.pharmalink.service.ActorService; // Import des ActorService
 import de.jklein.pharmalink.service.MedicationService; // Import des MedicationService
-import de.jklein.pharmalink.api.dto.MedikamentResponseDto; // Import für MedikamentResponseDto
+import de.jklein.pharmalink.api.dto.MedikamentResponseDto;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity; // Für den Umgang mit ResponseEntity
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -16,10 +15,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.Collections; // Für leere Listen als Fallback
+import java.util.Collections;
 import java.util.List;
-import java.util.Map; // Für JSON-Display im Manage-Controller, falls aktiv
-import com.fasterxml.jackson.databind.ObjectMapper; // Für JSON-Display im Manage-Controller, falls aktiv
+import java.util.Map;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Controller
 @RequestMapping("/app")

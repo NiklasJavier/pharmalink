@@ -15,8 +15,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.CookieClearingLogoutHandler;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
-import org.springframework.security.web.util.matcher.RequestMatcher; // Behalten Sie diesen Import bei
-
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.http.MediaType;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -54,6 +53,7 @@ public class SecurityConfig {
                         .requestMatchers("/error", "/web/error/**").permitAll()
                         .requestMatchers("/app/login").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/authenticate").permitAll()
+                        .requestMatchers("/").permitAll() // **DIESE ZEILE HINZUFÜGEN**
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
@@ -63,7 +63,7 @@ public class SecurityConfig {
                         .failureUrl("/app/login?error")
                         .permitAll()
                 )
-                .httpBasic(Customizer.withDefaults()) // Aktiviert HTTP Basic Authentication
+                .httpBasic(Customizer.withDefaults())
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("/app/login?logout")
@@ -79,14 +79,11 @@ public class SecurityConfig {
                     csrf.csrfTokenRequestHandler(requestHandler);
                 })
                 .exceptionHandling(exceptions -> exceptions
-                        // Implementierung eines RequestMatcher als Lambda, um Deprecation zu vermeiden.
-                        // Dies prüft, ob der Request-URI mit "/api/" beginnt.
                         .defaultAuthenticationEntryPointFor((request, response, authException) -> {
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                             response.getWriter().write("{ \"error\": \"Unauthorized\", \"message\": \"Authentication required: " + authException.getMessage() + "\" }");
-                        }, (RequestMatcher) request -> request.getRequestURI().startsWith("/api/")) // **HIER IST DIE ÄNDERUNG**
-                        // Für alle anderen Anfragen (UI-Seiten), leite zur HTML-Fehlerseite um
+                        }, (RequestMatcher) request -> request.getRequestURI().startsWith("/api/"))
                         .authenticationEntryPoint(new CustomAuthenticationEntryPoint())
                 );
 
