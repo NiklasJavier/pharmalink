@@ -12,10 +12,36 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+  thymeleaf:
+    cache: false
+    prefix: classpath:/web/
+    suffix: .html
+    mode: HTML
+    encoding: UTF-8
+    enabled: true
+
+app:
+  initial-users:
+    - username: admin
+      password: $2a$10$nZYgNvdSmcF6Nw.AtWBwLeapUQrLxRTZSkXWlOaD/xZyvFw8DkBke
+      roles:
+        - ROLE_USER
+        - ROLE_ADMIN
+
+springdoc:
+  info:
+    title: Pharmalink API
+    description: API-Dokumentation für die Pharmalink Lieferkettenanwendung auf Hyperledger Fabric.
+    path: /api/swagger
+  api-docs:
+    path: /api/api-docs
+
+actor:
+  bezeichnung: company2
 
 fabric:
   msp-id: Org1MSP
-  crypto-path: /fabric-crypto/organizations/peerOrganizations/org1.example.com
+  crypto-path: /Users/niklas/pharmalink/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com
   cert-path: users/hersteller-user1@org1.example.com/msp/signcerts
   key-dir-path: users/hersteller-user1@org1.example.com/msp/keystore
   tls-cert-path: peers/peer0.org1.example.com/tls/ca.crt
@@ -28,5 +54,5 @@ fabric:
 ipfs:
   email: ipfs@example.com
   ipfs-link: 12
-  host: host.docker.internal
+  host: localhost
   port: 5001
