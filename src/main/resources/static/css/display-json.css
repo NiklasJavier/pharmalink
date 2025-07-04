@@ -85,3 +85,80 @@
     font-style: italic;
     color: #64748b;
 }
+
+
+/*
+  ============================================================
+           STYLE FÜR INTERAKTIVE, KLICKBARE IDs
+  ============================================================
+*/
+
+/*
+  ============================================================
+           INDIVIDUELLE STILE FÜR KEYS, VALUES & LAYOUT
+  ============================================================
+*/
+
+/* Basis-Stil für alle klickbaren Werte (optional) */
+.clickable-value {
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    transition: all 0.2s ease-in-out;
+}
+
+/* --- Regel: status --- */
+.row-layout-status {
+    /* Layout der Zeile: z.B. mehr Abstand */
+    gap: 1.5rem;
+    align-items: center; /* Vertikal zentrieren */
+}
+.key-style-status {
+    /* Design des Keys: z.B. feste Breite und anderer Hintergrund */
+    flex-basis: 120px; /* Feste Breite für den Key */
+    font-style: italic;
+    background-color: #eef2ff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    text-align: right;
+}
+.value-style-status {
+    /* Design des Values */
+    background-color: #dcfce7;
+    color: #16a34a;
+    font-weight: bold;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+}
+.value-style-status:hover {
+    background-color: #bbf7d0;
+}
+
+
+/* --- Regel: med-id --- */
+.value-style-med-id {
+    background-color: #e7f5ff;
+    color: #0d6efd;
+    font-weight: bold;
+    padding: 2px 5px;
+    border-radius: 4px;
+}
+.value-style-med-id:hover {
+    background-color: #d1eaff;
+}
+
+
+/* --- Regel: hersteller-id --- */
+.key-style-hersteller {
+    color: #fd7e14;
+    font-weight: bold;
+}
+.value-style-hersteller {
+    background-color: #fff0e7;
+    color: #fd7e14;
+    padding: 2px 5px;
+    border-radius: 4px;
+}
+.value-style-hersteller:hover {
+    background-color: #ffe8d9;
+}
