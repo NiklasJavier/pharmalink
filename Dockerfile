@@ -12,7 +12,7 @@ WORKDIR /app
 
 COPY --from=build /home/gradle/src/build/libs/*.jar app.jar
 
-ENV SPRING_PROFILES_ACTIVE=prod
+ENV SPRING_PROFILES_ACTIVE=dev
 ENV SPRING_CONFIG_LOCATION=optional:file:/etc/pharmalink/application.yaml
 
 EXPOSE 8080
