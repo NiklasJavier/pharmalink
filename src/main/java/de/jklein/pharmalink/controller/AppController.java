@@ -19,6 +19,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/app")
@@ -53,8 +54,6 @@ public class AppController {
         return "auth/login";
     }
 
-// In src/main/java/de/jklein/pharmalink/controller/AppController.java
-
     @GetMapping("/dashboard")
     public String showDashboard(Model model, RedirectAttributes redirectAttributes) {
         String initialActorId = systemStateService.getInitialActorId();
@@ -77,18 +76,34 @@ public class AppController {
         model.addAttribute("pageTitle", "Dashboard");
 
         try {
-            if ("hersteller".equals(currentActor.getRolle())) {
-                // Die Liste der Medikamente abrufen
-                var medikamente = medicationService.getMedikamenteByHerstellerId(initialActorId);
-                // NEU: Die Liste in einen formatierten JSON-String umwandeln
-                String medikamenteAsJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(medikamente);
-                // Den JSON-String an das Model übergeben
-                model.addAttribute("medicationsAsJson", medikamenteAsJson);
+            switch (currentActor.getRolle()) {
+                case "hersteller":
+                    // 1. Die Liste der Medikamenten-Objekte abrufen
+                    var medikamente = medicationService.getMedikamenteByHerstellerId(initialActorId);
 
-            } else if ("grosshaendler".equals(currentActor.getRolle()) || "apotheke".equals(currentActor.getRolle())) {
-                model.addAttribute("units", unitService.getUnitsByOwner(initialActorId));
-            } else if ("behoerde".equals(currentActor.getRolle())) {
-                model.addAttribute("allActors", actorService.getActorsByRole("hersteller"));
+                    // 2. JEDES Medikament in der Liste in einen eigenen JSON-String umwandeln
+                    List<String> medikamenteAsJsonList = medikamente.stream()
+                            .map(med -> {
+                                try {
+                                    return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(med);
+                                } catch (Exception e) {
+                                    // Fallback, falls ein einzelnes Objekt nicht konvertiert werden kann
+                                    return "{\"error\": \"Konnte Medikament nicht in JSON umwandeln.\"}";
+                                }
+                            })
+                            .collect(Collectors.toList());
+
+                    // 3. Die LISTE der JSON-Strings an das Model übergeben
+                    model.addAttribute("medikamenteAsJsonList", medikamenteAsJsonList);
+                    break;
+
+                case "grosshaendler":
+                case "apotheke":
+                    model.addAttribute("units", unitService.getUnitsByOwner(initialActorId));
+                    break;
+                case "behoerde":
+                    model.addAttribute("allActors", actorService.getActorsByRole("hersteller"));
+                    break;
             }
         } catch (Exception e) {
             model.addAttribute("dashboardError", "Fehler beim Laden der Dashboard-Daten: " + e.getMessage());

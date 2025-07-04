@@ -1,0 +1,44 @@
+/* Container für das flexible Layout der JSON-Boxen */
+.flex-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+/*
+  ============================================================
+           HELLER STYLE FÜR DEN JSON-RENDERER
+  ============================================================
+*/
+
+/* Die äußere Box für jeden JSON-Viewer */
+.json-formatter-light-mode {
+    /* Erhöhen Sie diesen Wert, um die Standardbreite der Box zu vergrößern */
+    flex: 1 1 450px; /* War vorher 350px */
+
+    min-width: 450px; /* Passen Sie auch die Mindestbreite an */
+
+    /* Restliche Stile bleiben gleich */
+    border-radius: 0.75rem;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    padding: 1rem;
+    font-family: 'Fira Code', 'Courier New', monospace;
+    font-size: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* Farben für das Syntax-Highlighting im hellen Modus */
+.json-formatter-light-mode .json-formatter-key {
+    color: #1e293b; /* Dunkles Grau für die Schlüssel */
+}
+.json-formatter-light-mode .json-formatter-string {
+    color: #16a34a; /* Grün für Texte */
+}
+.json-formatter-light-mode .json-formatter-number {
+    color: #9333ea; /* Violett für Zahlen */
+}
+.json-formatter-light-mode .json-formatter-boolean,
+.json-formatter-light-mode .json-formatter-null {
+    color: #dc2626; /* Rot für true/false/null */
+}

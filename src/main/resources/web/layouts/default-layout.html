@@ -6,9 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title layout:title-pattern="$CONTENT_TITLE - $LAYOUT_TITLE">PharmaLink</title>
     <link rel="stylesheet" th:href="@{/css/main.css}">
+    <link rel="stylesheet" th:href="@{/css/display-json.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/json-formatter-js@2.3.4/dist/json-formatter.min.css">
+
     <th:block layout:fragment="pageCss"></th:block>
 </head>
 <body>
+<script src="https://cdn.jsdelivr.net/npm/json-formatter-js@2.3.4/dist/json-formatter.umd.min.js"></script>
+<script th:src="@{/js/main.js}"></script>
+<script th:src="@{/js/display-json.js}"></script>
 
 <div th:replace="~{fragments/header :: header}"></div>
 
@@ -19,7 +25,6 @@
 
 <div th:replace="~{fragments/footer :: footer}"></div>
 
-<script th:src="@{/js/main.js}"></script>
 <th:block layout:fragment="pageJs"></th:block>
 </body>
 </html>
