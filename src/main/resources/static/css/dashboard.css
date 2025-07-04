@@ -1,0 +1,46 @@
+/* Beispiel für Styling einer Datentabelle */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    border-radius: 8px; /* Optional: abgerundete Ecken für die Tabelle selbst */
+    overflow: hidden; /* Für abgerundete Ecken und Schatten */
+}
+
+.data-table th, .data-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.data-table th {
+    background-color: #f2f2f2;
+    color: #333;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.9em;
+}
+
+.data-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9; /* Streifenmuster */
+}
+
+.data-table tbody tr:hover {
+    background-color: #e9f5ff; /* Hellblauer Hover-Effekt */
+}
+
+.data-table td {
+    color: #555;
+    font-size: 0.9em;
+}
+
+.error-message { /* Wenn noch nicht definiert, als generische Fehlermeldung */
+    color: #dc3545;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+}

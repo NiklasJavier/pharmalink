@@ -43,7 +43,7 @@ main {
     flex-shrink: 0; /* Verhindert, dass das Logo schrumpft */
     height: 100%; /* Stellt sicher, dass das Logo die volle Höhe des Containers nutzt */
     display: flex; /* Auch hier Flexbox, um a-Tag zu zentrieren */
-    align-items: center; /* Vertikale Zentrierung des a-Tags */
+    align-items: center; /* Vertikale Zentrierung des a-Tag */
 }
 
 .logo a {
@@ -69,54 +69,56 @@ main {
     padding: 0;
     display: flex;
     justify-content: flex-end; /* Navigationspunkte rechtsbündig */
-    gap: 1.5em; /* Abstand zwischen den Navigationspunkten */
+    gap: 0.8em; /* Abstand zwischen den Boxen reduzieren */
     flex-wrap: wrap; /* Erlaubt Umbruch auf kleineren Bildschirmen */
-    align-items: center; /* **WICHTIG: Vertikale Zentrierung der Listenelemente** */
-    height: 100%; /* Stellt sicher, dass die Liste die volle Höhe des Nav-Containers nutzt */
+    align-items: center;
+    height: 100%;
 }
 
 .main-nav li {
-    display: flex; /* **WICHTIG: Für individuelle Zentrierung der Links innerhalb der Li** */
+    display: flex; /* Für individuelle Box-Darstellung der Links */
     align-items: center; /* Vertikale Zentrierung */
     height: 100%; /* Stellt sicher, dass das Listenelement die volle Höhe nutzt */
 }
 
 .main-nav a {
-    color: #333; /* Navigationslinks dunkel */
+    background-color: #333; /* Hintergrundfarbe der Box auf Schwarz */
+    color: white; /* Weißer Text */
     text-decoration: none;
     padding: 0.5em 1em; /* Konsistentes Padding für alle Links */
-    border-radius: 4px;
-    transition: none; /* Hover-Effekt entfernen */
+    border-radius: 4px; /* Abgerundete Ecken */
+    transition: background-color 0.3s ease, color 0.3s ease; /* Übergang für Hover */
     white-space: nowrap; /* Verhindert Zeilenumbruch in Nav-Links */
-    display: flex; /* Auch hier Flexbox für präzise vertikale Ausrichtung */
-    align-items: center; /* Zentriert den Text innerhalb des Links */
-    height: 100%; /* Stellt sicher, dass der Link die volle Höhe des Listenelements nutzt */
+    display: flex;
+    align-items: center;
+    height: 100%;
 }
 
 .main-nav a:hover {
-    background-color: transparent; /* Hintergrund beim Hover transparent machen */
-    color: #333; /* Farbe beim Hover beibehalten */
+    background-color: #555; /* Dunkleres Grau für den Hover-Effekt */
+    color: white; /* Text bleibt weiß */
 }
 
 .logout-button {
-    background: none;
-    border: none;
+    background-color: #ffffff; /* **Weißer Hintergrund für die Logout-Box** */
+    color: #e74c3c; /* **Roter Text** */
+    border: 1px solid #e74c3c; /* **Rote Umrandung** */
     padding: 0.5em 1em; /* Konsistentes Padding */
-    color: #dc3545; /* Rote Farbe für Logout */
+    border-radius: 4px; /* Abgerundete Ecken */
     cursor: pointer;
     font-size: 1em;
     font-family: inherit;
-    border-radius: 4px;
-    transition: none; /* Hover-Effekt entfernen */
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease; /* Übergang für alle Eigenschaften */
     white-space: nowrap;
-    display: flex; /* Flexbox für Ausrichtung */
-    align-items: center; /* Vertikale Zentrierung */
-    height: 100%; /* Stellt sicher, dass der Button die volle Höhe nutzt */
+    display: flex;
+    align-items: center;
+    height: 100%;
 }
 
 .logout-button:hover {
-    background-color: transparent; /* Hintergrund beim Hover transparent machen */
-    color: #dc3545; /* Farbe beim Hover beibehalten */
+    background-color: #fbe9e7; /* **Leicht hellroter Hintergrund beim Hover** */
+    color: #c0392b; /* **Dunkleres Rot für den Text beim Hover** */
+    border-color: #c0392b; /* **Dunklerer Rot-Rand beim Hover** */
 }
 
 
