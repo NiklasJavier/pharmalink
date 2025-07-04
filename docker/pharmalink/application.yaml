@@ -41,7 +41,7 @@ actor:
 
 fabric:
   msp-id: Org1MSP
-  crypto-path: /Users/niklas/pharmalink/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com
+  crypto-path: /fabric-crypto/organizations/peerOrganizations/org1.example.com
   cert-path: users/hersteller-user1@org1.example.com/msp/signcerts
   key-dir-path: users/hersteller-user1@org1.example.com/msp/keystore
   tls-cert-path: peers/peer0.org1.example.com/tls/ca.crt
@@ -54,5 +54,5 @@ fabric:
 ipfs:
   email: ipfs@example.com
   ipfs-link: 12
-  host: localhost
+  host: host.docker.internal
   port: 5001
