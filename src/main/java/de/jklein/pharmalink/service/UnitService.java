@@ -1,6 +1,7 @@
 package de.jklein.pharmalink.service;
 
 import com.google.gson.reflect.TypeToken;
+import de.jklein.pharmalink.api.dto.ActorResponseDto;
 import de.jklein.pharmalink.api.dto.CreateUnitsRequestDto;
 import de.jklein.pharmalink.api.dto.UnitResponseDto;
 import de.jklein.pharmalink.api.mapper.UnitMapper;
@@ -12,8 +13,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
 import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -40,16 +41,13 @@ public class UnitService {
      */
     public Optional<UnitResponseDto> getEnrichedUnitById(String unitId) {
         try {
-            // 1. Rufe die Unit von der Blockchain ab. Dein Chaincode hat die Funktion 'queryUnitById'.
             Unit unit = fabricClient.evaluateTransaction("queryUnitById", unitId, Unit.class);
             if (unit == null) {
                 return Optional.empty();
             }
 
-            // 2. Wandle das Domain-Objekt in ein DTO um.
             UnitResponseDto dto = unitMapper.toDto(unit);
 
-            // 3. Prüfe und löse den ipfsLink auf.
             final String originalIpfsLink = unit.getIpfsLink();
             if (originalIpfsLink != null && !originalIpfsLink.isBlank()) {
                 try {
@@ -79,19 +77,35 @@ public class UnitService {
     }
 
     /**
-     * Erstellt eine angegebene Anzahl von Units für ein Medikament.
-     * Wenn 'ipfsData' im Request vorhanden ist, wird es in IPFS gespeichert und
-     * der resultierende Hash an die Fabric-Transaktion übergeben.
+     * NEU HINZUGEFÜGT: Ruft alle Units ab, die einem bestimmten Besitzer gehören, und reichert sie an.
+     * Diese Methode wird vom AppController für die Dashboard-Ansicht von Großhändlern und Apotheken benötigt.
      *
-     * @param medId Die ID des Medikaments, für das Units erstellt werden.
-     * @param requestDto Das DTO mit den Details (Anzahl, Charge, IPFS-Daten).
-     * @return Eine Liste der neu erstellten Units als DTOs.
-     * @throws Exception bei Fehlern während der Transaktion.
+     * @param ownerId Die ID des Besitzers.
+     * @return Eine Liste der angereicherten Units, die dem Besitzer gehören.
      */
+    public List<UnitResponseDto> getUnitsByOwner(String ownerId) {
+        try {
+            // 1. Rufe die flache Liste aller Units für den Besitzer von der Blockchain ab.
+            String resultJson = fabricClient.evaluateGenericTransaction("queryUnitsByOwner", ownerId);
+            Type listType = new TypeToken<List<Unit>>() {}.getType();
+            List<Unit> units = fabricClient.getGson().fromJson(resultJson, listType);
+
+            // 2. Erstelle eine angereicherte Liste von DTOs, indem durch jedes Element iteriert wird.
+            return units.stream()
+                    .map(unit -> this.getEnrichedUnitById(unit.getUnitId())
+                            .orElse(null)) // Rufe die bestehende Anreicherungsmethode wieder auf
+                    .filter(Objects::nonNull) // Filtere eventuelle Null-Ergebnisse heraus
+                    .collect(Collectors.toList());
+
+        } catch (Exception e) {
+            logger.error("Fehler beim Abrufen der Units für Besitzer '{}'", ownerId, e);
+            return Collections.emptyList();
+        }
+    }
+
     public List<UnitResponseDto> createUnitsForMedication(String medId, CreateUnitsRequestDto requestDto) throws Exception {
         String ipfsHash = "";
 
-        // 1. Prüfen, ob ipfsData vorhanden ist und in IPFS speichern.
         if (requestDto.getIpfsData() != null && !requestDto.getIpfsData().isEmpty()) {
             logger.info("Processing 'ipfsData' for new units...");
             String ipfsJson = fabricClient.getGson().toJson(requestDto.getIpfsData());
@@ -100,7 +114,6 @@ public class UnitService {
             logger.info("Successfully created IPFS entry for new units. CID: {}", ipfsHash);
         }
 
-        // 2. Die Chaincode-Funktion 'createUnits' mit den korrekten Argumenten aufrufen.
         String resultJson = fabricClient.submitGenericTransaction(
                 "createUnits",
                 medId,
@@ -109,42 +122,24 @@ public class UnitService {
                 ipfsHash
         );
 
-        // 3. Die JSON-Antwort (Array von Units) verarbeiten.
         Type listType = new TypeToken<List<Unit>>() {}.getType();
         List<Unit> createdUnits = fabricClient.getGson().fromJson(resultJson, listType);
 
-        // 4. In DTOs umwandeln und zurückgeben.
         return unitMapper.toDtoList(createdUnits);
     }
 
-    /**
-     * Ruft alle Units für eine Medikamenten-ID ab, reichert jede Unit mit IPFS-Daten an
-     * und gruppiert das Ergebnis anschließend nach ihrer Charge.
-     *
-     * @param medId Die ID des Medikaments.
-     * @return Eine Map, bei der der Schlüssel die Chargenbezeichnung und der Wert die Liste der zugehörigen,
-     * angereicherten Units ist.
-     */
     public Map<String, List<UnitResponseDto>> getUnitsByMedIdGroupedByCharge(String medId) {
         try {
-            // 1. Rufe die flache Liste aller Units von der Blockchain ab.
             String resultJson = fabricClient.evaluateGenericTransaction("queryUnitsByMedId", medId);
             Type listType = new TypeToken<List<Unit>>() {}.getType();
             List<Unit> units = fabricClient.getGson().fromJson(resultJson, listType);
 
-            // 2. Erstelle eine angereicherte Liste von DTOs, indem durch jedes Element iteriert wird.
             List<UnitResponseDto> enrichedDtos = units.stream()
-                    .map(unit -> {
-                        // Führe für jede einzelne Unit die Anreicherungslogik aus.
-                        // Wir rufen die bereits existierende Methode für eine einzelne Unit wieder auf.
-                        // Das verhindert doppelten Code.
-                        return this.getEnrichedUnitById(unit.getUnitId())
-                                .orElse(null); // Gib null zurück, falls eine Unit nicht gefunden/verarbeitet werden kann
-                    })
-                    .filter(Objects::nonNull) // Filtere eventuelle Null-Ergebnisse heraus
+                    .map(unit -> this.getEnrichedUnitById(unit.getUnitId())
+                            .orElse(null))
+                    .filter(Objects::nonNull)
                     .collect(Collectors.toList());
 
-            // 3. Gruppiere die NUN angereicherte Liste der DTOs nach dem Feld 'chargeBezeichnung'.
             return enrichedDtos.stream()
                     .collect(Collectors.groupingBy(UnitResponseDto::getChargeBezeichnung));
 
@@ -154,53 +149,24 @@ public class UnitService {
         }
     }
 
-    /**
-     * Führt den Transfer einer Unit an einen neuen Besitzer durch.
-     *
-     * @param unitId Die ID der zu übertragenden Unit.
-     * @param newOwnerActorId Die ID des neuen Besitzers.
-     * @return Ein DTO der aktualisierten Unit.
-     * @throws Exception bei Fehlern, z.B. wenn der Aufrufer nicht der Besitzer ist.
-     */
     public UnitResponseDto transferUnit(String unitId, String newOwnerActorId) throws Exception {
-        // 1. Rufe die Chaincode-Funktion 'transferUnit' auf.
-        // Die Autorisierung (Besitzprüfung) findet im Chaincode statt.
         String resultJson = fabricClient.submitGenericTransaction(
                 "transferUnit",
                 unitId,
                 newOwnerActorId
         );
-
-        // 2. Wandle die aktualisierte Unit in ein Domain-Objekt um.
         Unit updatedUnit = fabricClient.getGson().fromJson(resultJson, Unit.class);
-
-        // 3. Mappe das Domain-Objekt zu einem DTO für die API-Antwort.
         return unitMapper.toDto(updatedUnit);
     }
 
-    /**
-     * Fügt einen neuen Temperaturmesswert zu einer bestehenden Unit hinzu.
-     *
-     * @param unitId Die ID der Unit.
-     * @param temperature Der gemessene Temperaturwert.
-     * @param timestamp Der Zeitstempel der Messung (z.B. im ISO 8601 Format).
-     * @return Ein DTO der aktualisierten Unit.
-     * @throws Exception bei Fehlern, z.B. wenn der Aufrufer nicht der Besitzer ist.
-     */
     public UnitResponseDto addTemperatureReading(String unitId, String temperature, String timestamp) throws Exception {
-        // 1. Rufe die Chaincode-Funktion 'addTemperatureReading' auf.
-        // Die Autorisierungsprüfung (Besitzprüfung) findet im Chaincode statt.
         String resultJson = fabricClient.submitGenericTransaction(
                 "addTemperatureReading",
                 unitId,
                 temperature,
                 timestamp
         );
-
-        // 2. Wandle die aktualisierte Unit in ein Domain-Objekt um.
         Unit updatedUnit = fabricClient.getGson().fromJson(resultJson, Unit.class);
-
-        // 3. Mappe das Domain-Objekt zu einem DTO für die API-Antwort.
         return unitMapper.toDto(updatedUnit);
     }
 }

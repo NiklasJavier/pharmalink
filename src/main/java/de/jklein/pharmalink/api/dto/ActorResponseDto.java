@@ -13,4 +13,22 @@ public class ActorResponseDto {
 
     // NEU: Feld für die aufgelösten IPFS-Daten
     private Map<String, Object> ipfsData;
+
+    public String getRolle() {
+        if (this.actorId == null || this.actorId.isBlank()) {
+            return "unbekannt";
+        }
+
+        if (actorId.startsWith("hersteller-")) {
+            return "hersteller";
+        } else if (actorId.startsWith("grosshaendler-")) {
+            return "grosshaendler";
+        } else if (actorId.startsWith("apotheke-")) {
+            return "apotheke";
+        } else if (actorId.startsWith("behoerde-")) {
+            return "behoerde";
+        } else {
+            return "unbekannt";
+        }
+    }
 }
