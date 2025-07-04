@@ -1,44 +1,87 @@
-/* Container für das flexible Layout der JSON-Boxen */
-.flex-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1.5rem;
-}
-
 /*
   ============================================================
-           HELLER STYLE FÜR DEN JSON-RENDERER
+      MODERNES THEME FÜR DEN JSON-RENDERER (KOMPLETTÜBERARBEITUNG)
   ============================================================
 */
 
-/* Die äußere Box für jeden JSON-Viewer */
-.json-formatter-light-mode {
-    /* Erhöhen Sie diesen Wert, um die Standardbreite der Box zu vergrößern */
-    flex: 1 1 450px; /* War vorher 350px */
+/* Container für mehrere JSON-Viewer nebeneinander */
+.flex-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem; /* Etwas mehr Abstand zwischen den Boxen */
+}
 
-    min-width: 450px; /* Passen Sie auch die Mindestbreite an */
-
-    /* Restliche Stile bleiben gleich */
-    border-radius: 0.75rem;
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
-    padding: 1rem;
-    font-family: 'Fira Code', 'Courier New', monospace;
+/* Der Haupt-Container für einen einzelnen JSON-Viewer */
+.json-formatter-modern-theme {
+    flex: 1 1 450px;
+    min-width: 450px;
+    font-family: 'Fira Code', 'Operator Mono', 'Source Code Pro', monospace;
     font-size: 14px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0; /* Dezenter Rand */
+    border-radius: 0.75rem;     /* Weichere Kanten */
+    overflow: hidden;         /* Stellt sicher, dass die Kanten rund bleiben */
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
-/* Farben für das Syntax-Highlighting im hellen Modus */
-.json-formatter-light-mode .json-formatter-key {
-    color: #1e293b; /* Dunkles Grau für die Schlüssel */
+/* Styling für jede einzelne Key-Value-Zeile */
+.json-formatter-modern-theme .json-formatter-row {
+    display: flex;
+    align-items: baseline; /* Richtet Key und Value an ihrer Schrift-Basislinie aus */
+    padding: 0.6rem 1.25rem; /* Vertikaler und horizontaler Abstand */
+    border-bottom: 1px solid #f1f5f9; /* Sehr feine Trennlinie */
+    transition: background-color 0.2s ease-in-out;
 }
-.json-formatter-light-mode .json-formatter-string {
-    color: #16a34a; /* Grün für Texte */
+
+/* Entfernt die Trennlinie bei der letzten Zeile */
+.json-formatter-modern-theme .json-formatter-row:last-child {
+    border-bottom: none;
 }
-.json-formatter-light-mode .json-formatter-number {
-    color: #9333ea; /* Violett für Zahlen */
+
+/* Zebra-Streifen für bessere Lesbarkeit bei langen Objekten */
+.json-formatter-modern-theme .json-formatter-row:nth-child(even) {
+    background-color: #f8fafc; /* Sehr helles Grau für jede zweite Zeile */
 }
-.json-formatter-light-mode .json-formatter-boolean,
-.json-formatter-light-mode .json-formatter-null {
-    color: #dc2626; /* Rot für true/false/null */
+
+/* Hover-Effekt für Interaktivität */
+.json-formatter-modern-theme .json-formatter-row:hover {
+    background-color: #f0f5ff;
+}
+
+/* Styling für den Schlüssel (Key) */
+.json-formatter-modern-theme .json-formatter-key {
+    color: #475569;      /* Ein professionelles Schiefergrau */
+    font-weight: 500;     /* Etwas fetter für mehr Betonung */
+    padding-right: 0.5rem;/* Abstand zum Doppelpunkt */
+    flex-shrink: 0;       /* Verhindert, dass der Key bei Platzmangel schrumpft */
+}
+
+/* Styling für die verschiedenen Wert-Typen (Values) */
+.json-formatter-modern-theme .json-formatter-string {
+    color: #059669; /* Ein sattes Grün */
+    word-break: break-all; /* Lange Strings ohne Leerzeichen umbrechen */
+}
+
+.json-formatter-modern-theme .json-formatter-number {
+    color: #7c3aed; /* Lebhaftes Violett */
+}
+
+.json-formatter-modern-theme .json-formatter-boolean {
+    color: #db2777; /* Kräftiges Pink/Magenta */
+    font-weight: 500;
+}
+
+.json-formatter-modern-theme .json-formatter-null {
+    color: #e11d48; /* Deutliches Rot */
+    font-weight: 500;
+}
+
+/* Styling für einklappbare Bereiche (Object/Array) */
+.json-formatter-modern-theme .json-formatter-toggler-link {
+    text-decoration: none;
+}
+
+.json-formatter-modern-theme .json-formatter-object-header {
+    font-style: italic;
+    color: #64748b;
 }
