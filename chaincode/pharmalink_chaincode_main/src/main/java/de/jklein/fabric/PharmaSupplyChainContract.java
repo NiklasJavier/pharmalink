@@ -48,7 +48,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
     }
 
     private static final String UNIT_COUNTER_PREFIX = "unitCounter_";
-    private static final String EVENT_NAME = "PharmalinkDataEvent"; // Name des Events
+    private static final String EVENT_NAME = "PharmalinkDataEvent";
 
     /**
      * Hilfsmethode: Prüft, ob ein Akteur im Ledger existiert.
@@ -211,11 +211,8 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         if (!actorExists(ctx, actorId)) {
             throw new ChaincodeException(String.format("Akteur %s nicht gefunden", actorId), PharmaSupplyChainErrors.ACTOR_NOT_FOUND.toString());
         }
-
         verifyCallingActorRole(ctx, "behoerde");
-
         ctx.getStub().delState(actorId);
-
         PharmaEvent event = new PharmaEvent("Actor", actorId, "DELETED");
         ctx.getStub().setEvent(EVENT_NAME, JsonUtil.toJson(event).getBytes(StandardCharsets.UTF_8));
     }
@@ -232,12 +229,10 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         List<Actor> actorList = new ArrayList<>();
         String queryString = "{\"selector\":{\"docType\":\"actor\"}}";
         final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = ctx.getStub().getQueryResult(queryString);
-
         for (final org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
             final Actor actor = JsonUtil.fromJson(kv.getStringValue(), Actor.class);
             actorList.add(actor);
         }
-
         return JsonUtil.toJson(actorList);
     }
 
@@ -266,9 +261,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         final ChaincodeStub stub = ctx.getStub();
         final String mspId = ctx.getClientIdentity().getMSPID();
         final String clientId = ctx.getClientIdentity().getId();
-
         final String certRoleRaw = ctx.getClientIdentity().getAttributeValue("role");
-
         if (certRoleRaw == null || certRoleRaw.isEmpty()) {
             final String errorMessage = "Client-Zertifikat enthält kein 'role'-Attribut. Registrierung nicht möglich.";
             System.err.println(errorMessage);
@@ -307,15 +300,6 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
         if (!actorState.isEmpty()) {
             System.out.println("Akteur mit ID " + actorId + " ist bereits registriert. Rückgabe der Informationen.");
-            // Hier sollte ein Update-Event emittiert werden, da der Akteur bereits existiert
-            // Aber Achtung: 'initCall' ändert die Daten nur, wenn der Akteur noch nicht existiert.
-            // Wenn er existiert, wird nur der vorhandene Zustand zurückgegeben.
-            // Um ein "update" Event zu triggern, müsste man hier prüfen ob sich bezeichnung, email, ipfsLink geändert haben.
-            // Für diese einfache Event-Logik gehen wir davon aus, dass putStringState nur bei tatsächlicher Änderung erfolgt
-            // oder dass ein Event bei "initCall" immer CREATED/UPDATED signalisiert.
-            // In diesem Fall, da der Akteur "registriert" ist, aber möglicherweise die Details aktualisiert werden,
-            // behandeln wir es als potentielles UPDATE.
-
             // Akteur-Objekt aus dem bestehenden Zustand erstellen, um es für ein potenzielles Update zu verwenden
             Actor existingActor = JsonUtil.fromJson(actorState, Actor.class);
             boolean changed = false;
@@ -495,7 +479,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      *
      * @param ctx Der Smart Contract Kontext.
      * @param bezeichnung Die Bezeichnung des Medikaments.
-     * @param infoblattHash Der Hash des Infoblatts (On-Chain-Referenz).
+     * @param infoblattHash Der Hash des Infoblatt.
      * @param ipfsLink Der IPFS Link zu weiteren Off-Chain-Informationen des Infoblatt.
      * @return Das erstellte Medikament als JSON-String.
      * @throws ChaincodeException Wenn der Aufrufer kein Hersteller ist, das Medikament bereits existiert
@@ -515,13 +499,16 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
         final String herstellerId = callingActor.getActorId();
 
-        final String combinedMedIdHashInput = herstellerId + "-" + bezeichnung;
+        final String combinedMedIdHashInput = herstellerId + "-" + bezeichnung + "-" + infoblattHash + "-" + ipfsLink;
         final String medSha = generateSha256(combinedMedIdHashInput);
         final String medId = "MED-" + medSha;
 
         byte[] medikamentStateBytes = stub.getState(medId);
         if (medikamentStateBytes != null && medikamentStateBytes.length > 0) {
-            throw new ChaincodeException(String.format("Medikament mit ID '%s' existiert bereits.", medId), PharmaSupplyChainErrors.MEDIKAMENT_ALREADY_EXISTS.toString());
+            throw new ChaincodeException(
+                    String.format("Ein Medikament mit der Bezeichnung '%s' von Hersteller '%s' existiert bereits. Bitte geben Sie eine andere Bezeichnung an.", bezeichnung, herstellerId),
+                    PharmaSupplyChainErrors.MEDIKAMENT_ALREADY_EXISTS.toString()
+            );
         }
 
         final Medikament newMedikament = new Medikament(medId, herstellerId, bezeichnung, ipfsLink);
@@ -852,7 +839,6 @@ public final class PharmaSupplyChainContract implements ContractInterface {
     @Transaction()
     public String addTemperatureReading(final Context ctx, final String unitId, final String temperature, final String timestamp) {
         byte[] unitStateBytes = ctx.getStub().getState(unitId);
-
         if (unitStateBytes == null || unitStateBytes.length == 0) {
             throw new ChaincodeException(String.format("Einheit %s nicht gefunden", unitId), PharmaSupplyChainErrors.UNIT_NOT_FOUND.toString());
         }
@@ -868,8 +854,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
         ctx.getStub().putState(unitId, JsonUtil.toJson(existingUnit).getBytes(StandardCharsets.UTF_8));
 
-        // Event emittieren
-        PharmaEvent event = new PharmaEvent("Unit", unitId, "UPDATED"); // "UPDATED" da Temperaturwerte hinzugefügt werden
+        PharmaEvent event = new PharmaEvent("Unit", unitId, "UPDATED");
         ctx.getStub().setEvent(EVENT_NAME, JsonUtil.toJson(event).getBytes(StandardCharsets.UTF_8));
 
         return JsonUtil.toJson(existingUnit);
@@ -888,7 +873,8 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      */
     @Transaction()
     public String transferUnit(final Context ctx, final String unitId, final String newOwnerActorId, final String transferTimestamp) {
-        byte[] unitStateBytes = ctx.getStub().getState(unitId);
+        ChaincodeStub stub = ctx.getStub();
+        byte[] unitStateBytes = stub.getState(unitId);
         if (unitStateBytes == null || unitStateBytes.length == 0) {
             throw new ChaincodeException(String.format("Einheit %s nicht gefunden", unitId), PharmaSupplyChainErrors.UNIT_NOT_FOUND.toString());
         }
@@ -900,8 +886,20 @@ public final class PharmaSupplyChainContract implements ContractInterface {
             throw new ChaincodeException("Nur der aktuelle Eigentümer der Einheit darf den Besitz übertragen.", PharmaSupplyChainErrors.UNAUTHORIZED_ACCESS.toString());
         }
 
-        if (!actorExists(ctx, newOwnerActorId)) {
+        // NEU: Rolle des neuen Eigentümers prüfen
+        byte[] newOwnerActorBytes = stub.getState(newOwnerActorId);
+        if (newOwnerActorBytes == null || newOwnerActorBytes.length == 0) {
             throw new ChaincodeException(String.format("Neuer Eigentümer Akteur %s nicht gefunden.", newOwnerActorId), PharmaSupplyChainErrors.ACTOR_NOT_FOUND.toString());
+        }
+        Actor newOwnerActor = JsonUtil.fromJson(new String(newOwnerActorBytes, StandardCharsets.UTF_8), Actor.class);
+
+        // Setzen von isConsumed und consumedRefId basierend auf der Rolle des neuen Eigentümers
+        if ("apotheke".equalsIgnoreCase(newOwnerActor.getRole()) || "konsument".equalsIgnoreCase(newOwnerActor.getRole())) {
+            existingUnit.setIsConsumed(true);
+            existingUnit.setConsumedRefId(newOwnerActorId);
+        } else {
+            existingUnit.setIsConsumed(false); // Sicherstellen, dass es auf false gesetzt wird, wenn Rolle nicht passt
+            existingUnit.setConsumedRefId(""); // Sicherstellen, dass es geleert wird
         }
 
         String previousOwnerId = existingUnit.getCurrentOwnerActorId();
@@ -909,10 +907,9 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
 
         existingUnit.setCurrentOwnerActorId(newOwnerActorId);
-        ctx.getStub().putState(unitId, JsonUtil.toJson(existingUnit).getBytes(StandardCharsets.UTF_8));
+        stub.putState(unitId, JsonUtil.toJson(existingUnit).getBytes(StandardCharsets.UTF_8));
 
-        // Event emittieren
-        PharmaEvent event = new PharmaEvent("Unit", unitId, "UPDATED"); // "UPDATED" da Besitzer und Transfer-Historie geändert werden
+        PharmaEvent event = new PharmaEvent("Unit", unitId, "UPDATED");
         ctx.getStub().setEvent(EVENT_NAME, JsonUtil.toJson(event).getBytes(StandardCharsets.UTF_8));
 
         return JsonUtil.toJson(existingUnit);
@@ -1030,8 +1027,6 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         final ChaincodeStub stub = ctx.getStub();
         final List<Medikament> medikamentList = new ArrayList<>();
 
-        // Diese Abfrage nutzt einen regulären Ausdruck, um nach einem Teilstring zu suchen.
-        // Das "(?i)" am Anfang macht die Suche case-insensitive (ignoriert Groß-/Kleinschreibung).
         final String queryString = String.format(
                 "{\"selector\":{\"docType\":\"medikament\",\"bezeichnung\":{\"$regex\":\"(?i)%s\"}}}", bezeichnungQuery);
 
@@ -1058,8 +1053,6 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         final ChaincodeStub stub = ctx.getStub();
         final List<Actor> actorList = new ArrayList<>();
 
-        // Diese Abfrage nutzt einen regulären Ausdruck, um nach einem Teilstring zu suchen.
-        // Das "(?i)" am Anfang macht die Suche case-insensitive.
         final String queryString = String.format(
                 "{\"selector\":{\"docType\":\"actor\",\"bezeichnung\":{\"$regex\":\"(?i)%s\"}}}", bezeichnungQuery);
 
@@ -1071,5 +1064,142 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         }
 
         return JsonUtil.toJson(actorList);
+    }
+
+    /**
+     * Transferiert den Besitz einer Gruppe von Einheiten innerhalb einer Charge vom aktuellen Eigentümer zu einem neuen Eigentümer.
+     * Nur der aktuelle Eigentümer aller Einheiten im Batch darf diese transferieren.
+     * Alle Einheiten im angegebenen Nummernkreis müssen existieren und denselben aktuellen Besitzer haben wie der aufrufende Akteur.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param medId Die ID des Medikaments, zu dem die Einheiten gehören.
+     * @param chargeBezeichnung Die Bezeichnung der Charge.
+     * @param startUnitNumber Die Startnummer der Einheit im Batch (inklusiv, z.B. 1).
+     * @param endUnitNumber Die Endnummer der Einheit im Batch (inklusiv, z.B. 10).
+     * @param newOwnerActorId Die ActorId des neuen Eigentümers.
+     * @param transferTimestamp Der Zeitstempel des Transfers als ISO 8601 String.
+     * @return Eine JSON-Zeichenkette der aktualisierten Einheiten.
+     * @throws ChaincodeException Wenn ein Medikament oder Akteur nicht gefunden wird, der Aufrufer nicht autorisiert ist
+     * oder eine Einheit im Batch nicht existiert/nicht dem Aufrufer gehört.
+     *
+     * Beispiel für Aufruf:
+     * {"function":"transferUnitsInBatch","Args":["MED-HASH123","Charge-XYZ","1","10","grosshaendler2","2025-06-19T10:05:00Z"]}
+     */
+    @Transaction()
+    public String transferUnitsInBatch(final Context ctx,
+                                       final String medId,
+                                       final String chargeBezeichnung,
+                                       final int startUnitNumber,
+                                       final int endUnitNumber,
+                                       final String newOwnerActorId,
+                                       final String transferTimestamp) {
+
+        final ChaincodeStub stub = ctx.getStub();
+        Actor callingActor = getCallingActorFromContext(ctx);
+        final String invokerActorId = callingActor.getActorId();
+
+        // Rolle des neuen Eigentümers für die isConsumed-Logik prüfen (einmal außerhalb der Schleife)
+        byte[] newOwnerActorBytes = stub.getState(newOwnerActorId);
+        if (newOwnerActorBytes == null || newOwnerActorBytes.length == 0) {
+            throw new ChaincodeException(String.format("Neuer Eigentümer Akteur %s nicht gefunden.", newOwnerActorId), PharmaSupplyChainErrors.ACTOR_NOT_FOUND.toString());
+        }
+        Actor newOwnerActor = JsonUtil.fromJson(new String(newOwnerActorBytes, StandardCharsets.UTF_8), Actor.class);
+        boolean isNewOwnerConsumerType = "apotheke".equalsIgnoreCase(newOwnerActor.getRole()) || "konsument".equalsIgnoreCase(newOwnerActor.getRole());
+
+
+        byte[] medikamentStateBytes = stub.getState(medId);
+        if (medikamentStateBytes == null || medikamentStateBytes.length == 0) {
+            throw new ChaincodeException(String.format("Medikament %s nicht gefunden, Einheiten können nicht transferiert werden.", medId), PharmaSupplyChainErrors.MEDIKAMENT_NOT_FOUND.toString());
+        }
+
+        if (startUnitNumber <= 0 || endUnitNumber < startUnitNumber) {
+            throw new ChaincodeException("Ungültiger Nummernkreis für Einheiten. Startnummer muss positiv sein und Endnummer >= Startnummer.", PharmaSupplyChainErrors.INVALID_ARGUMENT.toString());
+        }
+
+        List<Unit> transferredUnits = new ArrayList<>();
+
+        for (int i = startUnitNumber; i <= endUnitNumber; i++) {
+            String unitId = medId + "-" + chargeBezeichnung + "-" + String.format("%04d", i);
+
+            byte[] unitStateBytes = stub.getState(unitId);
+            if (unitStateBytes == null || unitStateBytes.length == 0) {
+                throw new ChaincodeException(String.format("Einheit %s im Batch nicht gefunden. Transaktion abgebrochen.", unitId), PharmaSupplyChainErrors.UNIT_NOT_FOUND.toString());
+            }
+
+            Unit existingUnit = JsonUtil.fromJson(new String(unitStateBytes, StandardCharsets.UTF_8), Unit.class);
+
+            if (!Objects.equals(invokerActorId, existingUnit.getCurrentOwnerActorId())) {
+                throw new ChaincodeException(String.format("Akteur %s ist nicht der aktuelle Eigentümer von Einheit %s. Batch-Transfer nicht autorisiert.", invokerActorId, unitId), PharmaSupplyChainErrors.UNAUTHORIZED_ACCESS.toString());
+            }
+
+            // Setzen von isConsumed und consumedRefId basierend auf der Rolle des neuen Eigentümers
+            if (isNewOwnerConsumerType) {
+                existingUnit.setIsConsumed(true);
+                existingUnit.setConsumedRefId(newOwnerActorId);
+            } else {
+                existingUnit.setIsConsumed(false);
+                existingUnit.setConsumedRefId("");
+            }
+
+            String previousOwnerId = existingUnit.getCurrentOwnerActorId();
+            existingUnit.addTransferEntry(previousOwnerId, newOwnerActorId, transferTimestamp);
+            existingUnit.setCurrentOwnerActorId(newOwnerActorId);
+
+            stub.putState(unitId, JsonUtil.toJson(existingUnit).getBytes(StandardCharsets.UTF_8));
+            transferredUnits.add(existingUnit);
+
+            PharmaEvent event = new PharmaEvent("Unit", unitId, "UPDATED");
+            ctx.getStub().setEvent(EVENT_NAME, JsonUtil.toJson(event).getBytes(StandardCharsets.UTF_8));
+        }
+
+        System.out.println(String.format("Batch-Transfer von %d Einheiten für Medikament %s, Charge %s von %s zu %s abgeschlossen.",
+                transferredUnits.size(), medId, chargeBezeichnung, invokerActorId, newOwnerActorId));
+
+        return JsonUtil.toJson(transferredUnits);
+    }
+
+    /**
+     * Markiert eine Einheit als an einen Konsumenten übergeben und somit "verbraucht".
+     * Nur Akteure mit der Rolle "apotheke" dürfen diese Transaktion ausführen.
+     * Die übergebene Einheit muss dem aufrufenden Apotheker gehören.
+     *
+     * @param ctx Der Smart Contract Kontext.
+     * @param unitId Die ID der Einheit, die an den Konsumenten übergeben wird.
+     * @param consumentRefId Die Referenz-ID des Konsumenten (kann auch eine externe ID sein).
+     * @param timestamp Der Zeitstempel der Übergabe als ISO 8601 String.
+     * @return Die aktualisierte Einheit als JSON-String.
+     * @throws ChaincodeException Wenn der Aufrufer keine Apotheke ist, die Einheit nicht gefunden wird
+     * oder die Einheit nicht dem aufrufenden Apotheker gehört oder bereits verbraucht ist.
+     *
+     * Example: {"function":"transferUnitToConsumer","Args":["MED-HASH-Charge-0001","KONS-12345","2025-07-05T10:00:00Z"]}
+     */
+    @Transaction()
+    public String transferUnitToConsumer(final Context ctx, final String unitId, final String consumentRefId, final String timestamp) {
+        final ChaincodeStub stub = ctx.getStub();
+        Actor callingActor = getCallingActorFromContext(ctx);
+        final String invokerActorId = callingActor.getActorId();
+        verifyCallingActorRole(ctx, "apotheke");
+        byte[] unitStateBytes = stub.getState(unitId);
+        if (unitStateBytes == null || unitStateBytes.length == 0) {
+            throw new ChaincodeException(String.format("Einheit %s nicht gefunden.", unitId), PharmaSupplyChainErrors.UNIT_NOT_FOUND.toString());
+        }
+        Unit existingUnit = JsonUtil.fromJson(new String(unitStateBytes, StandardCharsets.UTF_8), Unit.class);
+
+        if (!Objects.equals(invokerActorId, existingUnit.getCurrentOwnerActorId())) {
+            throw new ChaincodeException(String.format("Akteur %s ist nicht der aktuelle Eigentümer von Einheit %s. Übergabe nicht autorisiert.", invokerActorId, unitId), PharmaSupplyChainErrors.UNAUTHORIZED_ACCESS.toString());
+        }
+        if (existingUnit.getIsConsumed()) {
+            throw new ChaincodeException(String.format("Einheit %s wurde bereits als verbraucht markiert und kann nicht erneut übergeben werden.", unitId), PharmaSupplyChainErrors.INVALID_ARGUMENT.toString());
+        }
+        existingUnit.setIsConsumed(true);
+        existingUnit.setConsumedRefId(consumentRefId);
+        String previousOwnerId = existingUnit.getCurrentOwnerActorId();
+        existingUnit.addTransferEntry(previousOwnerId, consumentRefId, timestamp);
+        existingUnit.setCurrentOwnerActorId(consumentRefId);
+        stub.putState(unitId, JsonUtil.toJson(existingUnit).getBytes(StandardCharsets.UTF_8));
+        PharmaEvent event = new PharmaEvent("Unit", unitId, "UPDATED");
+        ctx.getStub().setEvent(EVENT_NAME, JsonUtil.toJson(event).getBytes(StandardCharsets.UTF_8));
+        System.out.println(String.format("Einheit %s erfolgreich an Konsument %s übergeben und als verbraucht markiert.", unitId, consumentRefId));
+        return JsonUtil.toJson(existingUnit);
     }
 }
