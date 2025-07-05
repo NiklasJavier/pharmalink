@@ -4,6 +4,7 @@ import de.jklein.fabric.models.Actor;
 import de.jklein.fabric.models.Medikament;
 import de.jklein.fabric.models.Unit;
 import de.jklein.fabric.utils.JsonUtil;
+import de.jklein.fabric.events.PharmaEvent;
 import org.hyperledger.fabric.contract.Context;
 import org.hyperledger.fabric.contract.ContractInterface;
 import org.hyperledger.fabric.contract.annotation.Contract;
@@ -47,6 +48,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
     }
 
     private static final String UNIT_COUNTER_PREFIX = "unitCounter_";
+    private static final String EVENT_NAME = "PharmalinkDataEvent"; // Name des Events
 
     /**
      * Hilfsmethode: Prüft, ob ein Akteur im Ledger existiert.
@@ -132,6 +134,10 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
         Actor actor = new Actor(actorId, bezeichnung, role, email, ipfsLink);
         ctx.getStub().putState(actorId, JsonUtil.toJson(actor).getBytes(StandardCharsets.UTF_8));
+
+        PharmaEvent event = new PharmaEvent("Actor", actorId, "CREATED");
+        ctx.getStub().setEvent(EVENT_NAME, JsonUtil.toJson(event).getBytes(StandardCharsets.UTF_8));
+
         return JsonUtil.toJson(actor);
     }
 
@@ -186,6 +192,10 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         existingActor.setIpfsLink(newIpfsLink);
 
         ctx.getStub().putState(actorId, JsonUtil.toJson(existingActor).getBytes(StandardCharsets.UTF_8));
+
+        PharmaEvent event = new PharmaEvent("Actor", actorId, "UPDATED");
+        ctx.getStub().setEvent(EVENT_NAME, JsonUtil.toJson(event).getBytes(StandardCharsets.UTF_8));
+
         return JsonUtil.toJson(existingActor);
     }
 
@@ -205,6 +215,9 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         verifyCallingActorRole(ctx, "behoerde");
 
         ctx.getStub().delState(actorId);
+
+        PharmaEvent event = new PharmaEvent("Actor", actorId, "DELETED");
+        ctx.getStub().setEvent(EVENT_NAME, JsonUtil.toJson(event).getBytes(StandardCharsets.UTF_8));
     }
 
     /**
@@ -289,19 +302,63 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         final String actorId = actualRoleFromCert.toLowerCase() + "-" + actorSha;
 
         final String actorState = stub.getStringState(actorId);
+        String newActorJson;
+        String operationType;
 
         if (!actorState.isEmpty()) {
             System.out.println("Akteur mit ID " + actorId + " ist bereits registriert. Rückgabe der Informationen.");
-            return actorState;
+            // Hier sollte ein Update-Event emittiert werden, da der Akteur bereits existiert
+            // Aber Achtung: 'initCall' ändert die Daten nur, wenn der Akteur noch nicht existiert.
+            // Wenn er existiert, wird nur der vorhandene Zustand zurückgegeben.
+            // Um ein "update" Event zu triggern, müsste man hier prüfen ob sich bezeichnung, email, ipfsLink geändert haben.
+            // Für diese einfache Event-Logik gehen wir davon aus, dass putStringState nur bei tatsächlicher Änderung erfolgt
+            // oder dass ein Event bei "initCall" immer CREATED/UPDATED signalisiert.
+            // In diesem Fall, da der Akteur "registriert" ist, aber möglicherweise die Details aktualisiert werden,
+            // behandeln wir es als potentielles UPDATE.
+
+            // Akteur-Objekt aus dem bestehenden Zustand erstellen, um es für ein potenzielles Update zu verwenden
+            Actor existingActor = JsonUtil.fromJson(actorState, Actor.class);
+            boolean changed = false;
+            if (!Objects.equals(existingActor.getBezeichnung(), bezeichnung)) {
+                existingActor.setBezeichnung(bezeichnung);
+                changed = true;
+            }
+            if (!Objects.equals(existingActor.getEmail(), email)) {
+                existingActor.setEmail(email);
+                changed = true;
+            }
+            if (!Objects.equals(existingActor.getIpfsLink(), ipfsLink)) {
+                existingActor.setIpfsLink(ipfsLink);
+                changed = true;
+            }
+
+            if (changed) {
+                stub.putStringState(actorId, JsonUtil.toJson(existingActor));
+                newActorJson = JsonUtil.toJson(existingActor);
+                operationType = "UPDATED";
+                PharmaEvent event = new PharmaEvent("Actor", actorId, operationType);
+                stub.setEvent(EVENT_NAME, JsonUtil.toJson(event).getBytes(StandardCharsets.UTF_8));
+            } else {
+                newActorJson = actorState;
+                operationType = "NO_CHANGE"; // Kein Event, da keine Änderung
+            }
+            return newActorJson;
+
+        } else {
+            final Actor newActor = new Actor(actorId, bezeichnung, actualRoleFromCert.toLowerCase(), email, ipfsLink);
+            newActorJson = JsonUtil.toJson(newActor);
+            stub.putStringState(actorId, newActorJson);
+
+            operationType = "CREATED";
+            // Event emittieren
+            PharmaEvent event = new PharmaEvent("Actor", actorId, operationType);
+            stub.setEvent(EVENT_NAME, JsonUtil.toJson(event).getBytes(StandardCharsets.UTF_8));
+
+            System.out.println("Neuer Akteur registriert: " + newActorJson);
+            return newActorJson;
         }
-
-        final Actor newActor = new Actor(actorId, bezeichnung, actualRoleFromCert.toLowerCase(), email, ipfsLink);
-        final String newActorJson = JsonUtil.toJson(newActor);
-        stub.putStringState(actorId, newActorJson);
-
-        System.out.println("Neuer Akteur registriert: " + newActorJson);
-        return newActorJson;
     }
+
 
     /**
      * Fragt die Informationen eines spezifischen Akteurs anhand seiner Actor ID ab.
@@ -426,6 +483,9 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         final String updatedActorJson = JsonUtil.toJson(existingActor);
         stub.putStringState(actorId, updatedActorJson);
 
+        PharmaEvent event = new PharmaEvent("Actor", actorId, "UPDATED");
+        ctx.getStub().setEvent(EVENT_NAME, JsonUtil.toJson(event).getBytes(StandardCharsets.UTF_8));
+
         System.out.println("Akteur IPFS Link aktualisiert: " + updatedActorJson);
         return updatedActorJson;
     }
@@ -472,6 +532,9 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
         stub.putStringState(UNIT_COUNTER_PREFIX + medId, "0");
 
+        PharmaEvent event = new PharmaEvent("Medikament", medId, "CREATED");
+        ctx.getStub().setEvent(EVENT_NAME, JsonUtil.toJson(event).getBytes(StandardCharsets.UTF_8));
+
         System.out.println("Neues Medikament angelegt: " + newMedikamentJson);
         return newMedikamentJson;
     }
@@ -516,6 +579,9 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         existingMedikament.setApprovedById(approverActorId);
         final String updatedMedikamentJson = JsonUtil.toJson(existingMedikament);
         stub.putStringState(medId, updatedMedikamentJson);
+
+        PharmaEvent event = new PharmaEvent("Medikament", medId, "UPDATED");
+        ctx.getStub().setEvent(EVENT_NAME, JsonUtil.toJson(event).getBytes(StandardCharsets.UTF_8));
 
         System.out.println("Medikamentstatus aktualisiert: " + updatedMedikamentJson);
         return updatedMedikamentJson;
@@ -564,6 +630,9 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
         final String updatedMedikamentJson = JsonUtil.toJson(existingMedikament);
         stub.putStringState(medId, updatedMedikamentJson);
+
+        PharmaEvent event = new PharmaEvent("Medikament", medId, "UPDATED");
+        ctx.getStub().setEvent(EVENT_NAME, JsonUtil.toJson(event).getBytes(StandardCharsets.UTF_8));
 
         System.out.println("Medikament aktualisiert: " + updatedMedikamentJson);
         return updatedMedikamentJson;
@@ -614,6 +683,9 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         existingMedikament.setTags(currentTags);
         final String updatedMedikamentJson = JsonUtil.toJson(existingMedikament);
         stub.putStringState(medId, updatedMedikamentJson);
+
+        PharmaEvent event = new PharmaEvent("Medikament", medId, "UPDATED");
+        ctx.getStub().setEvent(EVENT_NAME, JsonUtil.toJson(event).getBytes(StandardCharsets.UTF_8));
 
         System.out.println("Medikament-Tag aktualisiert: " + updatedMedikamentJson);
         return updatedMedikamentJson;
@@ -698,6 +770,9 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
         ctx.getStub().delState(medId);
         ctx.getStub().delState(UNIT_COUNTER_PREFIX + medId);
+
+        PharmaEvent event = new PharmaEvent("Medikament", medId, "DELETED");
+        ctx.getStub().setEvent(EVENT_NAME, JsonUtil.toJson(event).getBytes(StandardCharsets.UTF_8));
     }
 
 
@@ -753,6 +828,9 @@ public final class PharmaSupplyChainContract implements ContractInterface {
             Unit newUnit = new Unit(unitId, medId, chargeBezeichnung, ipfsLink, callingActor.getActorId());
             ctx.getStub().putState(unitId, JsonUtil.toJson(newUnit).getBytes(StandardCharsets.UTF_8));
             createdUnits.add(newUnit);
+
+            PharmaEvent event = new PharmaEvent("Unit", unitId, "CREATED");
+            ctx.getStub().setEvent(EVENT_NAME, JsonUtil.toJson(event).getBytes(StandardCharsets.UTF_8));
         }
 
         ctx.getStub().putState(UNIT_COUNTER_PREFIX + medId, String.valueOf(currentUnitCounter).getBytes(StandardCharsets.UTF_8));
@@ -789,6 +867,11 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         existingUnit.addTemperatureReading(timestamp, temperature);
 
         ctx.getStub().putState(unitId, JsonUtil.toJson(existingUnit).getBytes(StandardCharsets.UTF_8));
+
+        // Event emittieren
+        PharmaEvent event = new PharmaEvent("Unit", unitId, "UPDATED"); // "UPDATED" da Temperaturwerte hinzugefügt werden
+        ctx.getStub().setEvent(EVENT_NAME, JsonUtil.toJson(event).getBytes(StandardCharsets.UTF_8));
+
         return JsonUtil.toJson(existingUnit);
     }
 
@@ -827,6 +910,11 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
         existingUnit.setCurrentOwnerActorId(newOwnerActorId);
         ctx.getStub().putState(unitId, JsonUtil.toJson(existingUnit).getBytes(StandardCharsets.UTF_8));
+
+        // Event emittieren
+        PharmaEvent event = new PharmaEvent("Unit", unitId, "UPDATED"); // "UPDATED" da Besitzer und Transfer-Historie geändert werden
+        ctx.getStub().setEvent(EVENT_NAME, JsonUtil.toJson(event).getBytes(StandardCharsets.UTF_8));
+
         return JsonUtil.toJson(existingUnit);
     }
 
