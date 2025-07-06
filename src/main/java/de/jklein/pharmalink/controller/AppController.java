@@ -7,6 +7,7 @@ import de.jklein.pharmalink.domain.Unit;
 import de.jklein.pharmalink.service.ActorService;
 import de.jklein.pharmalink.service.MedicationService;
 import de.jklein.pharmalink.service.UnitService;
+import de.jklein.pharmalink.service.audit.AuditService;
 import de.jklein.pharmalink.service.system.SystemStateService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,14 +37,16 @@ public class AppController {
     private final MedicationService medicationService;
     private final UnitService unitService;
     private final ObjectMapper objectMapper;
+    private final AuditService auditService;
 
     public AppController(SystemStateService systemStateService, ActorService actorService,
-                         MedicationService medicationService, UnitService unitService, ObjectMapper objectMapper) {
+                         MedicationService medicationService, UnitService unitService, ObjectMapper objectMapper, AuditService auditService) {
         this.systemStateService = systemStateService;
         this.actorService = actorService;
         this.medicationService = medicationService;
         this.unitService = unitService;
         this.objectMapper = objectMapper;
+        this.auditService = auditService;
     }
 
     @ModelAttribute
@@ -81,6 +84,9 @@ public class AppController {
         model.addAttribute("initialActorId", initialActorId);
         model.addAttribute("currentActorInfo", currentActor);
         model.addAttribute("pageTitle", "Dashboard");
+
+        String apiTransactionsJson = auditService.getGroupedApiTransactionsByUrlAsJson(); // Rufe den JSON-String ab
+        model.addAttribute("apiTransactionsJson", apiTransactionsJson); // Zum Model hinzufügen
 
         try {
             List<Actor> allActors = systemStateService.getAllActors();
