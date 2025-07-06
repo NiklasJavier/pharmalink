@@ -1,4 +1,4 @@
-package de.jklein.pharmalink.service.audit;
+package de.jklein.pharmalink.listener;
 
 import de.jklein.pharmalink.domain.audit.LoginAttempt;
 import de.jklein.pharmalink.repository.audit.LoginAttemptRepository;

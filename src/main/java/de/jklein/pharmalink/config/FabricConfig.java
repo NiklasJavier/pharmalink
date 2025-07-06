@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hyperledger.fabric.client.Contract;
 import org.hyperledger.fabric.client.Gateway;
+import org.hyperledger.fabric.client.Hash; // Import für Hash hinzugefügt
 import org.hyperledger.fabric.client.identity.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -46,7 +47,7 @@ public class FabricConfig {
     private Path keyDirPath;
 
     @Value("${fabric.tls-cert-path}")
-    private Path tlsCertPath; // Dies ist der *relative* Pfad vom cryptoPath aus
+    private Path tlsCertPath;
 
     @Value("${fabric.peer.endpoint}")
     private String peerEndpoint;
@@ -101,9 +102,12 @@ public class FabricConfig {
         Gateway gateway = Gateway.newInstance()
                 .identity(identity)
                 .signer(signer)
+                .hash(Hash.SHA256)
                 .connection(grpcChannel)
                 .evaluateOptions(options -> options.withDeadlineAfter(5, TimeUnit.SECONDS))
-                .submitOptions(options -> options.withDeadlineAfter(15, TimeUnit.SECONDS))
+                .endorseOptions(options -> options.withDeadlineAfter(15, TimeUnit.SECONDS)) // Endorse-Timeout hinzugefügt
+                .submitOptions(options -> options.withDeadlineAfter(5, TimeUnit.SECONDS))
+                .commitStatusOptions(options -> options.withDeadlineAfter(1, TimeUnit.MINUTES)) // Commit-Status-Timeout hinzugefügt
                 .connect();
 
         System.out.println("--> Gateway erfolgreich verbunden.");
@@ -124,7 +128,6 @@ public class FabricConfig {
         }
     }
 
-    // Hilfsmethode zur Ermittlung der ersten Datei in einem Verzeichnis
     private Path getFirstFilePath(Path dirPath) throws IOException {
         if (!Files.exists(dirPath) || !Files.isDirectory(dirPath)) {
             throw new IOException("Verzeichnis nicht gefunden oder ist keine Datei: " + dirPath);
