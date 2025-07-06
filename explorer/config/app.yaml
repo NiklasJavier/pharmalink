@@ -1,0 +1,44 @@
+# PharmaLink Application Configuration
+
+app:
+  name: "PharmaLink Explorer"
+  version: "v1.2.3"
+  description: "Digitale Informationen für die pharmazeutische Lieferkette"
+  environment: "production" # development | production | staging
+
+api:
+  documentation_url: "https://localhost/api/swagger"
+  backend_version_url: "https://api.ihredomäne.com/version"
+  base_url: "https://api.ihredomäne.com/v1"
+  # Einheitliche Search-URL für alle Abfragen
+  search_url: "https://api.ihredomäne.com/v1/search"
+  # History-URL für Änderungshistorie
+  history_url: "https://api.ihredomäne.com/v1/history"
+
+data:
+  # Data source configuration
+  source: "api" # auto | local | api
+  # auto: uses local for development, api for production
+  # local: always use local demo data
+  # api: always use API calls
+  
+  # API configuration
+  timeout: 10000 # milliseconds
+  retry_attempts: 3
+  cache_duration: 300000 # 5 minutes in milliseconds
+
+ui:
+  theme:
+    primary_color: "emerald"
+    header_height: "20" # in Tailwind units (h-20)
+    mobile_header_height: "16" # in Tailwind units (h-16)
+
+features:
+  qr_scanner: false
+  search_history: false
+  offline_mode: false
+
+links:
+  support_url: "https://pharmalink.com/support"
+  privacy_url: "https://pharmalink.com/privacy"
+  terms_url: "https://pharmalink.com/terms"
