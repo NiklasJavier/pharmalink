@@ -3,9 +3,11 @@ package de.jklein.pharmalink.service.audit;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.jklein.pharmalink.domain.audit.ApiTransaction;
-import de.jklein.pharmalink.domain.audit.GrpcTransaction; // NEU: Import GrpcTransaction
+import de.jklein.pharmalink.domain.audit.GrpcTransaction;
+import de.jklein.pharmalink.domain.audit.LoginAttempt; // NEU: Import LoginAttempt
 import de.jklein.pharmalink.repository.audit.ApiTransactionRepository;
-import de.jklein.pharmalink.repository.audit.GrpcTransactionRepository; // NEU: Import GrpcTransactionRepository
+import de.jklein.pharmalink.repository.audit.GrpcTransactionRepository;
+import de.jklein.pharmalink.repository.audit.LoginAttemptRepository; // NEU: Import LoginAttemptRepository
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,17 +24,19 @@ import java.util.stream.Collectors;
 public class AuditService {
 
     private static final Logger logger = LoggerFactory.getLogger(AuditService.class);
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS"); // Für API-Transaktionen
-    private static final DateTimeFormatter DATE_ONLY_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd"); // Für den Wunsch, nur das Datum zu zeigen
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS"); // Für gRPC (volle Zeit)
+    private static final DateTimeFormatter DATE_ONLY_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd"); // Für API (nur Datum) und Login
 
     private final ApiTransactionRepository apiTransactionRepository;
-    private final GrpcTransactionRepository grpcTransactionRepository; // NEU: Repository für gRPC-Transaktionen
+    private final GrpcTransactionRepository grpcTransactionRepository;
+    private final LoginAttemptRepository loginAttemptRepository; // NEU: Repository für Login-Versuche
     private final ObjectMapper objectMapper;
 
     @Autowired
-    public AuditService(ApiTransactionRepository apiTransactionRepository, GrpcTransactionRepository grpcTransactionRepository, ObjectMapper objectMapper) { // NEU: GrpcTransactionRepository im Konstruktor
+    public AuditService(ApiTransactionRepository apiTransactionRepository, GrpcTransactionRepository grpcTransactionRepository, LoginAttemptRepository loginAttemptRepository, ObjectMapper objectMapper) { // NEU: LoginAttemptRepository im Konstruktor
         this.apiTransactionRepository = apiTransactionRepository;
         this.grpcTransactionRepository = grpcTransactionRepository;
+        this.loginAttemptRepository = loginAttemptRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -58,11 +62,11 @@ public class AuditService {
                 .map(tx -> {
                     Map<String, Object> map = new LinkedHashMap<>();
                     map.put("timestamp", tx.getTimestamp().format(DATE_TIME_FORMATTER)); // Nur Datum für API-Transaktionen
-                    map.put("successful", tx.isSuccessful());
                     map.put("httpMethod", tx.getHttpMethod());
-                    map.put("username", tx.getUsername());
                     map.put("responseStatus", tx.getResponseStatus());
+                    map.put("successful", tx.isSuccessful());
                     map.put("url", tx.getUrl());
+                    map.put("username", tx.getUsername());
                     return map;
                 })
                 .collect(Collectors.toList());
@@ -81,7 +85,7 @@ public class AuditService {
      */
     public List<GrpcTransaction> getAllGrpcTransactionsOrderedByIdDesc() {
         List<GrpcTransaction> transactions = grpcTransactionRepository.findAll();
-        transactions.sort(Comparator.comparing(GrpcTransaction::getId).reversed()); // Sortieren nach ID absteigend
+        transactions.sort(Comparator.comparing(GrpcTransaction::getId).reversed());
         return transactions;
     }
 
@@ -97,8 +101,8 @@ public class AuditService {
                 .map(tx -> {
                     Map<String, Object> map = new LinkedHashMap<>();
                     map.put("timestamp", tx.getTimestamp().format(DATE_TIME_FORMATTER)); // Timestamp hier mit voller Zeit
-                    map.put("successful", tx.isSuccessful());
                     map.put("transactionName", tx.getTransactionName());
+                    map.put("successful", tx.isSuccessful());
                     map.put("transactionArgs", tx.getTransactionArgs());
                     return map;
                 })
@@ -109,6 +113,44 @@ public class AuditService {
         } catch (JsonProcessingException e) {
             logger.error("Fehler beim Konvertieren der gRPC-Transaktionen in JSON: {}", e.getMessage(), e);
             return "{\"error\": \"Fehler beim Erstellen der gRPC-Transaktionsübersicht.\"}";
+        }
+    }
+
+    /**
+     * Ruft alle Login-Versuche ab, sortiert nach ID absteigend.
+     * @return Eine Liste von LoginAttempt-Objekten.
+     */
+    public List<LoginAttempt> getAllLoginAttemptsOrderedByIdDesc() {
+        List<LoginAttempt> attempts = loginAttemptRepository.findAll();
+        attempts.sort(Comparator.comparing(LoginAttempt::getId).reversed()); // Sortieren nach ID absteigend
+        return attempts;
+    }
+
+    /**
+     * Ruft alle Login-Versuche ab (sortiert nach ID absteigend) und gibt sie als flachen JSON-String zurück.
+     * Die Einträge innerhalb der Liste sind nach ID absteigend sortiert und der Timestamp steht an erster Stelle.
+     * @return Ein JSON-String der Login-Versuche.
+     */
+    public String getAllLoginAttemptsAsJson() {
+        List<LoginAttempt> allAttempts = getAllLoginAttemptsOrderedByIdDesc();
+
+        List<Map<String, Object>> jsonCompatibleList = allAttempts.stream()
+                .map(attempt -> {
+                    Map<String, Object> map = new LinkedHashMap<>();
+                    map.put("timestamp", attempt.getTimestamp().format(DATE_TIME_FORMATTER)); // Timestamp mit voller Zeit
+                    map.put("username", attempt.getUsername());
+                    map.put("successful", attempt.isSuccessful());
+                    map.put("ipAddress", attempt.getIpAddress());
+                    map.put("authenticationType", attempt.getAuthenticationType());
+                    return map;
+                })
+                .collect(Collectors.toList());
+
+        try {
+            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonCompatibleList);
+        } catch (JsonProcessingException e) {
+            logger.error("Fehler beim Konvertieren der Login-Versuche in JSON: {}", e.getMessage(), e);
+            return "{\"error\": \"Fehler beim Erstellen der Login-Übersicht.\"}";
         }
     }
 }

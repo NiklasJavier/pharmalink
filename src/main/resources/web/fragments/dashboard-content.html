@@ -81,6 +81,14 @@
         </th:block>
     </div>
 
+    <div th:if="${loginAttemptsJson != null and !loginAttemptsJson.isEmpty()}">
+        <div th:replace="~{fragments/dynamicTable :: dynamicTable(
+            tableTitle='Authentifizierungsversuche',
+            tableJsonString=${loginAttemptsJson},  idPrefix='login-attempts-table',
+            maxBodyHeight=400
+        )}"></div>
+    </div>
+
     <div th:if="${apiTransactionsJson != null and !apiTransactionsJson.isEmpty()}">
         <div th:replace="~{fragments/dynamicTable :: dynamicTable(
             tableTitle='API Transaktionen',

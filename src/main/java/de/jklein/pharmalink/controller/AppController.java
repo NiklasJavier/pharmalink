@@ -91,6 +91,9 @@ public class AppController {
         String grpcTransactionsJson = auditService.getAllGrpcTransactionsAsJson(); // Rufe den JSON-String ab
         model.addAttribute("grpcTransactionsJson", grpcTransactionsJson); // Zum Model hinzufügen
 
+        String loginAttemptsJson = auditService.getAllLoginAttemptsAsJson(); // Rufe den JSON-String ab
+        model.addAttribute("loginAttemptsJson", loginAttemptsJson);
+
         try {
             List<Actor> allActors = systemStateService.getAllActors();
             List<Medikament> allMedikamente = systemStateService.getAllMedikamente();

@@ -10,9 +10,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.stream.Collectors;
 
-/**
- * verantwortlich für das Laden von Benutzerdaten aus der Datenbank, die für die Authentifizierung benötigt werden.
- */
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
 

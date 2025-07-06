@@ -1,13 +1,10 @@
 package de.jklein.pharmalink.service.system;
 
-import de.jklein.pharmalink.api.dto.ActorResponseDto; // DTO Imports bleiben, falls von anderen Methoden benötigt
-import de.jklein.pharmalink.api.dto.MedikamentResponseDto;
-import de.jklein.pharmalink.api.dto.UnitResponseDto;
 import de.jklein.pharmalink.api.mapper.ActorMapper;
 import de.jklein.pharmalink.api.mapper.MedikamentMapper;
 import de.jklein.pharmalink.api.mapper.UnitMapper;
 import de.jklein.pharmalink.domain.system.SystemState;
-import de.jklein.pharmalink.domain.Actor; // NEU: Domain-Objekt Imports
+import de.jklein.pharmalink.domain.Actor;
 import de.jklein.pharmalink.domain.Medikament;
 import de.jklein.pharmalink.domain.Unit;
 import de.jklein.pharmalink.repository.system.SystemStateRepository;
@@ -19,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
