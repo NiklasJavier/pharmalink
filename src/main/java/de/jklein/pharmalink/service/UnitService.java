@@ -1,13 +1,12 @@
 package de.jklein.pharmalink.service;
 
 import com.google.gson.reflect.TypeToken;
-import de.jklein.pharmalink.api.dto.ActorResponseDto;
 import de.jklein.pharmalink.api.dto.CreateUnitsRequestDto;
-import de.jklein.pharmalink.api.dto.UnitResponseDto;
 import de.jklein.pharmalink.api.mapper.UnitMapper;
 import de.jklein.pharmalink.client.fabric.FabricClient;
 import de.jklein.pharmalink.client.ipfs.IpfsClient;
 import de.jklein.pharmalink.domain.Unit;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +16,7 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream; // NEU: Import für Stream hinzufügen
 
 @Service
 public class UnitService {
@@ -25,7 +25,7 @@ public class UnitService {
 
     private final FabricClient fabricClient;
     private final IpfsClient ipfsClient;
-    private final UnitMapper unitMapper;
+    private final UnitMapper unitMapper; // Mapper bleibt, falls Konvertierung zu/von DTOs in diesem Service noch nötig ist (z.B. für Controller-Aufrufe direkt)
 
     @Autowired
     public UnitService(FabricClient fabricClient, IpfsClient ipfsClient, UnitMapper unitMapper) {
@@ -36,17 +36,16 @@ public class UnitService {
 
     /**
      * Ruft eine einzelne Unit anhand ihrer ID ab und reichert sie mit Daten aus IPFS an.
+     * Gibt ein Optional des angereicherten Domain-Objekts zurück.
      * @param unitId Die ID der abzurufenden Unit.
-     * @return Ein Optional, das das angereicherte Unit-DTO enthält.
+     * @return Ein Optional, das das angereicherte Unit-Domain-Objekt enthält.
      */
-    public Optional<UnitResponseDto> getEnrichedUnitById(String unitId) {
+    public Optional<Unit> getEnrichedUnitById(String unitId) {
         try {
             Unit unit = fabricClient.evaluateTransaction("queryUnitById", unitId, Unit.class);
             if (unit == null) {
                 return Optional.empty();
             }
-
-            UnitResponseDto dto = unitMapper.toDto(unit);
 
             final String originalIpfsLink = unit.getIpfsLink();
             if (originalIpfsLink != null && !originalIpfsLink.isBlank()) {
@@ -58,7 +57,7 @@ public class UnitService {
                                 String jsonContent = new String(ipfsBytes, StandardCharsets.UTF_8);
                                 Type dataType = new TypeToken<Map<String, Object>>() {}.getType();
                                 Map<String, Object> ipfsData = fabricClient.getGson().fromJson(jsonContent, dataType);
-                                dto.setIpfsData(ipfsData);
+                                unit.setIpfsData(ipfsData);
                             } catch (Exception parseEx) {
                                 logger.error("Konnte IPFS JSON-Inhalt für Unit-CID '{}' nicht parsen.", cleanHash, parseEx);
                             }
@@ -69,7 +68,7 @@ public class UnitService {
                 }
             }
 
-            return Optional.of(dto);
+            return Optional.of(unit);
         } catch (Exception e) {
             logger.error("Fehler beim Abrufen der Unit mit ID '{}'", unitId, e);
             return Optional.empty();
@@ -77,33 +76,13 @@ public class UnitService {
     }
 
     /**
-     * NEU HINZUGEFÜGT: Ruft alle Units ab, die einem bestimmten Besitzer gehören, und reichert sie an.
-     * Diese Methode wird vom AppController für die Dashboard-Ansicht von Großhändlern und Apotheken benötigt.
-     *
-     * @param ownerId Die ID des Besitzers.
-     * @return Eine Liste der angereicherten Units, die dem Besitzer gehören.
+     * Erstellt Units für ein Medikament. Gibt eine Liste der erstellten Domain-Objekte zurück.
+     * @param medId Die ID des Medikaments, für das Units erstellt werden.
+     * @param requestDto Das DTO mit den Details (Anzahl, Charge, IPFS-Daten).
+     * @return Eine Liste der neu erstellten Units als Domain-Objekte.
+     * @throws Exception bei Fehlern während der Transaktion.
      */
-    public List<UnitResponseDto> getUnitsByOwner(String ownerId) {
-        try {
-            // 1. Rufe die flache Liste aller Units für den Besitzer von der Blockchain ab.
-            String resultJson = fabricClient.evaluateGenericTransaction("queryUnitsByOwner", ownerId);
-            Type listType = new TypeToken<List<Unit>>() {}.getType();
-            List<Unit> units = fabricClient.getGson().fromJson(resultJson, listType);
-
-            // 2. Erstelle eine angereicherte Liste von DTOs, indem durch jedes Element iteriert wird.
-            return units.stream()
-                    .map(unit -> this.getEnrichedUnitById(unit.getUnitId())
-                            .orElse(null)) // Rufe die bestehende Anreicherungsmethode wieder auf
-                    .filter(Objects::nonNull) // Filtere eventuelle Null-Ergebnisse heraus
-                    .collect(Collectors.toList());
-
-        } catch (Exception e) {
-            logger.error("Fehler beim Abrufen der Units für Besitzer '{}'", ownerId, e);
-            return Collections.emptyList();
-        }
-    }
-
-    public List<UnitResponseDto> createUnitsForMedication(String medId, CreateUnitsRequestDto requestDto) throws Exception {
+    public List<Unit> createUnitsForMedication(String medId, CreateUnitsRequestDto requestDto) throws Exception {
         String ipfsHash = "";
 
         if (requestDto.getIpfsData() != null && !requestDto.getIpfsData().isEmpty()) {
@@ -125,23 +104,29 @@ public class UnitService {
         Type listType = new TypeToken<List<Unit>>() {}.getType();
         List<Unit> createdUnits = fabricClient.getGson().fromJson(resultJson, listType);
 
-        return unitMapper.toDtoList(createdUnits);
+        return createdUnits;
     }
 
-    public Map<String, List<UnitResponseDto>> getUnitsByMedIdGroupedByCharge(String medId) {
+    /**
+     * Ruft alle Units für eine Medikamenten-ID ab, reichert jede Unit mit IPFS-Daten an
+     * und gruppiert das Ergebnis anschließend nach ihrer Charge.
+     * Gibt eine Map von Listen der angereicherten Domain-Objekte zurück.
+     * @param medId Die ID des Medikaments.
+     * @return Eine Map, bei der der Schlüssel die Chargenbezeichnung und der Wert die Liste der zugehörigen,
+     * angereicherten Units (Domain-Objekte) ist.
+     */
+    public Map<String, List<Unit>> getUnitsByMedIdGroupedByCharge(String medId) {
         try {
             String resultJson = fabricClient.evaluateGenericTransaction("queryUnitsByMedId", medId);
             Type listType = new TypeToken<List<Unit>>() {}.getType();
             List<Unit> units = fabricClient.getGson().fromJson(resultJson, listType);
 
-            List<UnitResponseDto> enrichedDtos = units.stream()
-                    .map(unit -> this.getEnrichedUnitById(unit.getUnitId())
-                            .orElse(null))
-                    .filter(Objects::nonNull)
+            List<Unit> enrichedUnits = units.stream()
+                    .flatMap(unit -> this.getEnrichedUnitById(unit.getUnitId()).stream())
                     .collect(Collectors.toList());
 
-            return enrichedDtos.stream()
-                    .collect(Collectors.groupingBy(UnitResponseDto::getChargeBezeichnung));
+            return enrichedUnits.stream()
+                    .collect(Collectors.groupingBy(Unit::getChargeBezeichnung));
 
         } catch (Exception e) {
             logger.error("Fehler beim Abrufen der gruppierten Units für medId '{}'", medId, e);
@@ -149,17 +134,34 @@ public class UnitService {
         }
     }
 
-    public UnitResponseDto transferUnit(String unitId, String newOwnerActorId) throws Exception {
+    /**
+     * Führt den Transfer einer Unit an einen neuen Besitzer durch.
+     * Gibt das aktualisierte Domain-Objekt zurück.
+     * @param unitId Die ID der zu übertragenden Unit.
+     * @param newOwnerActorId Die ID des neuen Besitzers.
+     * @return Das aktualisierte Unit-Domain-Objekt.
+     * @throws Exception bei Fehlern, z.B. wenn der Aufrufer nicht der Besitzer ist.
+     */
+    public Unit transferUnit(String unitId, String newOwnerActorId) throws Exception {
         String resultJson = fabricClient.submitGenericTransaction(
                 "transferUnit",
                 unitId,
                 newOwnerActorId
         );
         Unit updatedUnit = fabricClient.getGson().fromJson(resultJson, Unit.class);
-        return unitMapper.toDto(updatedUnit);
+        return updatedUnit;
     }
 
-    public UnitResponseDto addTemperatureReading(String unitId, String temperature, String timestamp) throws Exception {
+    /**
+     * Fügt einen neuen Temperaturmesswert zu einer bestehenden Unit hinzu.
+     * Gibt das aktualisierte Domain-Objekt zurück.
+     * @param unitId Die ID der Unit.
+     * @param temperature Der gemessene Temperaturwert.
+     * @param timestamp Der Zeitstempel der Messung (z.B. im ISO 8601 Format).
+     * @return Das aktualisierte Unit-Domain-Objekt.
+     * @throws Exception bei Fehlern, z.B. wenn der Aufrufer nicht der Besitzer ist.
+     */
+    public Unit addTemperatureReading(String unitId, String temperature, String timestamp) throws Exception {
         String resultJson = fabricClient.submitGenericTransaction(
                 "addTemperatureReading",
                 unitId,
@@ -167,6 +169,28 @@ public class UnitService {
                 timestamp
         );
         Unit updatedUnit = fabricClient.getGson().fromJson(resultJson, Unit.class);
-        return unitMapper.toDto(updatedUnit);
+        return updatedUnit;
+    }
+
+    /**
+     * Ruft alle Units ab, die einem bestimmten Eigentümer gehören, und reichert sie mit IPFS-Daten an.
+     * Gibt eine Liste der angereicherten Domain-Objekte zurück.
+     * Dies ersetzt die vorherige getUnitsByOwner-Methode.
+     * @param ownerActorId Die ActorId des Eigentümers.
+     * @return Eine Liste von angereicherten Unit-Domain-Objekten.
+     */
+    public List<Unit> getEnrichedUnitsByOwner(String ownerActorId) {
+        try {
+            String resultJson = fabricClient.evaluateGenericTransaction("queryUnitsByOwner", ownerActorId);
+            Type listType = new TypeToken<List<Unit>>() {}.getType();
+            List<Unit> units = fabricClient.getGson().fromJson(resultJson, listType);
+
+            return units.stream()
+                    .flatMap(unit -> this.getEnrichedUnitById(unit.getUnitId()).stream())
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            logger.error("Fehler beim Abrufen der Units für Eigentümer '{}'", ownerActorId, e);
+            return Collections.emptyList();
+        }
     }
 }

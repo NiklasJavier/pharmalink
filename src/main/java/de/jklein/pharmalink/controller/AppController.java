@@ -1,11 +1,15 @@
 package de.jklein.pharmalink.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import de.jklein.pharmalink.api.dto.ActorResponseDto;
+import de.jklein.pharmalink.domain.Actor;
+import de.jklein.pharmalink.domain.Medikament;
+import de.jklein.pharmalink.domain.Unit;
 import de.jklein.pharmalink.service.ActorService;
 import de.jklein.pharmalink.service.MedicationService;
 import de.jklein.pharmalink.service.UnitService;
 import de.jklein.pharmalink.service.system.SystemStateService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,6 +28,8 @@ import java.util.stream.Collectors;
 @Controller
 @RequestMapping("/app")
 public class AppController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AppController.class);
 
     private final SystemStateService systemStateService;
     private final ActorService actorService;
@@ -56,49 +62,64 @@ public class AppController {
 
     @GetMapping("/dashboard")
     public String showDashboard(Model model, RedirectAttributes redirectAttributes) {
-        String initialActorId = systemStateService.getInitialActorId();
-        if (initialActorId == null) {
-            redirectAttributes.addFlashAttribute("error", "Ihre Actor ID konnte nicht geladen werden.");
+        String initialActorId = systemStateService.getCurrentSystemState().getCurrentActorId();
+        if (initialActorId == null || initialActorId.isBlank()) {
+            logger.warn("Initial Actor ID not found or is blank. Redirecting to unknown-actor error page.");
+            redirectAttributes.addFlashAttribute("error", "Ihre Actor ID konnte nicht geladen werden oder ist ungültig. Bitte stellen Sie sicher, dass die Anwendung korrekt initialisiert ist.");
             return "redirect:/app/errors/unknown-actor";
         }
 
-        model.addAttribute("initialActorId", initialActorId);
-
-        Optional<ActorResponseDto> actorOpt = actorService.getEnrichedActorById(initialActorId);
+        Optional<Actor> actorOpt = actorService.getEnrichedActorById(initialActorId);
 
         if (actorOpt.isEmpty()) {
-            redirectAttributes.addFlashAttribute("error", "Unbekannter Akteurstyp für ID: " + initialActorId);
+            logger.warn("Actor with ID {} not found or enrichment failed. Redirecting to unknown-actor error page.", initialActorId);
+            redirectAttributes.addFlashAttribute("error", "Unbekannter Akteurstyp für ID: " + initialActorId + ". Akteur nicht in der Blockchain gefunden oder nicht registriert.");
             return "redirect:/app/errors/unknown-actor";
         }
 
-        ActorResponseDto currentActor = actorOpt.get();
+        Actor currentActor = actorOpt.get();
+        model.addAttribute("initialActorId", initialActorId);
         model.addAttribute("currentActorInfo", currentActor);
         model.addAttribute("pageTitle", "Dashboard");
 
         try {
-            switch (currentActor.getRolle()) {
+            List<Actor> allActors = systemStateService.getAllActors();
+            List<Medikament> allMedikamente = systemStateService.getAllMedikamente();
+            List<Unit> myUnits = systemStateService.getMyUnits();
+
+            model.addAttribute("allActors", allActors);
+            model.addAttribute("allMedikamente", allMedikamente);
+            model.addAttribute("myUnits", myUnits);
+
+            switch (currentActor.getRole().toLowerCase()) {
                 case "hersteller":
-                    var medikamente = medicationService.getMedikamenteByHerstellerId(initialActorId);
-                    List<String> medikamenteAsJsonList = medikamente.stream()
+                    List<Medikament> herstellerMedikamente = medicationService.getMedikamenteByHerstellerId(initialActorId);
+                    List<String> medikamenteAsJsonList = herstellerMedikamente.stream()
                             .map(med -> {
                                 try {
                                     return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(med);
                                 } catch (Exception e) {
-                                    return "{\"error\": \"Konnte Medikament nicht in JSON umwandeln.\"}";
+                                    logger.error("Fehler beim Umwandeln von Medikament {} in JSON für Hersteller {}: {}", med.getMedId(), initialActorId, e.getMessage(), e);
+                                    return "{\"error\": \"Konnte Medikament nicht in JSON umwandeln: " + e.getMessage() + "\"}";
                                 }
                             })
                             .collect(Collectors.toList());
                     model.addAttribute("medikamenteAsJsonList", medikamenteAsJsonList);
+                    model.addAttribute("roleSpecificMessage", "Als Hersteller sehen Sie hier eine Übersicht Ihrer Medikamente und deren Einheiten.");
                     break;
                 case "grosshaendler":
                 case "apotheke":
-                    model.addAttribute("units", unitService.getUnitsByOwner(initialActorId));
+                    model.addAttribute("roleSpecificMessage", "Als " + currentActor.getRole() + " sehen Sie hier die Ihnen zugeordneten Einheiten und den Verlauf.");
                     break;
                 case "behoerde":
-                    model.addAttribute("allActors", actorService.getActorsByRole("hersteller"));
+                    model.addAttribute("roleSpecificMessage", "Als Behörde haben Sie hier einen Überblick über alle Akteure und Medikamente im System.");
+                    break;
+                default:
+                    model.addAttribute("roleSpecificMessage", "Ihre Rolle ist nicht spezifisch zugeordnet. Allgemeine Informationen werden angezeigt.");
                     break;
             }
         } catch (Exception e) {
+            logger.error("Fehler beim Laden der Dashboard-Daten für Akteur ID {}: {}", initialActorId, e.getMessage(), e);
             model.addAttribute("dashboardError", "Fehler beim Laden der Dashboard-Daten: " + e.getMessage());
         }
         return "dashboard/overview";

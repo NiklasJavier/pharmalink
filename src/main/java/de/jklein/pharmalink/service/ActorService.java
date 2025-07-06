@@ -4,8 +4,8 @@ import com.google.gson.reflect.TypeToken;
 import de.jklein.pharmalink.api.dto.ActorResponseDto;
 import de.jklein.pharmalink.api.mapper.ActorMapper;
 import de.jklein.pharmalink.client.fabric.FabricClient;
-import de.jklein.pharmalink.client.ipfs.IpfsClient; // NEU: Import für IpfsClient
-import de.jklein.pharmalink.domain.Actor;
+import de.jklein.pharmalink.client.ipfs.IpfsClient;
+import de.jklein.pharmalink.domain.Actor; // Import des Domain-Objekts
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,8 +16,10 @@ import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream; // Import für Stream
 
 @Service
 public class ActorService {
@@ -26,9 +28,10 @@ public class ActorService {
 
     private final FabricClient fabricClient;
     private final IpfsClient ipfsClient;
-    private final ActorMapper actorMapper;
+    private final ActorMapper actorMapper; // Mapper bleibt für Konvertierung zu/von DTOs
+
     @Autowired
-    public ActorService(FabricClient fabricClient, IpfsClient ipfsClient, ActorMapper actorMapper) { // NEU: Im Konstruktor hinzugefügt
+    public ActorService(FabricClient fabricClient, IpfsClient ipfsClient, ActorMapper actorMapper) {
         this.fabricClient = fabricClient;
         this.ipfsClient = ipfsClient;
         this.actorMapper = actorMapper;
@@ -36,17 +39,16 @@ public class ActorService {
 
     /**
      * Ruft einen Akteur anhand seiner ID ab und reichert ihn mit Daten aus IPFS an.
+     * Gibt ein Optional des angereicherten Domain-Objekts zurück.
      * @param actorId Die ID des abzurufenden Akteurs.
-     * @return Ein Optional, das das angereicherte DTO enthält.
+     * @return Ein Optional, das das angereicherte Actor-Domain-Objekt enthält.
      */
-    public Optional<ActorResponseDto> getEnrichedActorById(String actorId) {
+    public Optional<Actor> getEnrichedActorById(String actorId) { // Rückgabetyp geändert
         try {
             Actor actor = fabricClient.evaluateTransaction("queryActorById", actorId, Actor.class);
             if (actor == null) {
                 return Optional.empty();
             }
-
-            ActorResponseDto dto = actorMapper.toDto(actor);
 
             final String originalIpfsLink = actor.getIpfsLink();
             if (originalIpfsLink != null && !originalIpfsLink.isBlank()) {
@@ -59,7 +61,7 @@ public class ActorService {
                                 String jsonContent = new String(ipfsBytes, StandardCharsets.UTF_8);
                                 Type dataType = new TypeToken<Map<String, Object>>() {}.getType();
                                 Map<String, Object> ipfsData = fabricClient.getGson().fromJson(jsonContent, dataType);
-                                dto.setIpfsData(ipfsData);
+                                actor.setIpfsData(ipfsData); // IPFS-Daten direkt im Domain-Objekt speichern
                             } catch (Exception parseEx) {
                                 logger.error("Konnte IPFS JSON-Inhalt für CID '{}' nicht parsen.", cleanHash, parseEx);
                             }
@@ -71,7 +73,7 @@ public class ActorService {
                 }
             }
 
-            return Optional.of(dto);
+            return Optional.of(actor); // Angereichertes Domain-Objekt zurückgeben
 
         } catch (Exception e) {
             logger.error("Fehler beim Abrufen des Akteurs mit ID '{}'", actorId, e);
@@ -80,53 +82,55 @@ public class ActorService {
     }
 
     /**
-     * Ruft alle Akteure mit einer bestimmten Rolle von der Blockchain ab.
+     * Ruft alle Akteure mit einer bestimmten Rolle von der Blockchain ab und reichert sie an.
+     * Gibt eine Liste von angereicherten Actor-Domain-Objekten zurück.
      * @param role Die Rolle, nach der gefiltert werden soll (z.B. "hersteller").
-     * @return Eine Liste von Actor-DTOs, die der Rolle entsprechen.
+     * @return Eine Liste von Actor-Domain-Objekten, die der Rolle entsprechen.
      */
-    public List<ActorResponseDto> getActorsByRole(String role) {
+    public List<Actor> getActorsByRole(String role) { // Rückgabetyp geändert
         try {
-            // 1. Rufe die Chaincode-Funktion 'queryActorsByRole' über den FabricClient auf.
             String resultJson = fabricClient.evaluateGenericTransaction("queryActorsByRole", role);
 
-            // 2. Wandle das Ergebnis (JSON-Array) in eine Liste von Domain-Objekten um.
             Type listType = new TypeToken<List<Actor>>() {}.getType();
             List<Actor> actors = fabricClient.getGson().fromJson(resultJson, listType);
 
-            // 3. Mappe die Domain-Objekte zu DTOs für die API-Antwort.
+            // Anreicherung direkt im Domain-Objekt
             return actors.stream()
-                    .map(actorMapper::toDto)
+                    .flatMap(actor -> this.getEnrichedActorById(actor.getActorId()).stream())
                     .collect(Collectors.toList());
 
         } catch (Exception e) {
             logger.error("Fehler beim Abrufen der Akteure für die Rolle '{}'", role, e);
-            // Gib bei einem Fehler eine leere Liste zurück, um die API stabil zu halten.
             return Collections.emptyList();
         }
     }
 
     /**
      * Sucht nach Herstellern, deren Bezeichnung einen bestimmten Text enthält.
-     *
+     * Gibt eine Liste von passenden, angereicherten Domain-Objekten zurück.
      * @param searchQuery Der Suchtext.
-     * @return Eine Liste von passenden Hersteller-DTOs.
+     * @return Eine Liste von passenden Hersteller-Domain-Objekten.
      */
-    public List<ActorResponseDto> searchHerstellerByBezeichnung(String searchQuery) {
+    public List<Actor> searchHerstellerByBezeichnung(String searchQuery) { // Rückgabetyp geändert
         try {
-            // 1. Rufe die Chaincode-Funktion auf, die alle passenden Akteure zurückgibt.
             String resultJson = fabricClient.evaluateGenericTransaction("queryActorsByBezeichnung", searchQuery);
             Type listType = new TypeToken<List<Actor>>() {}.getType();
             List<Actor> actors = fabricClient.getGson().fromJson(resultJson, listType);
 
-            // 2. Filtere die Liste im Java-Code, um nur Hersteller zu behalten.
+            // Filtere die Liste im Java-Code, um nur Hersteller zu behalten und reicher sie an.
             return actors.stream()
                     .filter(actor -> "hersteller".equalsIgnoreCase(actor.getRole()))
-                    .map(actorMapper::toDto) // Wandle die gefilterten Akteure in DTOs um
+                    .flatMap(actor -> this.getEnrichedActorById(actor.getActorId()).stream())
                     .collect(Collectors.toList());
 
         } catch (Exception e) {
             logger.error("Fehler bei der Suche nach Herstellern mit Query '{}'", searchQuery, e);
             return Collections.emptyList();
         }
+    }
+
+    // Zusätzliche Getter für den Mapper, falls dieser nicht direkt injiziert werden kann (z.B. im AppDataInitializer)
+    public ActorMapper getActorMapper() {
+        return actorMapper;
     }
 }

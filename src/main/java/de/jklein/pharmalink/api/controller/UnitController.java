@@ -4,6 +4,8 @@ import de.jklein.pharmalink.api.dto.AddTemperatureReadingRequestDto;
 import de.jklein.pharmalink.api.dto.CreateUnitsRequestDto;
 import de.jklein.pharmalink.api.dto.TransferUnitRequestDto;
 import de.jklein.pharmalink.api.dto.UnitResponseDto;
+import de.jklein.pharmalink.api.mapper.UnitMapper; // NEU: UnitMapper importieren
+import de.jklein.pharmalink.domain.Unit; // NEU: Unit Domain-Objekt importieren
 import de.jklein.pharmalink.service.UnitService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,16 +15,19 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors; // NEU: Collectors importieren
 
 @RestController
 @RequestMapping("/api/v1/units")
 public class UnitController {
 
     private final UnitService unitService;
+    private final UnitMapper unitMapper; // NEU: UnitMapper injizieren
 
     @Autowired
-    public UnitController(UnitService unitService) {
+    public UnitController(UnitService unitService, UnitMapper unitMapper) { // NEU: Im Konstruktor hinzufügen
         this.unitService = unitService;
+        this.unitMapper = unitMapper; // NEU: Injektion zuweisen
     }
 
     /**
@@ -35,7 +40,10 @@ public class UnitController {
      */
     @GetMapping("/{unitId}")
     public ResponseEntity<UnitResponseDto> getUnitById(@PathVariable final String unitId) {
+        // Service gibt Optional<Unit> zurück
         return unitService.getEnrichedUnitById(unitId)
+                // Optional<Unit> zu Optional<UnitResponseDto> mappen, dann zu ResponseEntity
+                .map(unitMapper::toDto) // Konvertierung von Domain zu DTO
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -46,18 +54,22 @@ public class UnitController {
      *
      * @param medId Die ID des Medikaments.
      * @param request Das DTO mit den Details für die zu erstellenden Units.
-     * @return Eine Liste der erstellten Units als DTOs mit Status 201 (Created).
+     * @return Eine Liste der erstellten Units als DTOs mit Status 201 (Created) oder eine Fehlermeldung.
      */
     @PostMapping("/{medId}/units")
-    public ResponseEntity<?> createUnitsForMedication(
-            @PathVariable final String medId,
-            @Valid @RequestBody final CreateUnitsRequestDto request) {
+    public ResponseEntity<?> createUnitsForMedication( // Rückgabetyp auf ResponseEntity<?> geändert
+                                                       @PathVariable final String medId,
+                                                       @Valid @RequestBody final CreateUnitsRequestDto request) {
 
         try {
-            List<UnitResponseDto> createdUnits = unitService.createUnitsForMedication(medId, request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdUnits);
+            // Service gibt List<Unit> zurück
+            List<Unit> createdUnits = unitService.createUnitsForMedication(medId, request);
+            // Konvertierung von Domain zu DTO-Liste für die API-Antwort
+            List<UnitResponseDto> createdUnitDtos = createdUnits.stream()
+                    .map(unitMapper::toDto)
+                    .collect(Collectors.toList());
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdUnitDtos);
         } catch (Exception e) {
-            // Fängt Fehler vom Chaincode ab (z.B. Medikament nicht freigegeben, nicht der Hersteller)
             return ResponseEntity
                     .internalServerError()
                     .body(Map.of("error", "Fehler beim Erstellen der Units: " + e.getMessage()));
@@ -69,13 +81,23 @@ public class UnitController {
      * Endpunkt: GET /api/v1/medications/{medId}/units-by-charge
      *
      * @param medId Die ID des Medikaments.
-     * @return Eine Map, die die Units nach Charge gruppiert enthält.
+     * @return Eine Map, die die Units nach Charge gruppiert enthält, oder eine Fehlermeldung.
      */
     @GetMapping("/{medId}/units-by-charge")
-    public ResponseEntity<?> getUnitsGroupedByCharge(@PathVariable final String medId) {
+    public ResponseEntity<?> getUnitsGroupedByCharge(@PathVariable final String medId) { // Rückgabetyp auf ResponseEntity<?> geändert
         try {
-            Map<String, List<UnitResponseDto>> groupedUnits = unitService.getUnitsByMedIdGroupedByCharge(medId);
-            return ResponseEntity.ok(groupedUnits);
+            // Service gibt Map<String, List<Unit>> zurück
+            Map<String, List<Unit>> groupedUnitsDomain = unitService.getUnitsByMedIdGroupedByCharge(medId);
+
+            // Konvertierung von Map<String, List<Unit>> zu Map<String, List<UnitResponseDto>> für die API-Antwort
+            Map<String, List<UnitResponseDto>> groupedUnitDtos = groupedUnitsDomain.entrySet().stream()
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            entry -> entry.getValue().stream()
+                                    .map(unitMapper::toDto)
+                                    .collect(Collectors.toList())
+                    ));
+            return ResponseEntity.ok(groupedUnitDtos);
         } catch (Exception e) {
             return ResponseEntity
                     .internalServerError()
@@ -89,19 +111,20 @@ public class UnitController {
      *
      * @param unitId Die ID der zu übertragenden Unit.
      * @param request Das DTO, das die ID des neuen Besitzers enthält.
-     * @return Die aktualisierte Unit als DTO.
+     * @return Die aktualisierte Unit als DTO bei Erfolg, oder eine Fehlermeldung bei Fehler.
      */
     @PostMapping("/{unitId}/transfer")
-    public ResponseEntity<?> transferUnit(
-            @PathVariable final String unitId,
-            @Valid @RequestBody final TransferUnitRequestDto request) {
+    public ResponseEntity<?> transferUnit( // Rückgabetyp auf ResponseEntity<?> geändert
+                                           @PathVariable final String unitId,
+                                           @Valid @RequestBody final TransferUnitRequestDto request) {
 
         try {
-            UnitResponseDto updatedUnit = unitService.transferUnit(unitId, request.getNewOwnerActorId());
-            return ResponseEntity.ok(updatedUnit);
+            // Service gibt Unit (Domain-Objekt) zurück
+            Unit updatedUnit = unitService.transferUnit(unitId, request.getNewOwnerActorId());
+            // Konvertierung von Domain zu DTO für die API-Antwort
+            UnitResponseDto updatedUnitDto = unitMapper.toDto(updatedUnit);
+            return ResponseEntity.ok(updatedUnitDto);
         } catch (Exception e) {
-            // Fängt Fehler vom Chaincode ab (z.B. "Aufrufer ist nicht der Besitzer").
-            // Eine spezifischere Fehlerbehandlung könnte hier 403 Forbidden zurückgeben.
             return ResponseEntity
                     .internalServerError()
                     .body(Map.of("error", "Fehler beim Transfer der Unit: " + e.getMessage()));
@@ -114,22 +137,24 @@ public class UnitController {
      *
      * @param unitId Die ID der Unit.
      * @param request Das DTO, das die Temperatur und den Zeitstempel enthält.
-     * @return Die aktualisierte Unit als DTO.
+     * @return Die aktualisierte Unit als DTO bei Erfolg, oder eine Fehlermeldung bei Fehler.
      */
     @PostMapping("/{unitId}/temperature-readings")
-    public ResponseEntity<?> addTemperatureReading(
-            @PathVariable final String unitId,
-            @Valid @RequestBody final AddTemperatureReadingRequestDto request) {
+    public ResponseEntity<?> addTemperatureReading( // Rückgabetyp auf ResponseEntity<?> geändert
+                                                    @PathVariable final String unitId,
+                                                    @Valid @RequestBody final AddTemperatureReadingRequestDto request) {
 
         try {
-            UnitResponseDto updatedUnit = unitService.addTemperatureReading(
+            // Service gibt Unit (Domain-Objekt) zurück
+            Unit updatedUnit = unitService.addTemperatureReading(
                     unitId,
                     request.getTemperature(),
                     request.getTimestamp()
             );
-            return ResponseEntity.ok(updatedUnit);
+            // Konvertierung von Domain zu DTO für die API-Antwort
+            UnitResponseDto updatedUnitDto = unitMapper.toDto(updatedUnit);
+            return ResponseEntity.ok(updatedUnitDto);
         } catch (Exception e) {
-            // Fängt Fehler vom Chaincode ab (z.B. "Aufrufer ist nicht der Besitzer").
             return ResponseEntity
                     .internalServerError()
                     .body(Map.of("error", "Fehler beim Hinzufügen der Temperaturdaten: " + e.getMessage()));

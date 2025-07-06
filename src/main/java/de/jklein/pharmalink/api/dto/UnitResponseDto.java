@@ -1,10 +1,15 @@
 package de.jklein.pharmalink.api.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.util.List;
 import java.util.Map;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class UnitResponseDto {
     private String unitId;
     private String medId;
@@ -14,6 +19,8 @@ public class UnitResponseDto {
     private List<Map<String, String>> temperatureReadings;
     private List<Map<String, String>> transferHistory;
 
-    // NEU: Feld für die aufgelösten IPFS-Daten
+    private boolean isConsumed;
+    private String consumedRefId;
+
     private Map<String, Object> ipfsData;
 }

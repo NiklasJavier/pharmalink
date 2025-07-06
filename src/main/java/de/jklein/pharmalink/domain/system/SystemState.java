@@ -1,15 +1,21 @@
 package de.jklein.pharmalink.domain.system;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import lombok.Data;
+import de.jklein.pharmalink.domain.Actor;
+import de.jklein.pharmalink.domain.Medikament;
+import de.jklein.pharmalink.domain.Unit;
+import jakarta.persistence.*;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
-@Data
+@Table(name = "system_state")
+@Getter
+@Setter
 @NoArgsConstructor
 public class SystemState {
 
@@ -17,10 +23,48 @@ public class SystemState {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String initialActorId;
+    @Column(name = "current_actor_id", unique = true)
+    private String currentActorId;
 
-    public SystemState(String initialActorId) {
-        this.initialActorId = initialActorId;
+    @Column(name = "last_updated")
+    private LocalDateTime lastUpdated;
+
+    @Transient
+    private List<Actor> allActors = new ArrayList<>();
+    @Transient
+    private List<Medikament> allMedikamente = new ArrayList<>();
+    @Transient
+    private List<Unit> myUnits = new ArrayList<>();
+
+    public SystemState(String currentActorId) {
+        this.currentActorId = currentActorId;
+        this.lastUpdated = LocalDateTime.now();
+    }
+
+    @PrePersist
+    @PreUpdate
+    public void setLastUpdated() {
+        this.lastUpdated = LocalDateTime.now();
+    }
+
+    public void setAllActors(List<Actor> allActors) {
+        this.allActors.clear();
+        if (allActors != null) {
+            this.allActors.addAll(allActors);
+        }
+    }
+
+    public void setAllMedikamente(List<Medikament> allMedikamente) {
+        this.allMedikamente.clear();
+        if (allMedikamente != null) {
+            this.allMedikamente.addAll(allMedikamente);
+        }
+    }
+
+    public void setMyUnits(List<Unit> myUnits) {
+        this.myUnits.clear();
+        if (myUnits != null) {
+            this.myUnits.addAll(myUnits);
+        }
     }
 }

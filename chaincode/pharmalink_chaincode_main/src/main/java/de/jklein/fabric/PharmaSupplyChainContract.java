@@ -1202,4 +1202,23 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         System.out.println(String.format("Einheit %s erfolgreich an Konsument %s übergeben und als verbraucht markiert.", unitId, consumentRefId));
         return JsonUtil.toJson(existingUnit);
     }
+
+    /**
+     * Fragt alle Medikamente im Ledger ab.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @return Eine JSON-Zeichenkette aller Medikamente.
+     * Example: {"function":"queryAllMedikamente","Args":[]}
+     */
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String queryAllMedikamente(final Context ctx) {
+        List<Medikament> medikamentList = new ArrayList<>();
+        String queryString = "{\"selector\":{\"docType\":\"medikament\"}}";
+        final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = ctx.getStub().getQueryResult(queryString);
+        for (final org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
+            final Medikament medikament = JsonUtil.fromJson(kv.getStringValue(), Medikament.class);
+            medikamentList.add(medikament);
+        }
+        return JsonUtil.toJson(medikamentList);
+    }
 }

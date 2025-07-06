@@ -1,6 +1,8 @@
 package de.jklein.pharmalink.api.controller;
 
 import de.jklein.pharmalink.api.dto.ActorResponseDto;
+import de.jklein.pharmalink.api.mapper.ActorMapper; // NEU: Import für ActorMapper
+import de.jklein.pharmalink.domain.Actor; // NEU: Import für Actor-Domain-Objekt
 import de.jklein.pharmalink.service.ActorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -10,16 +12,19 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.stream.Collectors; // NEU: Import für Collectors
 
 @RestController
 @RequestMapping("/api/v1/actors")
 public class ActorController {
 
     private final ActorService actorService;
+    private final ActorMapper actorMapper; // NEU: ActorMapper injizieren
 
     @Autowired
-    public ActorController(ActorService actorService) {
+    public ActorController(ActorService actorService, ActorMapper actorMapper) { // NEU: Im Konstruktor hinzufügen
         this.actorService = actorService;
+        this.actorMapper = actorMapper;
     }
 
     /**
@@ -31,7 +36,12 @@ public class ActorController {
      */
     @GetMapping
     public ResponseEntity<List<ActorResponseDto>> getActorsByRole(@RequestParam(name = "role") final String role) {
-        List<ActorResponseDto> actors = actorService.getActorsByRole(role);
-        return ResponseEntity.ok(actors);
+        // Services geben jetzt Domain-Objekte zurück
+        List<Actor> actors = actorService.getActorsByRole(role);
+        // Konvertierung von Domain-Objekten zu DTOs für die API-Antwort
+        List<ActorResponseDto> actorDtos = actors.stream()
+                .map(actorMapper::toDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(actorDtos);
     }
 }

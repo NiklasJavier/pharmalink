@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface SystemStateRepository extends JpaRepository<SystemState, Long> {
     Optional<SystemState> findFirstByOrderByIdAsc();
+    Optional<SystemState> findByCurrentActorId(String currentActorId);
 }

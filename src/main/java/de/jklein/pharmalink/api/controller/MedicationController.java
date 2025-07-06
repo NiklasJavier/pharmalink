@@ -1,6 +1,10 @@
 package de.jklein.pharmalink.api.controller;
 
-import de.jklein.pharmalink.api.dto.*;
+import de.jklein.pharmalink.api.dto.CreateMedikamentRequestDto;
+import de.jklein.pharmalink.api.dto.MedikamentResponseDto;
+import de.jklein.pharmalink.api.dto.UpdateMedicationStatusRequestDto;
+import de.jklein.pharmalink.api.mapper.MedikamentMapper;
+import de.jklein.pharmalink.domain.Medikament;
 import de.jklein.pharmalink.service.MedicationService;
 import de.jklein.pharmalink.service.system.SystemStateService;
 import jakarta.validation.Valid;
@@ -12,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * REST-Controller für die Verwaltung von Medikamenten und deren Einheiten.
@@ -27,16 +32,20 @@ public class MedicationController {
 
     private final MedicationService medicationService;
     private final SystemStateService systemStateService;
+    private final MedikamentMapper medikamentMapper;
 
     /**
-     * Konstruktor zur Injektion des MedicationService durch Spring.
+     * Konstruktor zur Injektion der Services und Mapper durch Spring.
      *
      * @param medicationService Der Service, der die Geschäftslogik kapselt.
+     * @param systemStateService Der Service für den Systemzustand.
+     * @param medikamentMapper Der Mapper für Medikamente.
      */
     @Autowired
-    public MedicationController(SystemStateService systemStateService, MedicationService medicationService) {
+    public MedicationController(SystemStateService systemStateService, MedicationService medicationService, MedikamentMapper medikamentMapper) {
         this.medicationService = medicationService;
         this.systemStateService = systemStateService;
+        this.medikamentMapper = medikamentMapper;
     }
 
     /**
@@ -45,19 +54,16 @@ public class MedicationController {
      *
      * @param request Das DTO mit den Daten des zu erstellenden Medikaments.
      * @param principal Das Sicherheitsobjekt des angemeldeten Benutzers (wird für die Berechtigung genutzt).
-     * @return Das neu erstellte Medikament als DTO mit dem Status 201 (Created).
+     * @return Das neu erstellte Medikament als DTO mit dem Status 201 (Created) oder eine Fehlermeldung.
      */
     @PostMapping
-    public ResponseEntity<?> createMedikament(
-            @Valid @RequestBody final CreateMedikamentRequestDto request,
-            final Principal principal) {
-
-        // Die Identität des Aufrufers (principal.getName()) wird hier nicht direkt an den Service
-        // übergeben, da der FabricClient bereits mit der Identität des Benutzers konfiguriert ist.
-        // Man könnte sie aber für zusätzliche Autorisierungs-Checks im Service verwenden.
+    public ResponseEntity<?> createMedikament( // Rückgabetyp auf ResponseEntity<?> geändert
+                                               @Valid @RequestBody final CreateMedikamentRequestDto request,
+                                               final Principal principal) {
 
         try {
-            MedikamentResponseDto createdMedikamentDto = medicationService.createMedikament(request);
+            Medikament createdMedikament = medicationService.createMedikament(request);
+            MedikamentResponseDto createdMedikamentDto = medikamentMapper.toDto(createdMedikament);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdMedikamentDto);
         } catch (Exception e) {
             return ResponseEntity
@@ -76,34 +82,30 @@ public class MedicationController {
      */
     @GetMapping("/{medId}")
     public ResponseEntity<MedikamentResponseDto> getMedicationById(@PathVariable final String medId) {
-        // Delegiert die Anfrage direkt an den Service.
-        // Der Service ist verantwortlich für das Holen und Anreichern der Daten.
         return medicationService.getEnrichedMedikamentById(medId)
+                .map(medikamentMapper::toDto)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     /**
      * Ruft alle Medikamente ab, die zum beim Anwendungsstart initialisierten Hersteller gehören.
-     * Endpunkt: GET /api/v1/hersteller/medications
      *
-     * @return Eine Liste der Medikamente des initialisierten Herstellers als DTOs.
+     * @return Eine Liste der Medikamente des initialisierten Herstellers als DTOs bei Erfolg, oder eine Fehlermeldung bei Fehler.
      */
     @GetMapping
     public ResponseEntity<?> getMyMedications() {
-        // 1. Die ID des Herstellers wird aus dem globalen SystemStateService bezogen.
-        final String herstellerId = systemStateService.getInitialActorId();
+        final String herstellerId = systemStateService.getCurrentSystemState().getCurrentActorId();
 
-        // 2. Prüfen, ob eine ID initialisiert wurde.
         if (herstellerId == null || herstellerId.isEmpty()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                     .body(Map.of("error", "Die Anwendung wurde nicht korrekt mit einer Hersteller-ID initialisiert."));
         }
 
         try {
-            // 3. Die Service-Methode wird mit der globalen ID aufgerufen.
-            List<MedikamentResponseDto> medikamente = medicationService.getMedikamenteByHerstellerId(herstellerId);
-            return ResponseEntity.ok(medikamente);
+            List<Medikament> medikamente = medicationService.getMedikamenteByHerstellerId(herstellerId);
+            List<MedikamentResponseDto> medikamentDtos = medikamentMapper.toDtoList(medikamente);
+            return ResponseEntity.ok(medikamentDtos);
         } catch (Exception e) {
             return ResponseEntity
                     .internalServerError()
@@ -113,23 +115,21 @@ public class MedicationController {
 
     /**
      * Aktualisiert den Status eines Medikaments, z.B. zur Freigabe durch eine Behörde.
-     * Endpunkt: POST /api/v1/medications/{medId}/approval
      *
      * @param medId Die ID des Medikaments.
      * @param request Das DTO mit dem neuen Status.
-     * @return Das aktualisierte Medikament als DTO.
+     * @return Das aktualisierte Medikament als DTO bei Erfolg, oder eine Fehlermeldung bei Fehler.
      */
     @PostMapping("/{medId}/approval")
-    public ResponseEntity<?> approveMedication(
-            @PathVariable final String medId,
-            @Valid @RequestBody final UpdateMedicationStatusRequestDto request) {
+    public ResponseEntity<?> approveMedication( // Rückgabetyp auf ResponseEntity<?> geändert
+                                                @PathVariable final String medId,
+                                                @Valid @RequestBody final UpdateMedicationStatusRequestDto request) {
 
         try {
-            MedikamentResponseDto updatedMedikament = medicationService.approveMedication(medId, request.getNewStatus());
-            return ResponseEntity.ok(updatedMedikament);
+            Medikament updatedMedikament = medicationService.approveMedication(medId, request.getNewStatus());
+            MedikamentResponseDto updatedMedikamentDto = medikamentMapper.toDto(updatedMedikament);
+            return ResponseEntity.ok(updatedMedikamentDto);
         } catch (Exception e) {
-            // Wenn der Chaincode eine Berechtigungs-Exception wirft, wird sie hier abgefangen.
-            // Eine spezifischere Fehlerbehandlung könnte hier 403 Forbidden zurückgeben.
             return ResponseEntity
                     .internalServerError()
                     .body(Map.of("error", "Fehler bei der Statusänderung: " + e.getMessage()));
@@ -138,14 +138,14 @@ public class MedicationController {
 
     /**
      * Sucht nach Medikamenten, deren Bezeichnung einen bestimmten Text enthält.
-     * Endpunkt: GET /api/v1/medications?search=Aspirin
      *
      * @param searchQuery Der Text, nach dem in der Bezeichnung gesucht wird.
      * @return Eine Liste von passenden Medikamenten als DTOs.
      */
     @GetMapping("/search")
     public ResponseEntity<List<MedikamentResponseDto>> searchMedications(@RequestParam(name = "search") final String searchQuery) {
-        List<MedikamentResponseDto> medikamente = medicationService.searchMedicationsByBezeichnung(searchQuery);
-        return ResponseEntity.ok(medikamente);
+        List<Medikament> medikamente = medicationService.searchMedicationsByBezeichnung(searchQuery);
+        List<MedikamentResponseDto> medikamentDtos = medikamentMapper.toDtoList(medikamente);
+        return ResponseEntity.ok(medikamentDtos);
     }
 }

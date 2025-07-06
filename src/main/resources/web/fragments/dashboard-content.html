@@ -10,11 +10,11 @@
             <div class="info-section actor-details">
                 <p>Benutzer: <strong class="copy-on-click" th:text="${#authentication.name}"></strong></p>
                 <p>Company: <strong class="copy-on-click" th:text="${currentActorInfo.bezeichnung}"></strong></p>
-                <p>Rolle: <strong class="copy-on-click" th:text="${currentActorInfo.getRolle()}"></strong></p>
+                <p>Rolle: <strong class="copy-on-click" th:text="${currentActorInfo.getRole()}"></strong></p>
             </div>
         </div>
     </div>
-    <div th:if="${currentActorInfo}" th:switch="${currentActorInfo.getRolle()}">
+    <div th:if="${currentActorInfo}" th:switch="${currentActorInfo.getRole()}">
         <th:block th:case="'hersteller'">
             <div th:replace="~{fragments/details/hersteller :: herstellerDetails}"></div>
         </th:block>

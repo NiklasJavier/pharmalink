@@ -1,77 +1,115 @@
 package de.jklein.pharmalink.service.system;
 
+import de.jklein.pharmalink.api.dto.ActorResponseDto; // DTO Imports bleiben, falls von anderen Methoden benötigt
+import de.jklein.pharmalink.api.dto.MedikamentResponseDto;
+import de.jklein.pharmalink.api.dto.UnitResponseDto;
+import de.jklein.pharmalink.api.mapper.ActorMapper;
+import de.jklein.pharmalink.api.mapper.MedikamentMapper;
+import de.jklein.pharmalink.api.mapper.UnitMapper;
 import de.jklein.pharmalink.domain.system.SystemState;
+import de.jklein.pharmalink.domain.Actor; // NEU: Domain-Objekt Imports
+import de.jklein.pharmalink.domain.Medikament;
+import de.jklein.pharmalink.domain.Unit;
 import de.jklein.pharmalink.repository.system.SystemStateRepository;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
-/**
- * Ein von Spring verwalteter Singleton-Service, der den globalen Zustand der Anwendung hält.
- * Dieser Service ist die einzige Quelle der Wahrheit für die initialisierte Actor-ID.
- */
 @Service
-@Slf4j
 @RequiredArgsConstructor
+@Slf4j
 public class SystemStateService {
 
     private final SystemStateRepository systemStateRepository;
+    private final ActorMapper actorMapper;
+    private final MedikamentMapper medikamentMapper;
+    private final UnitMapper unitMapper;
 
-    @Getter
-    private String initialActorId;
+    private SystemState currentSystemState;
 
-    /**
-     * Gleicht die vom Chaincode erhaltene ID mit der in der Datenbank gespeicherten ab.
-     * Diese Methode wird vom AppDataInitializer beim Start aufgerufen.
-     *
-     * @param actorIdFromChaincode Die "offizielle" ID aus dem Init-Aufruf des Chaincodes.
-     */
-    public void reconcileAndCacheActorId(String actorIdFromChaincode) {
-        Optional<SystemState> existingStateOpt = systemStateRepository.findFirstByOrderByIdAsc();
+    @Transactional
+    public SystemState reconcileAndCacheActorId(String actorId) {
+        Optional<SystemState> existingState = systemStateRepository.findByCurrentActorId(actorId);
 
-        if (existingStateOpt.isEmpty()) {
-            // Fall 1: Kein Zustand in der DB -> neuen Zustand speichern
-            log.info("No system state found in database. Creating new state...");
-            SystemState newState = new SystemState(actorIdFromChaincode);
-            systemStateRepository.save(newState);
-            log.info("Successfully saved initial actor ID '{}' to database.", actorIdFromChaincode);
-            this.initialActorId = actorIdFromChaincode;
+        if (existingState.isPresent()) {
+            currentSystemState = existingState.get();
+            log.info("Existing SystemState for Actor ID {} loaded.", actorId);
         } else {
-            // Fall 2: Zustand in der DB gefunden -> vergleichen und ggf. updaten
-            SystemState existingState = existingStateOpt.get();
-            if (!existingState.getInitialActorId().equals(actorIdFromChaincode)) {
-                log.warn("Actor ID from chaincode ('{}') differs from stored ID ('{}'). Updating database...",
-                        actorIdFromChaincode, existingState.getInitialActorId());
-                existingState.setInitialActorId(actorIdFromChaincode);
-                systemStateRepository.save(existingState);
-                this.initialActorId = actorIdFromChaincode;
+            List<SystemState> allStates = systemStateRepository.findAll();
+            if (!allStates.isEmpty()) {
+                currentSystemState = allStates.get(0);
+                currentSystemState.setCurrentActorId(actorId);
+                log.info("SystemState updated to new Actor ID: {}", actorId);
             } else {
-                log.info("Stored actor ID matches chaincode ID. No update needed.");
-                this.initialActorId = existingState.getInitialActorId();
+                currentSystemState = new SystemState(actorId);
+                log.info("New SystemState created for Actor ID: {}", actorId);
             }
+            systemStateRepository.save(currentSystemState);
         }
-        log.info("SystemStateService is now initialized with Actor ID: {}", this.initialActorId);
+        return currentSystemState;
     }
 
-    /**
-     * Fallback-Methode, falls der Chaincode beim Start nicht erreichbar ist.
-     * Versucht, den letzten bekannten Wert aus der DB zu laden.
-     */
     public void loadFromDatabaseOnFailure() {
-        if (this.initialActorId != null) {
-            log.info("Actor ID is already cached. No fallback needed.");
+        log.warn("Attempting to load SystemState from database due to initialization failure.");
+        List<SystemState> allStates = systemStateRepository.findAll();
+        if (!allStates.isEmpty()) {
+            this.currentSystemState = allStates.get(0);
+            log.info("SystemState loaded from database: Actor ID {}", currentSystemState.getCurrentActorId());
+        } else {
+            log.error("No SystemState found in database after initialization failure. Application may not function correctly.");
+        }
+    }
+
+    public SystemState getCurrentSystemState() {
+        return currentSystemState;
+    }
+
+    // UPDATE-METHODEN AKZEPTIEREN NUN DOMAIN-OBJEKTE DIREKT
+    @Transactional
+    public void updateAllActors(List<Actor> actors) { // Parameter geändert
+        if (currentSystemState == null) {
+            log.error("currentSystemState is null. Cannot update actors.");
             return;
         }
-        systemStateRepository.findFirstByOrderByIdAsc()
-                .ifPresentOrElse(
-                        state -> {
-                            this.initialActorId = state.getInitialActorId();
-                            log.warn("Loaded cached Actor ID '{}' from database due to an initialization error.", this.initialActorId);
-                        },
-                        () -> log.error("FATAL: Chaincode is unreachable and no state is cached in the database. Application might not work correctly.")
-                );
+        currentSystemState.setAllActors(actors); // Direkte Zuweisung
+        log.debug("SystemState: All actors updated.");
+    }
+
+    @Transactional
+    public void updateAllMedikamente(List<Medikament> medikamente) { // Parameter geändert
+        if (currentSystemState == null) {
+            log.error("currentSystemState is null. Cannot update medikamente.");
+            return;
+        }
+        currentSystemState.setAllMedikamente(medikamente); // Direkte Zuweisung
+        log.debug("SystemState: All medikamente updated.");
+    }
+
+    @Transactional
+    public void updateMyUnits(List<Unit> units) { // Parameter geändert
+        if (currentSystemState == null) {
+            log.error("currentSystemState is null. Cannot update units.");
+            return;
+        }
+        currentSystemState.setMyUnits(units); // Direkte Zuweisung
+        log.debug("SystemState: My units updated.");
+    }
+
+    public List<Actor> getAllActors() {
+        return currentSystemState != null ? currentSystemState.getAllActors() : Collections.emptyList();
+    }
+
+    public List<Medikament> getAllMedikamente() {
+        return currentSystemState != null ? currentSystemState.getAllMedikamente() : Collections.emptyList();
+    }
+
+    public List<Unit> getMyUnits() {
+        return currentSystemState != null ? currentSystemState.getMyUnits() : Collections.emptyList();
     }
 }
