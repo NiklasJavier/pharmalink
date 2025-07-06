@@ -5,13 +5,13 @@ import de.jklein.pharmalink.api.dto.ActorResponseDto; // Behalten, falls für an
 import de.jklein.pharmalink.api.mapper.ActorMapper;
 import de.jklein.pharmalink.client.fabric.FabricClient;
 import de.jklein.pharmalink.client.ipfs.IpfsClient;
-import de.jklein.pharmalink.domain.Actor; // Import Domain-Objekt
+import de.jklein.pharmalink.domain.Actor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException; // NEU: Import für IOException
+import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
@@ -46,7 +46,7 @@ public class ActorService {
      */
     public Optional<Actor> getEnrichedActorById(String actorId) {
         try {
-            Actor actor = fabricClient.evaluateTransaction("queryActorById", actorId, Actor.class);
+            Actor actor = fabricClient.evaluateTransaction("queryActorById", Actor.class, actorId);
             if (actor == null) {
                 return Optional.empty();
             }
@@ -59,9 +59,7 @@ public class ActorService {
                         originalIpfsLink, cleanHash, actorId);
 
                 try {
-                    // NEU: Direkte Verwendung von ipfsClient.getObject mit Type-Parameter
-                    // Dies nutzt intern den Datenbank-Cache und die Deserialisierungslogik
-                    Type dataType = new TypeToken<Map<String, Object>>() {}.getType(); // TypeToken außerhalb der Lambda
+                    Type dataType = new TypeToken<Map<String, Object>>() {}.getType();
                     Map<String, Object> ipfsData = ipfsClient.getObject(cleanHash, dataType);
 
                     if (ipfsData != null) {
@@ -70,15 +68,19 @@ public class ActorService {
                     } else {
                         logger.warn("IPFS content for CID '{}' was null after fetching for actor '{}'.", cleanHash, actorId);
                     }
-                } catch (IOException e) { // IOException fangen, da getObject sie werfen kann
-                    logger.error("Fehler beim Abrufen oder Deserialisieren von IPFS-Inhalt für CID '{}': {}", cleanHash, e.getMessage(), e);
-                    // Den Fehler loggen, aber die Akteur-Anreicherung fortsetzen
+                } catch (IOException e) {
+                    if (e.getCause() instanceof IllegalArgumentException) {
+                        logger.warn("IPFS link '{}' (cleaned to '{}') for actor '{}' is not a valid IPFS hash. Skipping IPFS data enrichment. Error: {}",
+                                originalIpfsLink, cleanHash, actorId, e.getMessage());
+                    } else {
+                        logger.error("Fehler beim Abrufen oder Deserialisieren von IPFS-Inhalt für CID '{}': {}", cleanHash, e.getMessage(), e);
+                    }
                 }
             }
 
             return Optional.of(actor);
 
-        } catch (Exception e) { // Hier bleibt Exception, um Fabric-Fehler und andere abzufangen
+        } catch (Exception e) {
             logger.error("Fehler beim Abrufen des Akteurs mit ID '{}': {}", actorId, e.getMessage(), e);
             return Optional.empty();
         }
@@ -101,7 +103,7 @@ public class ActorService {
                     .flatMap(actor -> {
                         try {
                             return this.getEnrichedActorById(actor.getActorId()).stream();
-                        } catch (Exception e) { // Exception muss hier gefangen werden, da flatMap keine Checked Exception zulässt
+                        } catch (Exception e) {
                             logger.warn("Fehler beim Anreichern von Akteur '{}' für Rolle '{}'. Fehler: {}. Dieser Eintrag wird übersprungen.",
                                     actor.getActorId(), role, e.getMessage());
                             return Stream.empty();
@@ -132,7 +134,7 @@ public class ActorService {
                     .flatMap(actor -> {
                         try {
                             return this.getEnrichedActorById(actor.getActorId()).stream();
-                        } catch (Exception e) { // Exception muss hier gefangen werden
+                        } catch (Exception e) {
                             logger.warn("Fehler beim Anreichern von Hersteller '{}' für Suche '{}'. Fehler: {}. Dieser Eintrag wird übersprungen.",
                                     actor.getActorId(), searchQuery, e.getMessage());
                             return Stream.empty();

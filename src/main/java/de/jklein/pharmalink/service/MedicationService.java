@@ -45,9 +45,8 @@ public class MedicationService {
         String finalIpfsLink = "";
         if (requestDto.getIpfsData() != null && !requestDto.getIpfsData().isEmpty()) {
             logger.info("Processing 'ipfsData' to generate a new IPFS link...");
-            // Nutze IpfsClient.addObject, das bereits in den Cache schreibt
             String ipfsJson = fabricClient.getGson().toJson(requestDto.getIpfsData());
-            finalIpfsLink = ipfsClient.addObject(ipfsJson); // addObject erwartet Object, nicht byte[]
+            finalIpfsLink = ipfsClient.addObject(ipfsJson);
             logger.info("Successfully created new IPFS link: {}", finalIpfsLink);
         }
 
@@ -75,7 +74,7 @@ public class MedicationService {
                 .flatMap(medikament -> {
                     try {
                         return getEnrichedMedikamentById(medikament.getMedId()).stream();
-                    } catch (Exception e) { // Exception muss hier gefangen werden, da flatMap keine Checked Exception zulässt
+                    } catch (Exception e) {
                         logger.warn("Fehler beim Anreichern von Medikament '{}' für Hersteller '{}'. Fehler: {}. Dieser Eintrag wird übersprungen.",
                                 medikament.getMedId(), herstellerId, e.getMessage());
                         return Stream.empty();
@@ -86,7 +85,8 @@ public class MedicationService {
 
     public Optional<Medikament> getEnrichedMedikamentById(String medId) {
         try {
-            Medikament medikament = fabricClient.evaluateTransaction("queryMedikamentById", medId, Medikament.class);
+            // KORREKTUR: Argumentenreihenfolge angepasst
+            Medikament medikament = fabricClient.evaluateTransaction("queryMedikamentById", Medikament.class, medId);
             if (medikament == null) {
                 return Optional.empty();
             }
@@ -100,8 +100,6 @@ public class MedicationService {
                         originalIpfsLink, cleanHash, medId);
 
                 try {
-                    // NEU: Direkte Verwendung von ipfsClient.getObject mit Type-Parameter
-                    // Dies nutzt intern den Datenbank-Cache und die Deserialisierungslogik
                     Map<String, Object> ipfsData = ipfsClient.getObject(cleanHash, new TypeToken<Map<String, Object>>() {}.getType());
 
                     if (ipfsData != null) {
@@ -110,15 +108,14 @@ public class MedicationService {
                     } else {
                         logger.warn("IPFS content for CID '{}' was null after fetching for medication '{}'.", cleanHash, medId);
                     }
-                } catch (IOException e) { // IOException fangen, da getObject sie werfen kann
-                    logger.error("Fehler beim Abrufen oder Deserialisieren von IPFS-Inhalt für CID '{}': {}", cleanHash, e.getMessage(), e);
-                    // Den Fehler loggen, aber die Medikamenten-Anreicherung fortsetzen
+                } catch (IOException e) {
+                    logger.warn("Fehler beim Abrufen oder Deserialisieren von IPFS-Inhalt für CID '{}': {}. Überspringe Anreicherung.", cleanHash, e.getMessage());
                 }
             }
 
             return Optional.of(medikament);
 
-        } catch (Exception e) { // Hier bleibt Exception, um Fabric-Fehler und andere abzufangen
+        } catch (Exception e) {
             logger.error("Fehler beim Abrufen des Medikaments mit ID '{}': {}", medId, e.getMessage(), e);
             return Optional.empty();
         }

@@ -42,7 +42,8 @@ public class UnitService {
      */
     public Optional<Unit> getEnrichedUnitById(String unitId) {
         try {
-            Unit unit = fabricClient.evaluateTransaction("queryUnitById", unitId, Unit.class);
+            // KORREKTUR: Argumentenreihenfolge angepasst
+            Unit unit = fabricClient.evaluateTransaction("queryUnitById", Unit.class, unitId);
             if (unit == null) {
                 return Optional.empty();
             }
@@ -56,7 +57,7 @@ public class UnitService {
 
                 try {
                     Type dataType = new TypeToken<Map<String, Object>>() {}.getType();
-                    Map<String, Object> ipfsData = ipfsClient.getObject(cleanHash, dataType); // Hier wird die Validierung jetzt im IpfsClient durchgeführt
+                    Map<String, Object> ipfsData = ipfsClient.getObject(cleanHash, dataType);
 
                     if (ipfsData != null) {
                         unit.setIpfsData(ipfsData);
@@ -64,9 +65,8 @@ public class UnitService {
                     } else {
                         logger.warn("IPFS content for CID '{}' was null after fetching for unit '{}'.", cleanHash, unitId);
                     }
-                } catch (IOException e) { // Hier nur noch die IOException fangen (IllegalArgumentException wird jetzt im IpfsClient behandelt und dort schon geloggt)
+                } catch (IOException e) {
                     logger.warn("Fehler beim Abrufen oder Deserialisieren von IPFS-Inhalt für CID '{}': {}. Überspringe Anreicherung.", cleanHash, e.getMessage());
-                    // Den Fehler loggen, aber die Unit-Anreicherung fortsetzen, ohne IPFS-Daten anzuhängen
                 }
             }
 
