@@ -120,7 +120,6 @@ public class AppController {
 
         return "manage/overview";
     }
-
     @GetMapping("/errors/unknown-actor")
     public String showUnknownActorErrorPage() {
         return "errors/unknown-actor";

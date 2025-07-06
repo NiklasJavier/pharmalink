@@ -4,7 +4,6 @@
       layout:decorate="~{layouts/default-layout}">
 <head>
     <title>Dashboard</title>
-
     <th:block layout:fragment="pageCss">
         <link rel="stylesheet" th:href="@{/css/dashboard.css}">
     </th:block>
@@ -16,7 +15,6 @@
     </head>
     <div th:replace="~{fragments/dashboard-content :: dashboardContent}"></div>
 </div>
-
 <th:block layout:fragment="pageJs">
     <script th:src="@{/js/dashboard.js}"></script>
 </th:block>

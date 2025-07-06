@@ -14,16 +14,12 @@
 <script th:src="@{/js/main.js}"></script>
 <script th:src="@{/js/display-json.js}"></script>
 <script th:src="@{/js/clipboard-helper.js}"></script>
-
 <div th:replace="~{fragments/header :: header}"></div>
-
 <main>
     <div layout:fragment="content">
     </div>
 </main>
-
 <div th:replace="~{fragments/footer :: footer}"></div>
-
 <th:block layout:fragment="pageJs"></th:block>
 </body>
 </html>
