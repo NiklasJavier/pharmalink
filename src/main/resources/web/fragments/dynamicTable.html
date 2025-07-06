@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="dynamicTable (tableTitle, tableJsonString, idPrefix, maxBodyHeight)"
+     th:id="${idPrefix + '-table-container'}"
+     class="dynamic-table-fragment-container card">
+
+    <div class="card-header">
+        <h3 th:text="${tableTitle}">Dynamische Tabelle</h3>
+    </div>
+
+    <div class="card-body">
+        <div th:id="${idPrefix + '-render-root'}">
+            Lade Daten...
+        </div>
+
+        <script th:inline="javascript">
+            document.addEventListener('DOMContentLoaded', function() {
+                // Der JSON-String wird direkt übergeben. Thymeleaf wird ihn als JavaScript-Literal einbetten.
+                // Es ist wichtig, den String in Anführungszeichen zu setzen, da th:inline="javascript" dies bei Strings nicht automatisch tut.
+                const dataJsonString = /*[[${tableJsonString}]]*/ '';
+
+                const rootElementId = [[${idPrefix + '-render-root'}]]; // ID des Ziel-Divs
+                const height = [[${maxBodyHeight}]]; // Max-Höhe für das Scrollen
+                const title = [[${tableTitle}]]; // Titel für den JS-Renderer
+
+                // Nur rendern, wenn der JSON-String nicht null, nicht "null" (als String) oder "[]" (leeres Array) ist
+                if (dataJsonString && dataJsonString !== 'null' && dataJsonString !== '[]') {
+                    // console.log(`Rendering table for ${rootElementId} with data: ${dataJsonString.substring(0, 100)}...`); // Debugging
+                    renderDynamicTableFromJson(dataJsonString, rootElementId, height, title);
+                } else {
+                    // Wenn keine Daten vorhanden sind, eine entsprechende Meldung anzeigen
+                    document.getElementById(rootElementId).innerHTML = '<p>Keine Daten verfügbar.</p>';
+                }
+            });
+        </script>
+    </div>
+</div>
+
+</body>
+</html>

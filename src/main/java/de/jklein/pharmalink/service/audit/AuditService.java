@@ -3,15 +3,17 @@ package de.jklein.pharmalink.service.audit;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.jklein.pharmalink.domain.audit.ApiTransaction;
+import de.jklein.pharmalink.domain.audit.GrpcTransaction; // NEU: Import GrpcTransaction
 import de.jklein.pharmalink.repository.audit.ApiTransactionRepository;
+import de.jklein.pharmalink.repository.audit.GrpcTransactionRepository; // NEU: Import GrpcTransactionRepository
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.format.DateTimeFormatter; // Für Formatierung des Timestamps
+import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
-import java.util.LinkedHashMap; // Wichtig für Beibehaltung der Einfügereihenfolge (falls nötig, sonst HashMap)
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -20,15 +22,17 @@ import java.util.stream.Collectors;
 public class AuditService {
 
     private static final Logger logger = LoggerFactory.getLogger(AuditService.class);
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
-
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS"); // Für API-Transaktionen
+    private static final DateTimeFormatter DATE_ONLY_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd"); // Für den Wunsch, nur das Datum zu zeigen
 
     private final ApiTransactionRepository apiTransactionRepository;
-    private final ObjectMapper objectMapper; // Für JSON-Konvertierung
+    private final GrpcTransactionRepository grpcTransactionRepository; // NEU: Repository für gRPC-Transaktionen
+    private final ObjectMapper objectMapper;
 
     @Autowired
-    public AuditService(ApiTransactionRepository apiTransactionRepository, ObjectMapper objectMapper) {
+    public AuditService(ApiTransactionRepository apiTransactionRepository, GrpcTransactionRepository grpcTransactionRepository, ObjectMapper objectMapper) { // NEU: GrpcTransactionRepository im Konstruktor
         this.apiTransactionRepository = apiTransactionRepository;
+        this.grpcTransactionRepository = grpcTransactionRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -37,54 +41,74 @@ public class AuditService {
      * @return Eine Liste von ApiTransaction-Objekten.
      */
     public List<ApiTransaction> getAllApiTransactionsOrderedByIdDesc() {
-        // FindAll gibt eine unsortierte Liste zurück, daher manuell sortieren.
-        // Oder JpaRepository um findByOrderByIdDesc() erweitern, wenn dies oft benötigt wird.
         List<ApiTransaction> transactions = apiTransactionRepository.findAll();
-        transactions.sort(Comparator.comparing(ApiTransaction::getId).reversed()); // Sortieren nach ID absteigend
+        transactions.sort(Comparator.comparing(ApiTransaction::getId).reversed());
         return transactions;
     }
 
     /**
-     * Ruft alle API-Transaktionen ab, gruppiert sie nach URL und gibt das Ergebnis als JSON-String zurück.
-     * Die Einträge innerhalb jeder URL-Gruppe sind nach ID absteigend sortiert.
-     * @return Ein JSON-String der gruppierten Transaktionen.
+     * Ruft alle API-Transaktionen ab (sortiert nach ID absteigend) und gibt sie als flachen JSON-String zurück.
+     * Die Einträge innerhalb der Liste sind nach ID absteigend sortiert und der Timestamp steht an erster Stelle (nur Datum).
+     * @return Ein JSON-String der Transaktionen.
      */
-    public String getGroupedApiTransactionsByUrlAsJson() {
-        List<ApiTransaction> allTransactions = getAllApiTransactionsOrderedByIdDesc(); // Bereits sortiert
+    public String getAllApiTransactionsAsJson() {
+        List<ApiTransaction> allTransactions = getAllApiTransactionsOrderedByIdDesc();
 
-        // Gruppierung nach URL
-        Map<String, List<ApiTransaction>> groupedByUrl = allTransactions.stream()
-                .collect(Collectors.groupingBy(ApiTransaction::getUrl, LinkedHashMap::new, Collectors.toList()));
-        // LinkedHashMap::new bewahrt die Reihenfolge der URL-Einträge, wie sie zuerst erscheinen.
-
-        // Das ApiTransaction-Objekt enthält LocalDateTime. Wir müssen es für JSON korrekt formatieren.
-        // Erstellen Sie eine Map<String, Object> Struktur, die dem gewünschten JSON-Output entspricht
-        Map<String, List<Map<String, Object>>> jsonCompatibleMap = new LinkedHashMap<>();
-        groupedByUrl.forEach((url, transactions) -> {
-            List<Map<String, Object>> transactionMaps = transactions.stream()
-                    .map(tx -> {
-                        Map<String, Object> map = new LinkedHashMap<>(); // Beibehaltung der Reihenfolge der Felder
-                        map.put("id", tx.getId());
-                        map.put("httpMethod", tx.getHttpMethod());
-                        map.put("responseStatus", tx.getResponseStatus());
-                        map.put("successful", tx.isSuccessful());
-                        map.put("timestamp", tx.getTimestamp().format(DATE_TIME_FORMATTER)); // LocalDateTime formatieren
-                        map.put("url", tx.getUrl());
-                        map.put("username", tx.getUsername());
-                        map.put("requestBody", tx.getRequestBody()); // Kann null sein
-                        map.put("errorMessage", tx.getErrorMessage()); // Kann null sein
-                        return map;
-                    })
-                    .collect(Collectors.toList());
-            jsonCompatibleMap.put(url, transactionMaps);
-        });
+        List<Map<String, Object>> jsonCompatibleList = allTransactions.stream()
+                .map(tx -> {
+                    Map<String, Object> map = new LinkedHashMap<>();
+                    map.put("timestamp", tx.getTimestamp().format(DATE_TIME_FORMATTER)); // Nur Datum für API-Transaktionen
+                    map.put("successful", tx.isSuccessful());
+                    map.put("httpMethod", tx.getHttpMethod());
+                    map.put("username", tx.getUsername());
+                    map.put("responseStatus", tx.getResponseStatus());
+                    map.put("url", tx.getUrl());
+                    return map;
+                })
+                .collect(Collectors.toList());
 
         try {
-            // Konvertiere die gruppierte Map in einen JSON-String
-            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonCompatibleMap);
+            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonCompatibleList);
         } catch (JsonProcessingException e) {
             logger.error("Fehler beim Konvertieren der API-Transaktionen in JSON: {}", e.getMessage(), e);
             return "{\"error\": \"Fehler beim Erstellen der Transaktionsübersicht.\"}";
+        }
+    }
+
+    /**
+     * Ruft alle gRPC-Transaktionen ab, sortiert nach ID absteigend.
+     * @return Eine Liste von GrpcTransaction-Objekten.
+     */
+    public List<GrpcTransaction> getAllGrpcTransactionsOrderedByIdDesc() {
+        List<GrpcTransaction> transactions = grpcTransactionRepository.findAll();
+        transactions.sort(Comparator.comparing(GrpcTransaction::getId).reversed()); // Sortieren nach ID absteigend
+        return transactions;
+    }
+
+    /**
+     * Ruft alle gRPC-Transaktionen ab (sortiert nach ID absteigend) und gibt sie als flachen JSON-String zurück.
+     * Die Einträge innerhalb der Liste sind nach ID absteigend sortiert und die ID steht an erster Stelle.
+     * @return Ein JSON-String der gRPC-Transaktionen.
+     */
+    public String getAllGrpcTransactionsAsJson() {
+        List<GrpcTransaction> allTransactions = getAllGrpcTransactionsOrderedByIdDesc();
+
+        List<Map<String, Object>> jsonCompatibleList = allTransactions.stream()
+                .map(tx -> {
+                    Map<String, Object> map = new LinkedHashMap<>();
+                    map.put("timestamp", tx.getTimestamp().format(DATE_TIME_FORMATTER)); // Timestamp hier mit voller Zeit
+                    map.put("successful", tx.isSuccessful());
+                    map.put("transactionName", tx.getTransactionName());
+                    map.put("transactionArgs", tx.getTransactionArgs());
+                    return map;
+                })
+                .collect(Collectors.toList());
+
+        try {
+            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonCompatibleList);
+        } catch (JsonProcessingException e) {
+            logger.error("Fehler beim Konvertieren der gRPC-Transaktionen in JSON: {}", e.getMessage(), e);
+            return "{\"error\": \"Fehler beim Erstellen der gRPC-Transaktionsübersicht.\"}";
         }
     }
 }

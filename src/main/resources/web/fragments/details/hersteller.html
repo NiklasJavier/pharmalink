@@ -21,20 +21,6 @@
         </div>
         </div>
     </div>
-    <div class="card" th:if="${apiTransactionsJson != null and !apiTransactionsJson.isEmpty()}">
-        <div class="card-header">
-            <h3>Medikamente unter unserer Verwaltung</h3>
-        </div>
-        <div class="card-body">
-            <div class="flex-container">
-                <div th:each="jsonString, iterStat : ${apiTransactionsJson}"
-                     th:id="'json-container-' + ${iterStat.index}"
-                     class="json-container-item">
-                    <script th:id="'json-data-' + ${iterStat.index}" type="application/json" th:utext="${jsonString}"></script>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 </div>
 

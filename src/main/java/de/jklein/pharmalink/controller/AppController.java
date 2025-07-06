@@ -85,8 +85,11 @@ public class AppController {
         model.addAttribute("currentActorInfo", currentActor);
         model.addAttribute("pageTitle", "Dashboard");
 
-        String apiTransactionsJson = auditService.getGroupedApiTransactionsByUrlAsJson(); // Rufe den JSON-String ab
+        String apiTransactionsJson = auditService.getAllApiTransactionsAsJson(); // Rufe den JSON-String ab
         model.addAttribute("apiTransactionsJson", apiTransactionsJson); // Zum Model hinzufügen
+
+        String grpcTransactionsJson = auditService.getAllGrpcTransactionsAsJson(); // Rufe den JSON-String ab
+        model.addAttribute("grpcTransactionsJson", grpcTransactionsJson); // Zum Model hinzufügen
 
         try {
             List<Actor> allActors = systemStateService.getAllActors();

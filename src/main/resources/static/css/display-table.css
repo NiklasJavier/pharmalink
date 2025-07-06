@@ -1,0 +1,127 @@
+/* src/main/resources/static/css/display-table.css */
+
+/* Allgemeine Container für dynamische Tabellen-Fragmente */
+.dynamic-table-fragment-container {
+    margin-bottom: 20px;
+}
+
+/* Stil für den Scroll-Bereich der Tabelle */
+.dynamic-table-scroll-container {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Basis-Tabelle Styling */
+.dynamic-generated-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+    font-size: 0.95em;
+    background-color: #ffffff;
+}
+
+/* Tabellenkopf (Header) Styling */
+.dynamic-generated-table thead {
+    background-color: #1B1B1B;
+    color: #ffffff;
+}
+
+.dynamic-generated-table th {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 2px solid #303f9f;
+    font-weight: bold;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+/* Tabellenkörper (Body) Styling */
+.dynamic-generated-table tbody tr {
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.dynamic-generated-table tbody tr:nth-child(even) {
+    background-color: #f8f8f8;
+}
+
+.dynamic-generated-table tbody tr:hover {
+    background-color: #e6e6fa;
+    cursor: default;
+}
+
+.dynamic-generated-table td {
+    padding: 10px 15px;
+    vertical-align: top;
+}
+
+/* Styling für spezielle Zellentypen (aus dynamicTableRenderer.js) */
+.json-cell-content {
+    font-family: 'Courier New', monospace;
+    background-color: #f0f4f7;
+    border-radius: 4px;
+    padding: 5px;
+    white-space: pre-wrap;
+    font-size: 0.85em;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.empty-cell-content {
+    color: #888;
+    font-style: italic;
+}
+
+/* Styling für die "Keine Daten verfügbar" Zeile */
+.dynamic-generated-table tbody tr:last-child td[colspan] {
+    text-align: center;
+    font-style: italic;
+    color: #555;
+    padding: 20px;
+    background-color: #f0f0f0;
+}
+
+/* Optional: Styling für abgeschnittene Zellen, um Tooltip anzudeuten */
+.truncated-cell {
+    cursor: help; /* Mauszeiger, der auf Hilfetext (Tooltip) hindeutet */
+    /* text-overflow: ellipsis; /* Kann verwendet werden, wenn der Text nicht abgeschnitten, sondern visuell gekürzt werden soll */
+    /* white-space: nowrap; */ /* Verhindert Zeilenumbruch */
+    /* overflow: hidden; */ /* Inhalte, die über die Zelle hinausgehen, werden versteckt */
+}
+
+/* Tabellenkörper (Body) Styling */
+.dynamic-generated-table tbody tr {
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.dynamic-generated-table tbody tr:nth-child(even) {
+    background-color: #f8f8f8;
+}
+
+/* WICHTIG: Hover-Effekt auf die ZELLEN (td) der Zeile anwenden,
+   um spezifische Zellfarben zu überdecken. */
+.dynamic-generated-table tbody tr:hover td {
+    background-color: #d1e0e0; /* Ein deutlicher, aber neutraler Hover-Ton (hellblau/grau) */
+    /* Wenn dies immer noch nicht ausreicht, könnte ein !important wie folgt hinzugefügt werden,
+       aber es sollte vermieden werden, wenn eine Spezifitätserhöhung möglich ist:
+       background-color: #d1e0e0 !important; */
+}
+
+/* Optional: Die Zeilenfarbe selbst kann beibehalten werden, falls z.B. ein Rahmen für die Zeile gewünscht wird */
+.dynamic-generated-table tbody tr:hover {
+    cursor: pointer; /* Zeigt an, dass die Zeile interaktiv sein könnte */
+}
+
+/* Styling für die "successful" Spalte */
+.cell-successful-true {
+    background-color: #e6ffe6; /* Sehr helles Grün */
+    color: #28a745; /* Dunkelgrüner Text */
+    font-weight: bold;
+}
+
+.cell-successful-false {
+    background-color: #ffe6e6; /* Sehr helles Rot */
+    color: #dc3545; /* Dunkelroter Text */
+    font-weight: bold;
+}

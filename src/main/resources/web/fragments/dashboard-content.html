@@ -1,3 +1,51 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+    <link rel="stylesheet" th:href="@{/css/display-json.css}">
+    <style>
+        /* Bestehendes Styling von vorheriger Antwort (könnte in main.css oder display-json.css sein) */
+        .api-url-display {
+            color: #0056b3;
+            font-family: monospace;
+            background-color: #e6e6e6;
+            padding: 2px 5px;
+            border-radius: 3px;
+            margin-right: 8px;
+        }
+        .dynamic-table-scroll-container {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .dynamic-generated-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .dynamic-generated-table th, .dynamic-generated-table td {
+            border: 1px solid #eee;
+            padding: 8px;
+            text-align: left;
+        }
+        .dynamic-generated-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .dynamic-generated-table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .dynamic-generated-table tbody tr:hover {
+            background-color: #e9e9e9;
+        }
+    </style>
+</head>
+<body>
+
 <div th:fragment="dashboardContent">
     <div class="card" th:if="${currentActorInfo}">
         <div class="card-header">
@@ -14,6 +62,7 @@
             </div>
         </div>
     </div>
+
     <div th:if="${currentActorInfo}" th:switch="${currentActorInfo.getRole()}">
         <th:block th:case="'hersteller'">
             <div th:replace="~{fragments/details/hersteller :: herstellerDetails}"></div>
@@ -31,4 +80,22 @@
             <p>Für Ihre Rolle ist keine Ansicht hinterlegt.</p>
         </th:block>
     </div>
+
+    <div th:if="${apiTransactionsJson != null and !apiTransactionsJson.isEmpty()}">
+        <div th:replace="~{fragments/dynamicTable :: dynamicTable(
+            tableTitle='API Transaktionen',
+            tableJsonString=${apiTransactionsJson},  idPrefix='api-transactions-table',
+            maxBodyHeight=400
+        )}"></div>
+    </div>
+
+    <div th:if="${grpcTransactionsJson != null and !grpcTransactionsJson.isEmpty()}">
+        <div th:replace="~{fragments/dynamicTable :: dynamicTable(
+            tableTitle='Grcp Transaktionen',
+            tableJsonString=${grpcTransactionsJson},  idPrefix='grcp-transactions-table',
+            maxBodyHeight=400
+        )}"></div>
+    </div>
 </div>
+</body>
+</html>

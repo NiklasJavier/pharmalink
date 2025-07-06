@@ -42,23 +42,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function renderAllJsonContainers() {
     const containers = document.querySelectorAll('.json-container-item:not(.json-rendered)');
+    let isFirstContainer = true; // NEU: Flag, um den ersten Container zu identifizieren
+
     containers.forEach(container => {
         const jsonDataScript = container.querySelector('script[type="application/json"]');
         if (jsonDataScript) {
             try {
                 const jsonObj = JSON.parse(jsonDataScript.textContent);
                 if (typeof JSONFormatter !== 'undefined') {
-                    const formatter = new JSONFormatter(jsonObj, 2, { theme: 'viewer-theme' });
+                    // NEU: Setze initialExpandedLevel basierend auf dem Flag
+                    const initialLevel = isFirstContainer ? 2 : 0; // 2 für den ersten, 0 für alle anderen (vollständig eingeklappt)
+
+                    const formatter = new JSONFormatter(jsonObj, initialLevel, { theme: 'viewer-theme' });
                     container.innerHTML = '';
                     container.appendChild(formatter.render());
 
-                    // Bestehende Funktionen
                     makeValuesInteractive(container);
-
-                    // NEU HINZUGEFÜGT: Entfernt die Anführungszeichen nach dem Rendern
                     removeQuotesFromValues(container);
 
                     container.classList.add('json-rendered');
+                    isFirstContainer = false; // Setze das Flag auf false, nachdem der erste Container verarbeitet wurde
                 } else {
                     container.textContent = 'Fehler: Renderer-Bibliothek fehlt.';
                 }
@@ -93,11 +96,9 @@ function makeValuesInteractive(container) {
                 valueEl.classList.add('clickable-value');
                 valueEl.id = `interactive-${rule.value}-${idCounter++}`;
                 valueEl.addEventListener('click', () => {
-                    // Wichtig: Hier holen wir den Wert erneut, falls er sich geändert hat
                     const currentValue = valueEl.textContent.replace(/"/g, '');
                     const updatedValue = rule.action(currentValue, rule.label);
                     if (updatedValue !== null) {
-                        // Da die Quotes jetzt immer entfernt werden, fügen wir sie hier für die Anzeige nicht wieder hinzu
                         valueEl.textContent = updatedValue;
                     }
                 });
@@ -108,7 +109,6 @@ function makeValuesInteractive(container) {
 }
 
 /**
- * NEU HINZUGEFÜGT
  * Entfernt die umschließenden Anführungszeichen von allen String-Werten.
  * @param {HTMLElement} container Der Container, in dem gesucht werden soll.
  */
