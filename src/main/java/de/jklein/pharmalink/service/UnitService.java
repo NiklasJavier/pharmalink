@@ -12,11 +12,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.lang.reflect.Type;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream; // NEU: Import für Stream hinzufügen
+import java.util.stream.Stream;
 
 @Service
 public class UnitService {
@@ -25,7 +25,7 @@ public class UnitService {
 
     private final FabricClient fabricClient;
     private final IpfsClient ipfsClient;
-    private final UnitMapper unitMapper; // Mapper bleibt, falls Konvertierung zu/von DTOs in diesem Service noch nötig ist (z.B. für Controller-Aufrufe direkt)
+    private final UnitMapper unitMapper;
 
     @Autowired
     public UnitService(FabricClient fabricClient, IpfsClient ipfsClient, UnitMapper unitMapper) {
@@ -49,28 +49,32 @@ public class UnitService {
 
             final String originalIpfsLink = unit.getIpfsLink();
             if (originalIpfsLink != null && !originalIpfsLink.isBlank()) {
+                final String cleanHash = originalIpfsLink.replace("ipfs://", "").trim();
+
+                logger.info("Resolving IPFS link '{}' (cleaned to '{}') for unit '{}'",
+                        originalIpfsLink, cleanHash, unitId);
+
                 try {
-                    final String cleanHash = originalIpfsLink.replace("ipfs://", "").trim();
-                    if (!cleanHash.isEmpty()) {
-                        ipfsClient.get(cleanHash).ifPresent(ipfsBytes -> {
-                            try {
-                                String jsonContent = new String(ipfsBytes, StandardCharsets.UTF_8);
-                                Type dataType = new TypeToken<Map<String, Object>>() {}.getType();
-                                Map<String, Object> ipfsData = fabricClient.getGson().fromJson(jsonContent, dataType);
-                                unit.setIpfsData(ipfsData);
-                            } catch (Exception parseEx) {
-                                logger.error("Konnte IPFS JSON-Inhalt für Unit-CID '{}' nicht parsen.", cleanHash, parseEx);
-                            }
-                        });
+                    // NEU: Direkte Verwendung von ipfsClient.getObject mit Type-Parameter
+                    // Dies nutzt intern den Datenbank-Cache und die Deserialisierungslogik
+                    Type dataType = new TypeToken<Map<String, Object>>() {}.getType(); // TypeToken außerhalb der Lambda
+                    Map<String, Object> ipfsData = ipfsClient.getObject(cleanHash, dataType);
+
+                    if (ipfsData != null) {
+                        unit.setIpfsData(ipfsData);
+                        logger.info("Successfully attached IPFS data for CID '{}'", cleanHash);
+                    } else {
+                        logger.warn("IPFS content for CID '{}' was null after fetching for unit '{}'.", cleanHash, unitId);
                     }
-                } catch (Exception ipfsEx) {
-                    logger.warn("Fehler beim Abrufen von IPFS-Daten für Unit-Link '{}'. Fehler: {}.", originalIpfsLink, ipfsEx.getMessage());
+                } catch (IOException e) { // IOException fangen, da getObject sie werfen kann
+                    logger.error("Fehler beim Abrufen oder Deserialisieren von IPFS-Inhalt für CID '{}': {}", cleanHash, e.getMessage(), e);
+                    // Den Fehler loggen, aber die Unit-Anreicherung fortsetzen
                 }
             }
 
             return Optional.of(unit);
-        } catch (Exception e) {
-            logger.error("Fehler beim Abrufen der Unit mit ID '{}'", unitId, e);
+        } catch (Exception e) { // Hier bleibt Exception, um Fabric-Fehler und andere abzufangen
+            logger.error("Fehler beim Abrufen der Unit mit ID '{}': {}", unitId, e.getMessage(), e);
             return Optional.empty();
         }
     }
@@ -88,8 +92,8 @@ public class UnitService {
         if (requestDto.getIpfsData() != null && !requestDto.getIpfsData().isEmpty()) {
             logger.info("Processing 'ipfsData' for new units...");
             String ipfsJson = fabricClient.getGson().toJson(requestDto.getIpfsData());
-            byte[] ipfsBytes = ipfsJson.getBytes(StandardCharsets.UTF_8);
-            ipfsHash = ipfsClient.add(ipfsBytes);
+            // NEU: Verwende ipfsClient.addObject, das bereits Caching-Logik enthält
+            ipfsHash = ipfsClient.addObject(ipfsJson);
             logger.info("Successfully created IPFS entry for new units. CID: {}", ipfsHash);
         }
 
@@ -122,14 +126,22 @@ public class UnitService {
             List<Unit> units = fabricClient.getGson().fromJson(resultJson, listType);
 
             List<Unit> enrichedUnits = units.stream()
-                    .flatMap(unit -> this.getEnrichedUnitById(unit.getUnitId()).stream())
+                    .flatMap(unit -> {
+                        try {
+                            return this.getEnrichedUnitById(unit.getUnitId()).stream();
+                        } catch (Exception e) { // Exception muss hier gefangen werden
+                            logger.warn("Fehler beim Anreichern von Unit '{}' für Medikament '{}'. Fehler: {}. Dieser Eintrag wird übersprungen.",
+                                    unit.getUnitId(), medId, e.getMessage());
+                            return Stream.empty();
+                        }
+                    })
                     .collect(Collectors.toList());
 
             return enrichedUnits.stream()
                     .collect(Collectors.groupingBy(Unit::getChargeBezeichnung));
 
         } catch (Exception e) {
-            logger.error("Fehler beim Abrufen der gruppierten Units für medId '{}'", medId, e);
+            logger.error("Fehler beim Abrufen der gruppierten Units für medId '{}': {}", medId, e.getMessage(), e);
             return Collections.emptyMap();
         }
     }
@@ -186,10 +198,18 @@ public class UnitService {
             List<Unit> units = fabricClient.getGson().fromJson(resultJson, listType);
 
             return units.stream()
-                    .flatMap(unit -> this.getEnrichedUnitById(unit.getUnitId()).stream())
+                    .flatMap(unit -> {
+                        try {
+                            return this.getEnrichedUnitById(unit.getUnitId()).stream();
+                        } catch (Exception e) { // Exception muss hier gefangen werden
+                            logger.warn("Fehler beim Anreichern von Unit '{}' für Eigentümer '{}'. Fehler: {}. Dieser Eintrag wird übersprungen.",
+                                    unit.getUnitId(), ownerActorId, e.getMessage());
+                            return Stream.empty();
+                        }
+                    })
                     .collect(Collectors.toList());
         } catch (Exception e) {
-            logger.error("Fehler beim Abrufen der Units für Eigentümer '{}'", ownerActorId, e);
+            logger.error("Fehler beim Abrufen der Units für Eigentümer '{}': {}", ownerActorId, e.getMessage(), e);
             return Collections.emptyList();
         }
     }

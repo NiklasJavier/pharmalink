@@ -18,7 +18,7 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream; // NEU: Import für Stream hinzufügen
+import java.util.stream.Stream;
 
 @Service
 public class MedicationService {
@@ -45,9 +45,9 @@ public class MedicationService {
         String finalIpfsLink = "";
         if (requestDto.getIpfsData() != null && !requestDto.getIpfsData().isEmpty()) {
             logger.info("Processing 'ipfsData' to generate a new IPFS link...");
+            // Nutze IpfsClient.addObject, das bereits in den Cache schreibt
             String ipfsJson = fabricClient.getGson().toJson(requestDto.getIpfsData());
-            byte[] ipfsBytes = ipfsJson.getBytes(StandardCharsets.UTF_8);
-            finalIpfsLink = ipfsClient.add(ipfsBytes);
+            finalIpfsLink = ipfsClient.addObject(ipfsJson); // addObject erwartet Object, nicht byte[]
             logger.info("Successfully created new IPFS link: {}", finalIpfsLink);
         }
 
@@ -75,7 +75,7 @@ public class MedicationService {
                 .flatMap(medikament -> {
                     try {
                         return getEnrichedMedikamentById(medikament.getMedId()).stream();
-                    } catch (Exception e) {
+                    } catch (Exception e) { // Exception muss hier gefangen werden, da flatMap keine Checked Exception zulässt
                         logger.warn("Fehler beim Anreichern von Medikament '{}' für Hersteller '{}'. Fehler: {}. Dieser Eintrag wird übersprungen.",
                                 medikament.getMedId(), herstellerId, e.getMessage());
                         return Stream.empty();
@@ -99,24 +99,27 @@ public class MedicationService {
                 logger.info("Resolving IPFS link '{}' (cleaned to '{}') for medication '{}'",
                         originalIpfsLink, cleanHash, medId);
 
-                ipfsClient.get(cleanHash).ifPresent(ipfsBytes -> {
-                    try {
-                        String jsonContent = new String(ipfsBytes, StandardCharsets.UTF_8);
-                        Type type = new TypeToken<Map<String, Object>>() {}.getType();
-                        Map<String, Object> ipfsData = fabricClient.getGson().fromJson(jsonContent, type);
+                try {
+                    // NEU: Direkte Verwendung von ipfsClient.getObject mit Type-Parameter
+                    // Dies nutzt intern den Datenbank-Cache und die Deserialisierungslogik
+                    Map<String, Object> ipfsData = ipfsClient.getObject(cleanHash, new TypeToken<Map<String, Object>>() {}.getType());
 
+                    if (ipfsData != null) {
                         medikament.setIpfsData(ipfsData);
                         logger.info("Successfully attached IPFS data for CID '{}'", cleanHash);
-                    } catch (Exception e) {
-                        logger.error("Failed to parse IPFS JSON content for CID '{}'", cleanHash, e);
+                    } else {
+                        logger.warn("IPFS content for CID '{}' was null after fetching for medication '{}'.", cleanHash, medId);
                     }
-                });
+                } catch (IOException e) { // IOException fangen, da getObject sie werfen kann
+                    logger.error("Fehler beim Abrufen oder Deserialisieren von IPFS-Inhalt für CID '{}': {}", cleanHash, e.getMessage(), e);
+                    // Den Fehler loggen, aber die Medikamenten-Anreicherung fortsetzen
+                }
             }
 
             return Optional.of(medikament);
 
-        } catch (Exception e) {
-            logger.error("Fehler beim Abrufen des Medikaments mit ID '{}'", medId, e);
+        } catch (Exception e) { // Hier bleibt Exception, um Fabric-Fehler und andere abzufangen
+            logger.error("Fehler beim Abrufen des Medikaments mit ID '{}': {}", medId, e.getMessage(), e);
             return Optional.empty();
         }
     }
@@ -143,7 +146,7 @@ public class MedicationService {
                     .collect(Collectors.toList());
 
         } catch (Exception e) {
-            logger.error("Fehler bei der Suche nach Medikamenten mit Query '{}'", searchQuery, e);
+            logger.error("Fehler bei der Suche nach Medikamenten mit Query '{}': {}", searchQuery, e.getMessage(), e);
             return Collections.emptyList();
         }
     }
@@ -155,7 +158,7 @@ public class MedicationService {
             List<Medikament> medikamente = fabricClient.getGson().fromJson(resultJson, listType);
             return medikamente;
         } catch (Exception e) {
-            logger.error("Fehler beim Abrufen aller Medikamente aus dem Chaincode.", e);
+            logger.error("Fehler beim Abrufen aller Medikamente aus dem Chaincode: {}", e.getMessage(), e);
             return Collections.emptyList();
         }
     }

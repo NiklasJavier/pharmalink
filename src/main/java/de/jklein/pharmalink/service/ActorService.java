@@ -1,25 +1,26 @@
 package de.jklein.pharmalink.service;
 
 import com.google.gson.reflect.TypeToken;
-import de.jklein.pharmalink.api.dto.ActorResponseDto;
+import de.jklein.pharmalink.api.dto.ActorResponseDto; // Behalten, falls für andere Controller oder spezifische DTO-Nutzung benötigt
 import de.jklein.pharmalink.api.mapper.ActorMapper;
 import de.jklein.pharmalink.client.fabric.FabricClient;
 import de.jklein.pharmalink.client.ipfs.IpfsClient;
-import de.jklein.pharmalink.domain.Actor; // Import des Domain-Objekts
+import de.jklein.pharmalink.domain.Actor; // Import Domain-Objekt
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
+import java.io.IOException; // NEU: Import für IOException
 import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream; // Import für Stream
+import java.util.stream.Stream;
 
 @Service
 public class ActorService {
@@ -28,7 +29,7 @@ public class ActorService {
 
     private final FabricClient fabricClient;
     private final IpfsClient ipfsClient;
-    private final ActorMapper actorMapper; // Mapper bleibt für Konvertierung zu/von DTOs
+    private final ActorMapper actorMapper;
 
     @Autowired
     public ActorService(FabricClient fabricClient, IpfsClient ipfsClient, ActorMapper actorMapper) {
@@ -43,7 +44,7 @@ public class ActorService {
      * @param actorId Die ID des abzurufenden Akteurs.
      * @return Ein Optional, das das angereicherte Actor-Domain-Objekt enthält.
      */
-    public Optional<Actor> getEnrichedActorById(String actorId) { // Rückgabetyp geändert
+    public Optional<Actor> getEnrichedActorById(String actorId) {
         try {
             Actor actor = fabricClient.evaluateTransaction("queryActorById", actorId, Actor.class);
             if (actor == null) {
@@ -52,31 +53,33 @@ public class ActorService {
 
             final String originalIpfsLink = actor.getIpfsLink();
             if (originalIpfsLink != null && !originalIpfsLink.isBlank()) {
-                try {
-                    final String cleanHash = originalIpfsLink.replace("ipfs://", "").trim();
+                final String cleanHash = originalIpfsLink.replace("ipfs://", "").trim();
 
-                    if (!cleanHash.isEmpty()) {
-                        ipfsClient.get(cleanHash).ifPresent(ipfsBytes -> {
-                            try {
-                                String jsonContent = new String(ipfsBytes, StandardCharsets.UTF_8);
-                                Type dataType = new TypeToken<Map<String, Object>>() {}.getType();
-                                Map<String, Object> ipfsData = fabricClient.getGson().fromJson(jsonContent, dataType);
-                                actor.setIpfsData(ipfsData); // IPFS-Daten direkt im Domain-Objekt speichern
-                            } catch (Exception parseEx) {
-                                logger.error("Konnte IPFS JSON-Inhalt für CID '{}' nicht parsen.", cleanHash, parseEx);
-                            }
-                        });
+                logger.info("Resolving IPFS link '{}' (cleaned to '{}') for actor '{}'",
+                        originalIpfsLink, cleanHash, actorId);
+
+                try {
+                    // NEU: Direkte Verwendung von ipfsClient.getObject mit Type-Parameter
+                    // Dies nutzt intern den Datenbank-Cache und die Deserialisierungslogik
+                    Type dataType = new TypeToken<Map<String, Object>>() {}.getType(); // TypeToken außerhalb der Lambda
+                    Map<String, Object> ipfsData = ipfsClient.getObject(cleanHash, dataType);
+
+                    if (ipfsData != null) {
+                        actor.setIpfsData(ipfsData);
+                        logger.info("Successfully attached IPFS data for CID '{}'", cleanHash);
+                    } else {
+                        logger.warn("IPFS content for CID '{}' was null after fetching for actor '{}'.", cleanHash, actorId);
                     }
-                } catch (Exception ipfsEx) {
-                    logger.warn("Fehler beim Abrufen von IPFS-Daten für den Link '{}'. Fehler: {}. Dieser Eintrag wird übersprungen.",
-                            originalIpfsLink, ipfsEx.getMessage());
+                } catch (IOException e) { // IOException fangen, da getObject sie werfen kann
+                    logger.error("Fehler beim Abrufen oder Deserialisieren von IPFS-Inhalt für CID '{}': {}", cleanHash, e.getMessage(), e);
+                    // Den Fehler loggen, aber die Akteur-Anreicherung fortsetzen
                 }
             }
 
-            return Optional.of(actor); // Angereichertes Domain-Objekt zurückgeben
+            return Optional.of(actor);
 
-        } catch (Exception e) {
-            logger.error("Fehler beim Abrufen des Akteurs mit ID '{}'", actorId, e);
+        } catch (Exception e) { // Hier bleibt Exception, um Fabric-Fehler und andere abzufangen
+            logger.error("Fehler beim Abrufen des Akteurs mit ID '{}': {}", actorId, e.getMessage(), e);
             return Optional.empty();
         }
     }
@@ -87,20 +90,27 @@ public class ActorService {
      * @param role Die Rolle, nach der gefiltert werden soll (z.B. "hersteller").
      * @return Eine Liste von Actor-Domain-Objekten, die der Rolle entsprechen.
      */
-    public List<Actor> getActorsByRole(String role) { // Rückgabetyp geändert
+    public List<Actor> getActorsByRole(String role) {
         try {
             String resultJson = fabricClient.evaluateGenericTransaction("queryActorsByRole", role);
 
             Type listType = new TypeToken<List<Actor>>() {}.getType();
             List<Actor> actors = fabricClient.getGson().fromJson(resultJson, listType);
 
-            // Anreicherung direkt im Domain-Objekt
             return actors.stream()
-                    .flatMap(actor -> this.getEnrichedActorById(actor.getActorId()).stream())
+                    .flatMap(actor -> {
+                        try {
+                            return this.getEnrichedActorById(actor.getActorId()).stream();
+                        } catch (Exception e) { // Exception muss hier gefangen werden, da flatMap keine Checked Exception zulässt
+                            logger.warn("Fehler beim Anreichern von Akteur '{}' für Rolle '{}'. Fehler: {}. Dieser Eintrag wird übersprungen.",
+                                    actor.getActorId(), role, e.getMessage());
+                            return Stream.empty();
+                        }
+                    })
                     .collect(Collectors.toList());
 
         } catch (Exception e) {
-            logger.error("Fehler beim Abrufen der Akteure für die Rolle '{}'", role, e);
+            logger.error("Fehler beim Abrufen der Akteure für die Rolle '{}': {}", role, e.getMessage(), e);
             return Collections.emptyList();
         }
     }
@@ -111,25 +121,31 @@ public class ActorService {
      * @param searchQuery Der Suchtext.
      * @return Eine Liste von passenden Hersteller-Domain-Objekten.
      */
-    public List<Actor> searchHerstellerByBezeichnung(String searchQuery) { // Rückgabetyp geändert
+    public List<Actor> searchHerstellerByBezeichnung(String searchQuery) {
         try {
             String resultJson = fabricClient.evaluateGenericTransaction("queryActorsByBezeichnung", searchQuery);
             Type listType = new TypeToken<List<Actor>>() {}.getType();
             List<Actor> actors = fabricClient.getGson().fromJson(resultJson, listType);
 
-            // Filtere die Liste im Java-Code, um nur Hersteller zu behalten und reicher sie an.
             return actors.stream()
                     .filter(actor -> "hersteller".equalsIgnoreCase(actor.getRole()))
-                    .flatMap(actor -> this.getEnrichedActorById(actor.getActorId()).stream())
+                    .flatMap(actor -> {
+                        try {
+                            return this.getEnrichedActorById(actor.getActorId()).stream();
+                        } catch (Exception e) { // Exception muss hier gefangen werden
+                            logger.warn("Fehler beim Anreichern von Hersteller '{}' für Suche '{}'. Fehler: {}. Dieser Eintrag wird übersprungen.",
+                                    actor.getActorId(), searchQuery, e.getMessage());
+                            return Stream.empty();
+                        }
+                    })
                     .collect(Collectors.toList());
 
         } catch (Exception e) {
-            logger.error("Fehler bei der Suche nach Herstellern mit Query '{}'", searchQuery, e);
+            logger.error("Fehler bei der Suche nach Herstellern mit Query '{}': {}", searchQuery, e.getMessage(), e);
             return Collections.emptyList();
         }
     }
 
-    // Zusätzliche Getter für den Mapper, falls dieser nicht direkt injiziert werden kann (z.B. im AppDataInitializer)
     public ActorMapper getActorMapper() {
         return actorMapper;
     }
