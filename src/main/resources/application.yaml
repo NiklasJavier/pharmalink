@@ -52,6 +52,6 @@ fabric:
   chaincode-name: pharmalink_chaincode_main
 ipfs:
   email: ipfs@example.com
-  ipfs-link: 12
+  ipfs-link: null
   host: localhost
   port: 5001

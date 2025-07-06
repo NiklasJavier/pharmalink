@@ -14,14 +14,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.lang.reflect.Type; // NEU: Import für Type
+import java.lang.reflect.Type;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
 /**
  * Client für die Interaktion mit dem InterPlanetary File System (IPFS).
  * Verantwortlich für das Hinzufügen von Daten zu IPFS und das Abrufen von Daten über Hashes.
- * Implementiert nun auch einen Datenbank-Cache.
+ * Implementiert nun auch einen Datenbank-Cache und Validierung von Hashes.
  */
 @Component
 public class IpfsClient {
@@ -32,13 +32,6 @@ public class IpfsClient {
     private final ObjectMapper objectMapper;
     private final IpfsCacheRepository ipfsCacheRepository;
 
-    /**
-     * Konstruktor zur Initialisierung des IPFS-Clients.
-     *
-     * @param ipfsConfig Die Konfiguration für den IPFS-Daemon.
-     * @param objectMapper Der Jackson ObjectMapper für JSON-Serialisierung/Deserialisierung.
-     * @param ipfsCacheRepository Das Repository für den IPFS-Datenbank-Cache.
-     */
     @Autowired
     public IpfsClient(IpfsConfig ipfsConfig, ObjectMapper objectMapper, IpfsCacheRepository ipfsCacheRepository) {
         this.ipfs = new IPFS(ipfsConfig.getIpfsHost(), ipfsConfig.getIpfsPort());
@@ -77,13 +70,14 @@ public class IpfsClient {
      * Sucht zuerst im lokalen Datenbank-Cache.
      *
      * @param ipfsHash Der IPFS-Hash des abzurufenden Objekts.
-     * @return Der Inhalt des Objekts als String, oder null, wenn nicht gefunden.
+     * @return Der Inhalt des Objekts als String, oder null, wenn nicht gefunden oder Hash ungültig.
      * @throws IOException Wenn ein Fehler beim Abrufen von IPFS auftritt.
      */
     public String getObject(String ipfsHash) throws IOException {
-        if (ipfsHash == null || ipfsHash.isBlank()) {
-            logger.warn("Attempted to get IPFS object with null or blank hash.");
-            return null;
+        // NEU: Vorabprüfung des IPFS-Hash-Formats
+        if (!isValidIpfsHashFormat(ipfsHash)) {
+            logger.warn("Attempted to get IPFS object with invalid hash format: '{}'. Skipping retrieval.", ipfsHash);
+            return null; // Ungültiges Format, nicht weitersuchen
         }
 
         Optional<IpfsCacheEntry> cachedEntry = ipfsCacheRepository.findByIpfsHash(ipfsHash);
@@ -119,24 +113,42 @@ public class IpfsClient {
 
     /**
      * Ruft den Inhalt eines Objekts von IPFS ab und deserialisiert es in den angegebenen Typ.
-     * Nutzt intern getObject(String ipfsHash) mit Cache-Logik.
+     * Nutzt intern getObject(String ipfsHash) mit Cache-Logik und Hash-Validierung.
      *
      * @param ipfsHash Der IPFS-Hash des abzurufenden Objekts.
-     * @param valueType Das Type-Objekt, das den Typ darstellt, in den der Inhalt deserialisiert werden soll (z.B. TypeToken<Map<String, Object>>().getType()).
+     * @param valueType Das Type-Objekt, das den Typ darstellt, in den der Inhalt deserialisiert werden soll.
      * @param <T> Der generische Typ des Objekts.
      * @return Das deserialisierte Objekt, oder null, wenn der Inhalt nicht gefunden oder deserialisiert werden konnte.
      * @throws IOException Wenn ein Fehler beim Abrufen oder Deserialisieren auftritt.
      */
-    public <T> T getObject(String ipfsHash, Type valueType) throws IOException { // NEU: Signatur geändert von Class<T> zu Type
-        String jsonContent = getObject(ipfsHash);
+    public <T> T getObject(String ipfsHash, Type valueType) throws IOException {
+        String jsonContent = getObject(ipfsHash); // Nutzt die Caching-Logik und Hash-Validierung
         if (jsonContent != null) {
             try {
-                return objectMapper.readValue(jsonContent, objectMapper.getTypeFactory().constructType(valueType)); // NEU: Anpassung für Type
+                return objectMapper.readValue(jsonContent, objectMapper.getTypeFactory().constructType(valueType));
             } catch (IOException e) {
                 logger.error("Error deserializing IPFS content for hash {} to type {}: {}", ipfsHash, valueType.getTypeName(), e.getMessage());
                 throw e;
             }
         }
         return null;
+    }
+
+    /**
+     * Überprüft, ob der gegebene String ein grundlegend gültiges IPFS-Hash-Format hat.
+     * Dies ist eine heuristische Prüfung und ersetzt keine vollständige CID-Validierung.
+     *
+     * @param ipfsHash Der zu prüfende IPFS-Hash.
+     * @return true, wenn der Hash ein gültiges Format zu haben scheint, false sonst.
+     */
+    private boolean isValidIpfsHashFormat(String ipfsHash) {
+        if (ipfsHash == null || ipfsHash.isBlank()) {
+            return false;
+        }
+        String trimmedHash = ipfsHash.trim();
+        // Grundlegende Prüfung für CIDv0 (Qm...) und CIDv1 (b...)
+        // CIDv0 Hashes sind 46 Zeichen lang, CIDv1 können länger sein und beginnen mit 'b'.
+        // Diese Prüfung ist eine Heuristik, keine vollständige CID-Validierung (die Multihash übernimmt).
+        return (trimmedHash.startsWith("Qm") && trimmedHash.length() == 46) || (trimmedHash.startsWith("b") && trimmedHash.length() > 30);
     }
 }

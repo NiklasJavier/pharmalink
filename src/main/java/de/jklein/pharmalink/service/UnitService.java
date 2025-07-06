@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -36,7 +37,6 @@ public class UnitService {
 
     /**
      * Ruft eine einzelne Unit anhand ihrer ID ab und reichert sie mit Daten aus IPFS an.
-     * Gibt ein Optional des angereicherten Domain-Objekts zurück.
      * @param unitId Die ID der abzurufenden Unit.
      * @return Ein Optional, das das angereicherte Unit-Domain-Objekt enthält.
      */
@@ -55,10 +55,8 @@ public class UnitService {
                         originalIpfsLink, cleanHash, unitId);
 
                 try {
-                    // NEU: Direkte Verwendung von ipfsClient.getObject mit Type-Parameter
-                    // Dies nutzt intern den Datenbank-Cache und die Deserialisierungslogik
-                    Type dataType = new TypeToken<Map<String, Object>>() {}.getType(); // TypeToken außerhalb der Lambda
-                    Map<String, Object> ipfsData = ipfsClient.getObject(cleanHash, dataType);
+                    Type dataType = new TypeToken<Map<String, Object>>() {}.getType();
+                    Map<String, Object> ipfsData = ipfsClient.getObject(cleanHash, dataType); // Hier wird die Validierung jetzt im IpfsClient durchgeführt
 
                     if (ipfsData != null) {
                         unit.setIpfsData(ipfsData);
@@ -66,14 +64,14 @@ public class UnitService {
                     } else {
                         logger.warn("IPFS content for CID '{}' was null after fetching for unit '{}'.", cleanHash, unitId);
                     }
-                } catch (IOException e) { // IOException fangen, da getObject sie werfen kann
-                    logger.error("Fehler beim Abrufen oder Deserialisieren von IPFS-Inhalt für CID '{}': {}", cleanHash, e.getMessage(), e);
-                    // Den Fehler loggen, aber die Unit-Anreicherung fortsetzen
+                } catch (IOException e) { // Hier nur noch die IOException fangen (IllegalArgumentException wird jetzt im IpfsClient behandelt und dort schon geloggt)
+                    logger.warn("Fehler beim Abrufen oder Deserialisieren von IPFS-Inhalt für CID '{}': {}. Überspringe Anreicherung.", cleanHash, e.getMessage());
+                    // Den Fehler loggen, aber die Unit-Anreicherung fortsetzen, ohne IPFS-Daten anzuhängen
                 }
             }
 
             return Optional.of(unit);
-        } catch (Exception e) { // Hier bleibt Exception, um Fabric-Fehler und andere abzufangen
+        } catch (Exception e) {
             logger.error("Fehler beim Abrufen der Unit mit ID '{}': {}", unitId, e.getMessage(), e);
             return Optional.empty();
         }
@@ -92,7 +90,6 @@ public class UnitService {
         if (requestDto.getIpfsData() != null && !requestDto.getIpfsData().isEmpty()) {
             logger.info("Processing 'ipfsData' for new units...");
             String ipfsJson = fabricClient.getGson().toJson(requestDto.getIpfsData());
-            // NEU: Verwende ipfsClient.addObject, das bereits Caching-Logik enthält
             ipfsHash = ipfsClient.addObject(ipfsJson);
             logger.info("Successfully created IPFS entry for new units. CID: {}", ipfsHash);
         }
@@ -129,7 +126,7 @@ public class UnitService {
                     .flatMap(unit -> {
                         try {
                             return this.getEnrichedUnitById(unit.getUnitId()).stream();
-                        } catch (Exception e) { // Exception muss hier gefangen werden
+                        } catch (Exception e) {
                             logger.warn("Fehler beim Anreichern von Unit '{}' für Medikament '{}'. Fehler: {}. Dieser Eintrag wird übersprungen.",
                                     unit.getUnitId(), medId, e.getMessage());
                             return Stream.empty();
@@ -201,7 +198,7 @@ public class UnitService {
                     .flatMap(unit -> {
                         try {
                             return this.getEnrichedUnitById(unit.getUnitId()).stream();
-                        } catch (Exception e) { // Exception muss hier gefangen werden
+                        } catch (Exception e) {
                             logger.warn("Fehler beim Anreichern von Unit '{}' für Eigentümer '{}'. Fehler: {}. Dieser Eintrag wird übersprungen.",
                                     unit.getUnitId(), ownerActorId, e.getMessage());
                             return Stream.empty();
