@@ -235,7 +235,7 @@ public class SystemStateService {
         logger.info("My units cache was refreshed with {} entries.", units.size());
     }
 
-    private void saveStateToDatabase() {
+    public void saveStateToDatabase() {
         SystemState state = new SystemState();
         state.setId(SYSTEM_STATE_ID);
         state.setCurrentActorId(currentActorId.get());
