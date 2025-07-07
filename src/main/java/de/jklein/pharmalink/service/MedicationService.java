@@ -2,14 +2,10 @@ package de.jklein.pharmalink.service;
 
 import com.google.gson.reflect.TypeToken;
 import de.jklein.pharmalink.api.dto.CreateMedikamentRequestDto;
-import de.jklein.pharmalink.api.dto.MedikamentResponseDto; // Beibehalten, falls für andere Controller oder spezifische DTO-Nutzung benötigt
-import de.jklein.pharmalink.api.dto.UnitResponseDto; // Hinzugefügt für createUnitsForMedication
 import de.jklein.pharmalink.api.mapper.MedikamentMapper;
-import de.jklein.pharmalink.api.mapper.UnitMapper; // Hinzugefügt für createUnitsForMedication
 import de.jklein.pharmalink.client.fabric.FabricClient;
 import de.jklein.pharmalink.client.ipfs.IpfsClient;
 import de.jklein.pharmalink.domain.Medikament;
-import de.jklein.pharmalink.domain.Unit; // Hinzugefügt für createUnitsForMedication
 
 import org.hyperledger.fabric.client.GatewayException;
 import org.slf4j.Logger;
@@ -32,14 +28,12 @@ public class MedicationService {
     private final FabricClient fabricClient;
     private final IpfsClient ipfsClient;
     private final MedikamentMapper medikamentMapper;
-    private final UnitMapper unitMapper; // Hinzugefügt
 
     @Autowired
-    public MedicationService(FabricClient fabricClient, IpfsClient ipfsClient, MedikamentMapper medikamentMapper, UnitMapper unitMapper) {
+    public MedicationService(FabricClient fabricClient, IpfsClient ipfsClient, MedikamentMapper medikamentMapper) {
         this.fabricClient = fabricClient;
         this.ipfsClient = ipfsClient;
         this.medikamentMapper = medikamentMapper;
-        this.unitMapper = unitMapper; // Initialisiert
     }
 
     public Medikament createMedikament(CreateMedikamentRequestDto requestDto) throws Exception {
@@ -126,35 +120,6 @@ public class MedicationService {
         }
     }
 
-    /**
-     * NEUE METHODE: Erstellt Units und gibt eine Liste der entsprechenden DTOs zurück.
-     *
-     * @param medId             Die ID des Medikaments.
-     * @param chargeBezeichnung Die Bezeichnung der Charge.
-     * @param anzahl            Die Anzahl der zu erstellenden Units.
-     * @param ipfsLink          Ein optionaler Link zu IPFS.
-     * @return Eine Liste der erstellten Units als DTOs.
-     * @throws Exception Wirft eine Exception bei Fehlern während der Transaktion.
-     */
-    public List<UnitResponseDto> createUnitsForMedication(String medId, String chargeBezeichnung, int anzahl, String ipfsLink) throws Exception {
-        String resultJson = fabricClient.submitGenericTransaction(
-                "createUnits",
-                medId,
-                chargeBezeichnung,
-                String.valueOf(anzahl), // Chaincode-Argumente sind typischerweise Strings
-                ipfsLink != null ? ipfsLink : "" // Sicherstellen, dass kein null übergeben wird
-        );
-
-        if (resultJson == null || resultJson.isEmpty() || resultJson.equals("[]")) {
-            return Collections.emptyList();
-        }
-
-        Type listType = new TypeToken<List<Unit>>() {}.getType();
-        List<Unit> createdUnits = fabricClient.getGson().fromJson(resultJson, listType);
-
-        return unitMapper.toDtoList(createdUnits);
-    }
-
     public Medikament approveMedication(String medId, String newStatus) throws Exception {
         String resultJson = fabricClient.submitGenericTransaction(
                 "approveMedikament",
@@ -190,8 +155,6 @@ public class MedicationService {
     public List<Medikament> getAllMedikamente() {
         try {
             // Annahme: "queryAllMedikamente" existiert im Chaincode und gibt alle Medikamente zurück.
-            // Falls nicht, könnte hier "queryMedikamenteByBezeichnung", "" als Workaround verwendet werden,
-            // wenn der Chaincode dies unterstützt.
             String resultJson = fabricClient.evaluateGenericTransaction("queryAllMedikamente");
             Type listType = new TypeToken<List<Medikament>>() {}.getType();
             List<Medikament> medikamente = fabricClient.getGson().fromJson(resultJson, listType);
