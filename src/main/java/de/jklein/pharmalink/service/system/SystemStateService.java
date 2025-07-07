@@ -1,5 +1,6 @@
 package de.jklein.pharmalink.service.system;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.jklein.pharmalink.client.fabric.FabricClient;
@@ -327,5 +328,33 @@ public class SystemStateService {
 
     public List<Unit> getMyUnits() {
         return Collections.unmodifiableList(myUnits);
+    }
+
+    /**
+     * Gibt alle Akteure im SystemState als JSON-String zurück.
+     * @return JSON-String der Akteure.
+     * @throws JsonProcessingException wenn die Serialisierung fehlschlägt.
+     */
+    public String getAllActorsAsJsonString() throws JsonProcessingException {
+        return objectMapper.writeValueAsString(this.allActors);
+    }
+
+    /**
+     * Gibt alle Medikamente im SystemState als JSON-String zurück.
+     *
+     * @return JSON-String der Medikamente.
+     * @throws JsonProcessingException wenn die Serialisierung fehlschlägt.
+     */
+    public String getAllMedikamenteAsJsonString() throws JsonProcessingException {
+        return objectMapper.writeValueAsString(this.allMedikamente);
+    }
+
+    /**
+     * Gibt alle Units des aktuellen Benutzers im SystemState als JSON-String zurück.
+     * @return JSON-String der Units.
+     * @throws JsonProcessingException wenn die Serialisierung fehlschlägt.
+     */
+    public String getMyUnitsAsJsonString() throws JsonProcessingException {
+        return objectMapper.writeValueAsString(this.myUnits);
     }
 }

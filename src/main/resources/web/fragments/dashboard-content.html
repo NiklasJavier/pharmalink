@@ -62,7 +62,13 @@
             </div>
         </div>
     </div>
-
+    <div class="my-4" th:if="${kpiDataJson}">
+        <div th:replace="~{fragments/dynamic-kpis :: dynamicKPIs(
+        kpiTitle='Statistiken',
+        kpiJsonString=${kpiDataJson},
+        idPrefix='dashboard-kpis'
+    )}"></div>
+    </div>
     <div th:if="${currentActorInfo}" th:switch="${currentActorInfo.getRole()}">
         <th:block th:case="'hersteller'">
             <div th:replace="~{fragments/details/hersteller :: herstellerDetails}"></div>

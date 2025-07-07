@@ -1,0 +1,47 @@
+/* Styling für das KPI-Fragment */
+
+.dynamic-kpi-fragment-container .card-body {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+}
+
+/* * Das Grid-Layout sorgt für eine responsive Anordnung der Karten.
+ * - `repeat(auto-fit, ...)`: Erstellt so viele Spalten, wie in den Container passen.
+ * - `minmax(150px, 1fr)`: Jede Spalte ist mindestens 150px breit und teilt sich den
+ * verfügbaren Platz (1fr) mit den anderen.
+ */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem; /* Abstand zwischen den Karten */
+    width: 100%;
+}
+
+.kpi-card {
+    background-color: #f8f9fa; /* Heller Hintergrund */
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    padding: 1.25rem 1rem;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.kpi-card:hover {
+    transform: translateY(-5px); /* Leichter Schwebe-Effekt */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.kpi-value {
+    font-size: 2.5rem; /* Große Schrift für die Zahl */
+    font-weight: 700;
+    color: #1B1B1B; /* Blau, passend zu Bootstrap Primary */
+    line-height: 1.2;
+}
+
+.kpi-key {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #6c757d; /* Grauer Text für die Beschreibung */
+    margin-top: 0.25rem;
+}
