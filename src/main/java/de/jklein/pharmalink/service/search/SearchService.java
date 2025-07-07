@@ -3,7 +3,7 @@ package de.jklein.pharmalink.service.search;
 import de.jklein.pharmalink.domain.Actor;
 import de.jklein.pharmalink.domain.Medikament;
 import de.jklein.pharmalink.domain.Unit;
-import de.jklein.pharmalink.service.system.SystemStateService;
+import de.jklein.pharmalink.service.state.SystemStateService;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;

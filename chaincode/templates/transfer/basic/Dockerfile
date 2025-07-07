@@ -18,7 +18,7 @@ ENV TINI_VERSION v0.19.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 RUN chmod +x /tini
 
-RUN addgroup --system javauser && useradd -g javauser javauser
+RUN addgroup --state javauser && useradd -g javauser javauser
 
 # copy only the artifacts we need from the first stage and discard the rest
 COPY --chown=javauser:javauser --from=GRADLE_BUILD /home/gradle/build/libs/chaincode.jar /chaincode.jar

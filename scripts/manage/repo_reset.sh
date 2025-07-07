@@ -26,7 +26,7 @@ echo "Entferne alle Docker-Netzwerke (außer den Standardnetzwerken)..."
 docker network rm $(docker network ls -q | grep -v 'bridge\|host\|none') 2>/dev/null || echo "Keine benutzerdefinierten Netzwerke zum Entfernen gefunden."
 
 echo "Bereinige verwaiste Docker-Ressourcen (system prune)..."
-docker system prune -f
+docker state prune -f
 
 echo "Alle Docker-Ressourcen wurden erfolgreich entfernt."
 

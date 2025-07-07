@@ -2,11 +2,10 @@ package de.jklein.pharmalink.api.controller;
 
 import de.jklein.pharmalink.api.dto.SystemStateDto;
 import de.jklein.pharmalink.api.dto.SystemStatsDto;
-import de.jklein.pharmalink.service.system.SystemStateService;
+import de.jklein.pharmalink.service.state.SystemStateService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.Map; // NEU: Import hinzufügen
@@ -25,7 +24,7 @@ public class SystemController {
      * **NEUER ENDPUNKT**: Gibt die ID des aktuell im System registrierten Akteurs zurück.
      */
     @GetMapping("/current-actor-id")
-    @Operation(summary = "Get Current Actor ID", description = "Retrieves the ID of the actor currently registered in the system state.")
+    @Operation(summary = "Get Current Actor ID", description = "Retrieves the ID of the actor currently registered in the state state.")
     public ResponseEntity<Map<String, String>> getCurrentActorId() {
         String actorId = systemStateService.getCurrentActorId().get();
         if (actorId == null || actorId.isEmpty()) {

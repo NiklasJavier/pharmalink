@@ -7,7 +7,7 @@ import de.jklein.pharmalink.api.mapper.MedikamentMapper;
 import de.jklein.pharmalink.domain.Medikament;
 import de.jklein.pharmalink.service.fabric.ActorFabricService;
 import de.jklein.pharmalink.service.fabric.MedicationFabricService;
-import de.jklein.pharmalink.service.system.SystemStateService;
+import de.jklein.pharmalink.service.state.SystemStateService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

@@ -7,18 +7,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-// import org.springframework.web.filter.ContentCachingFilter; // ENTFERNT: Nicht mehr benötigt
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
     private final ApiTransactionInterceptor apiTransactionInterceptor;
-    private final RequestCachingFilter requestCachingFilter; // NEU: Ihr benutzerdefinierter Filter
-
     @Autowired
     public WebConfig(ApiTransactionInterceptor apiTransactionInterceptor, RequestCachingFilter requestCachingFilter) { // NEU: Filter im Konstruktor hinzufügen
         this.apiTransactionInterceptor = apiTransactionInterceptor;
-        this.requestCachingFilter = requestCachingFilter; // NEU: Zuweisung
     }
 
     @Override

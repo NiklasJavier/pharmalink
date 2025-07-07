@@ -6,7 +6,7 @@ import de.jklein.pharmalink.api.dto.UpdateMedicationStatusRequestDto;
 import de.jklein.pharmalink.api.mapper.MedikamentMapper;
 import de.jklein.pharmalink.domain.Medikament;
 import de.jklein.pharmalink.service.fabric.MedicationFabricService;
-import de.jklein.pharmalink.service.system.SystemStateService;
+import de.jklein.pharmalink.service.state.SystemStateService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

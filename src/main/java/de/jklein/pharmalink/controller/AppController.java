@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import de.jklein.pharmalink.domain.Actor;
 import de.jklein.pharmalink.service.audit.AuditService;
 import de.jklein.pharmalink.service.search.SearchService;
-import de.jklein.pharmalink.service.system.SystemStateService;
+import de.jklein.pharmalink.service.state.SystemStateService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
