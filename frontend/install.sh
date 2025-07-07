@@ -60,19 +60,12 @@ cat << EOF > docker.env
 # Environment variables reference: docs.retool.com/docs/environment-variables
 DEPLOYMENT_TEMPLATE_TYPE=docker-compose
 
-# Retool's internal Postgres credentials
-POSTGRES_HOST=postgres
-POSTGRES_DB=hammerhead_production
-POSTGRES_PORT=5432
-POSTGRES_USER=retool_internal_user
-POSTGRES_PASSWORD=$(random 64)
-
 # Retool DB credentials
-RETOOLDB_POSTGRES_HOST=retooldb-postgres
-RETOOLDB_POSTGRES_DB=postgres
+RETOOLDB_POSTGRES_HOST=app-postgres
+RETOOLDB_POSTGRES_DB=frontend
 RETOOLDB_POSTGRES_PORT=5432
-RETOOLDB_POSTGRES_USER=root
-RETOOLDB_POSTGRES_PASSWORD=$(random 64)
+RETOOLDB_POSTGRES_USER=user
+RETOOLDB_POSTGRES_PASSWORD=user
 
 # Workflows configuration
 WORKFLOW_BACKEND_HOST=http://workflows-backend:3000
@@ -104,8 +97,6 @@ BASE_DOMAIN=https://$hostname
 EOF
 
 echo "✅ Created docker.env"
-
-# Pull Retool DB config from docker.env if retooldb.env doesn't exist 
 
 [[ -f retooldb.env ]] || grep RETOOLDB docker.env | cut -c 10- > retooldb.env && echo "✅ Created retooldb.env"
 

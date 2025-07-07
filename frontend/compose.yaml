@@ -5,7 +5,7 @@ include:
 services:
   api:
     build:
-      context: ../../../../../pharmalink/fabric-samples/retool-onpremise-master 2
+      context: .
     env_file: docker.env
     environment:
       - SERVICE_TYPE=MAIN_BACKEND,DB_CONNECTOR,DB_SSH_CONNECTOR
@@ -14,6 +14,7 @@ services:
     networks:
       - frontend
       - backend
+      - pharmalink-net
       - code-executor
     depends_on:
       - postgres
@@ -21,25 +22,27 @@ services:
 
   jobs-runner:
     build:
-      context: ../../../../../pharmalink/fabric-samples/retool-onpremise-master 2
+      context: .
     env_file: docker.env
     environment:
       - SERVICE_TYPE=JOBS_RUNNER
     networks:
       - backend
+      - pharmalink-net
     depends_on:
       - postgres
     restart: always
 
   workflows-worker:
     build:
-      context: ../../../../../pharmalink/fabric-samples/retool-onpremise-master 2
+      context: .
     env_file: docker.env
     environment:
       - SERVICE_TYPE=WORKFLOW_TEMPORAL_WORKER
       - NODE_OPTIONS=--max_old_space_size=1024
     networks:
       - backend
+      - pharmalink-net
       - code-executor
     depends_on:
       - postgres
@@ -47,12 +50,13 @@ services:
 
   workflows-backend:
     build:
-      context: ../../../../../pharmalink/fabric-samples/retool-onpremise-master 2
+      context: .
     env_file: docker.env
     environment:
       - SERVICE_TYPE=WORKFLOW_BACKEND,DB_CONNECTOR,DB_SSH_CONNECTOR
     networks:
       - backend
+      - pharmalink-net
       - code-executor
     depends_on:
       - postgres
@@ -60,37 +64,25 @@ services:
 
   code-executor:
     build:
-      context: ../../../../../pharmalink/fabric-samples/retool-onpremise-master 2
+      context: .
       target: code-executor
     environment:
       - NODE_OPTIONS=--max_old_space_size=1024
     networks:
       - code-executor
-    # Privileged is required to sandbox user code execution and to use custom libraries
-    # Set to false if your deployment method does not allow this
     privileged: true
     restart: always
 
-  # Retool's internal DB, we recommend using an externally hosted database: https://docs.retool.com/docs/configuring-retools-storage-database
   postgres:
     image: postgres:16.8
     env_file: docker.env
     networks:
       - backend
+      - pharmalink-net
     volumes:
       - data:/var/lib/postgresql/data
     restart: always
-  
-  retooldb-postgres:
-    image: postgres:16.8
-    env_file: retooldb.env
-    networks:
-      - backend
-    volumes:
-      - retooldb-data:/var/lib/postgresql/data
-    restart: always
 
-  # Optional Nginx container for handling TLS for your domain (requires setting DOMAINS and STAGE)
   https-portal:
     image: tryretool/https-portal:latest
     env_file: docker.env
@@ -113,6 +105,8 @@ networks:
   frontend:
   backend:
   code-executor:
+  pharmalink-net:
+    driver: bridge
 
 volumes:
   data:
