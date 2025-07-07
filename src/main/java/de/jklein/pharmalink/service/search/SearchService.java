@@ -1,17 +1,16 @@
-package de.jklein.pharmalink.service;
+package de.jklein.pharmalink.service.search;
 
 import de.jklein.pharmalink.domain.Actor;
 import de.jklein.pharmalink.domain.Medikament;
 import de.jklein.pharmalink.domain.Unit;
 import de.jklein.pharmalink.service.system.SystemStateService;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils; // Import hinzugefügt
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -25,31 +24,39 @@ public class SearchService {
     }
 
     /**
-     * **ERWEITERT**: Durchsucht Medikamente nach Bezeichnung, Hersteller, Status und Tags.
-     * Alle Parameter sind optional.
+     * Searches medications based on a combination of optional filters.
      *
-     * @param query  Der Suchbegriff für Medikamenten- oder Herstellerbezeichnung.
-     * @param status Der exakte Status des Medikaments (z.B. "angelegt").
-     * @param tags   Eine Liste von Tags; das Medikament muss mindestens einen davon enthalten.
-     * @return Eine gefilterte Liste von Medikamenten.
+     * @param query     The search term for medication or manufacturer name.
+     * @param status    The exact status of the medication (e.g., "angelegt").
+     * @param tags      A list of tags; the medication must contain at least one.
+     * @param ownedByMe If true, returns only medications owned by the current actor.
+     * @return A filtered list of medications.
      */
-    public List<Medikament> searchMedikamente(String query, String status, List<String> tags) {
+    public List<Medikament> searchMedikamente(String query, String status, List<String> tags, boolean ownedByMe) {
+        // Start with a stream of all medications from the cache.
         Stream<Medikament> medikamentenStream = systemStateService.getAllMedikamente().stream();
 
-        // --- Filter 1: Nach Status ---
+        // --- Filter 1: By owner (manufacturer) ---
+        if (ownedByMe) {
+            String currentActorId = systemStateService.getCurrentActorId().get();
+            if (StringUtils.hasText(currentActorId)) {
+                medikamentenStream = medikamentenStream.filter(m -> currentActorId.equals(m.getHerstellerId()));
+            } else {
+                return List.of(); // No actor set, so they can't own anything.
+            }
+        }
+
+        // --- Filter 2: By status ---
         if (StringUtils.hasText(status)) {
             medikamentenStream = medikamentenStream.filter(m -> status.equalsIgnoreCase(m.getStatus()));
         }
 
-        // --- Filter 2: Nach Tags ---
-        // Prüft, ob einer der Such-Tags im Key oder Value der Medikamenten-Tags vorkommt.
+        // --- Filter 3: By tags ---
         if (!CollectionUtils.isEmpty(tags)) {
             medikamentenStream = medikamentenStream.filter(medikament -> {
                 if (medikament.getTags() == null || medikament.getTags().isEmpty()) {
                     return false;
                 }
-                // Ein Medikament passt, wenn irgendeiner seiner Tags (key oder value)
-                // einen der übergebenen Such-Tags enthält (case-insensitive).
                 return tags.stream().anyMatch(searchTag ->
                         medikament.getTags().entrySet().stream()
                                 .anyMatch(entry ->
@@ -60,27 +67,30 @@ public class SearchService {
             });
         }
 
-        // --- Filter 3: Nach Freitext-Query (Bezeichnung oder Hersteller) ---
+        // --- Filter 4: By free-text query (medication name OR manufacturer name) ---
         if (StringUtils.hasText(query)) {
             final String lowercaseQuery = query.toLowerCase(Locale.ROOT);
-            List<Actor> allActors = systemStateService.getAllActors();
 
-            Set<String> matchingHerstellerIds = allActors.stream()
+            // Create a map of manufacturer IDs to their lowercase names for efficient lookup.
+            Map<String, String> manufacturerNames = systemStateService.getAllActors().stream()
                     .filter(actor -> "hersteller".equalsIgnoreCase(actor.getRole()))
-                    .filter(actor -> actor.getBezeichnung().toLowerCase(Locale.ROOT).contains(lowercaseQuery))
-                    .map(Actor::getActorId)
-                    .collect(Collectors.toSet());
+                    .collect(Collectors.toMap(
+                            Actor::getActorId,
+                            actor -> actor.getBezeichnung().toLowerCase(Locale.ROOT)
+                    ));
 
             medikamentenStream = medikamentenStream.filter(medikament ->
+                    // Condition A: Medication name matches the query.
                     medikament.getBezeichnung().toLowerCase(Locale.ROOT).contains(lowercaseQuery) ||
-                            matchingHerstellerIds.contains(medikament.getHerstellerId())
+                            // Condition B: The medication's manufacturer name matches the query.
+                            manufacturerNames.getOrDefault(medikament.getHerstellerId(), "").contains(lowercaseQuery)
             );
         }
 
         return medikamentenStream.collect(Collectors.toList());
     }
 
-    // --- Bestehende Methoden (searchActors, searchUnitsByCharge) bleiben unverändert ---
+    // --- searchActors and searchUnitsByCharge remain unchanged ---
 
     public List<Actor> searchActors(String role, String bezeichnungQuery) {
         Stream<Actor> actorStream = systemStateService.getAllActors().stream();

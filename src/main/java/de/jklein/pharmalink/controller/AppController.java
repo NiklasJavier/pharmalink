@@ -4,9 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.jklein.pharmalink.domain.Actor;
 import de.jklein.pharmalink.domain.Medikament;
 import de.jklein.pharmalink.domain.Unit;
-import de.jklein.pharmalink.service.ActorService;
-import de.jklein.pharmalink.service.MedicationService;
-import de.jklein.pharmalink.service.UnitService;
+import de.jklein.pharmalink.service.fabric.ActorFabricService;
+import de.jklein.pharmalink.service.fabric.MedicationFabricService;
+import de.jklein.pharmalink.service.fabric.UnitFabricService;
 import de.jklein.pharmalink.service.audit.AuditService;
 import de.jklein.pharmalink.service.system.SystemStateService;
 import org.slf4j.Logger;
@@ -33,18 +33,18 @@ public class AppController {
     private static final Logger logger = LoggerFactory.getLogger(AppController.class);
 
     private final SystemStateService systemStateService;
-    private final ActorService actorService;
-    private final MedicationService medicationService;
-    private final UnitService unitService;
+    private final ActorFabricService actorFabricService;
+    private final MedicationFabricService medicationFabricService;
+    private final UnitFabricService unitFabricService;
     private final ObjectMapper objectMapper;
     private final AuditService auditService;
 
-    public AppController(SystemStateService systemStateService, ActorService actorService,
-                         MedicationService medicationService, UnitService unitService, ObjectMapper objectMapper, AuditService auditService) {
+    public AppController(SystemStateService systemStateService, ActorFabricService actorFabricService,
+                         MedicationFabricService medicationFabricService, UnitFabricService unitFabricService, ObjectMapper objectMapper, AuditService auditService) {
         this.systemStateService = systemStateService;
-        this.actorService = actorService;
-        this.medicationService = medicationService;
-        this.unitService = unitService;
+        this.actorFabricService = actorFabricService;
+        this.medicationFabricService = medicationFabricService;
+        this.unitFabricService = unitFabricService;
         this.objectMapper = objectMapper;
         this.auditService = auditService;
     }
@@ -72,7 +72,7 @@ public class AppController {
             return "redirect:/app/errors/unknown-actor";
         }
 
-        Optional<Actor> actorOpt = actorService.getEnrichedActorById(initialActorId);
+        Optional<Actor> actorOpt = actorFabricService.getEnrichedActorById(initialActorId);
 
         if (actorOpt.isEmpty()) {
             logger.warn("Actor with ID {} not found or enrichment failed. Redirecting to unknown-actor error page.", initialActorId);
@@ -105,7 +105,7 @@ public class AppController {
 
             switch (currentActor.getRole().toLowerCase()) {
                 case "hersteller":
-                    List<Medikament> herstellerMedikamente = medicationService.getMedikamenteByHerstellerId(initialActorId);
+                    List<Medikament> herstellerMedikamente = medicationFabricService.getMedikamenteByHerstellerId(initialActorId);
                     List<String> medikamenteAsJsonList = herstellerMedikamente.stream()
                             .map(med -> {
                                 try {

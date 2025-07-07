@@ -1,11 +1,11 @@
-package de.jklein.pharmalink.api.controller;
+package de.jklein.pharmalink.api.controller.fabric;
 
 import de.jklein.pharmalink.api.dto.CreateMedikamentRequestDto;
 import de.jklein.pharmalink.api.dto.MedikamentResponseDto;
 import de.jklein.pharmalink.api.dto.UpdateMedicationStatusRequestDto;
 import de.jklein.pharmalink.api.mapper.MedikamentMapper;
 import de.jklein.pharmalink.domain.Medikament;
-import de.jklein.pharmalink.service.MedicationService;
+import de.jklein.pharmalink.service.fabric.MedicationFabricService;
 import de.jklein.pharmalink.service.system.SystemStateService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * REST-Controller für die Verwaltung von Medikamenten und deren Einheiten.
@@ -28,22 +27,22 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/v1/medications")
-public class MedicationController {
+public class MedicationFabricController {
 
-    private final MedicationService medicationService;
+    private final MedicationFabricService medicationFabricService;
     private final SystemStateService systemStateService;
     private final MedikamentMapper medikamentMapper;
 
     /**
      * Konstruktor zur Injektion der Services und Mapper durch Spring.
      *
-     * @param medicationService Der Service, der die Geschäftslogik kapselt.
+     * @param medicationFabricService Der Service, der die Geschäftslogik kapselt.
      * @param systemStateService Der Service für den Systemzustand.
      * @param medikamentMapper Der Mapper für Medikamente.
      */
     @Autowired
-    public MedicationController(SystemStateService systemStateService, MedicationService medicationService, MedikamentMapper medikamentMapper) {
-        this.medicationService = medicationService;
+    public MedicationFabricController(SystemStateService systemStateService, MedicationFabricService medicationFabricService, MedikamentMapper medikamentMapper) {
+        this.medicationFabricService = medicationFabricService;
         this.systemStateService = systemStateService;
         this.medikamentMapper = medikamentMapper;
     }
@@ -62,7 +61,7 @@ public class MedicationController {
                                                final Principal principal) {
 
         try {
-            Medikament createdMedikament = medicationService.createMedikament(request);
+            Medikament createdMedikament = medicationFabricService.createMedikament(request);
             MedikamentResponseDto createdMedikamentDto = medikamentMapper.toDto(createdMedikament);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdMedikamentDto);
         } catch (Exception e) {
@@ -82,7 +81,7 @@ public class MedicationController {
      */
     @GetMapping("/{medId}")
     public ResponseEntity<MedikamentResponseDto> getMedicationById(@PathVariable final String medId) {
-        return medicationService.getEnrichedMedikamentById(medId)
+        return medicationFabricService.getEnrichedMedikamentById(medId)
                 .map(medikamentMapper::toDto)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -103,7 +102,7 @@ public class MedicationController {
         }
 
         try {
-            List<Medikament> medikamente = medicationService.getMedikamenteByHerstellerId(herstellerId);
+            List<Medikament> medikamente = medicationFabricService.getMedikamenteByHerstellerId(herstellerId);
             List<MedikamentResponseDto> medikamentDtos = medikamentMapper.toDtoList(medikamente);
             return ResponseEntity.ok(medikamentDtos);
         } catch (Exception e) {
@@ -126,7 +125,7 @@ public class MedicationController {
                                                 @Valid @RequestBody final UpdateMedicationStatusRequestDto request) {
 
         try {
-            Medikament updatedMedikament = medicationService.approveMedication(medId, request.getNewStatus());
+            Medikament updatedMedikament = medicationFabricService.approveMedication(medId, request.getNewStatus());
             MedikamentResponseDto updatedMedikamentDto = medikamentMapper.toDto(updatedMedikament);
             return ResponseEntity.ok(updatedMedikamentDto);
         } catch (Exception e) {
@@ -144,7 +143,7 @@ public class MedicationController {
      */
     @GetMapping("/search")
     public ResponseEntity<List<MedikamentResponseDto>> searchMedications(@RequestParam(name = "search") final String searchQuery) {
-        List<Medikament> medikamente = medicationService.searchMedicationsByBezeichnung(searchQuery);
+        List<Medikament> medikamente = medicationFabricService.searchMedicationsByBezeichnung(searchQuery);
         List<MedikamentResponseDto> medikamentDtos = medikamentMapper.toDtoList(medikamente);
         return ResponseEntity.ok(medikamentDtos);
     }

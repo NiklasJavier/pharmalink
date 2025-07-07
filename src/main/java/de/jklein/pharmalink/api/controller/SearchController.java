@@ -6,7 +6,7 @@ import de.jklein.pharmalink.api.dto.UnitResponseDto;
 import de.jklein.pharmalink.api.mapper.ActorMapper;
 import de.jklein.pharmalink.api.mapper.MedikamentMapper;
 import de.jklein.pharmalink.api.mapper.UnitMapper;
-import de.jklein.pharmalink.service.SearchService;
+import de.jklein.pharmalink.service.search.SearchService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.http.ResponseEntity;
@@ -44,19 +44,21 @@ public class SearchController {
     }
 
     /**
-     * **ERWEITERTER ENDPUNKT**: Sucht Medikamente mit optionalen Filtern für Query, Status und Tags.
+     * **ADAPTED ENDPOINT**: Now accepts the optional 'ownedByMe' parameter.
      */
     @GetMapping("/medikamente")
-    @Operation(summary = "Search for medications", description = "Searches for medications with optional filters for name/manufacturer, status, and tags.")
+    @Operation(summary = "Search for medications", description = "Searches for medications with optional filters for name/manufacturer, status, tags, and ownership.")
     public ResponseEntity<List<MedikamentResponseDto>> searchMedikamente(
             @Parameter(description = "Search query for medication or manufacturer name.")
             @RequestParam(required = false) String query,
             @Parameter(description = "Filter by a specific medication status (e.g., 'angelegt', 'freigegeben').")
             @RequestParam(required = false) String status,
             @Parameter(description = "Filter by a list of tags. The medication must contain at least one tag.")
-            @RequestParam(required = false) List<String> tags) {
+            @RequestParam(required = false) List<String> tags,
+            @Parameter(description = "If true, returns only medications owned by the current actor.")
+            @RequestParam(required = false, defaultValue = "false") boolean ownedByMe) { // NEW Parameter
 
-        var foundMedikamente = searchService.searchMedikamente(query, status, tags);
+        var foundMedikamente = searchService.searchMedikamente(query, status, tags, ownedByMe); // Pass parameter
         return ResponseEntity.ok(medikamentMapper.toDtoList(foundMedikamente));
     }
 

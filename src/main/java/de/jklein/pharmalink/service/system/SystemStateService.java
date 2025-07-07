@@ -10,9 +10,9 @@ import de.jklein.pharmalink.domain.audit.ChaincodeEventLog;
 import de.jklein.pharmalink.domain.system.SystemState;
 import de.jklein.pharmalink.repository.audit.ChaincodeEventLogRepository;
 import de.jklein.pharmalink.repository.system.SystemStateRepository;
-import de.jklein.pharmalink.service.ActorService;
-import de.jklein.pharmalink.service.MedicationService;
-import de.jklein.pharmalink.service.UnitService;
+import de.jklein.pharmalink.service.fabric.ActorFabricService;
+import de.jklein.pharmalink.service.fabric.MedicationFabricService;
+import de.jklein.pharmalink.service.fabric.UnitFabricService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.Getter;
@@ -40,19 +40,17 @@ public class SystemStateService {
     private static final String SYSTEM_STATE_ID = "pharmalink-system-state";
     private static final String GENERIC_EVENT_NAME = "PharmalinkDataEvent";
 
-    // --- Services and Repositories ---
     private final SystemStateRepository systemStateRepository;
     private final FabricClient fabricClient;
-    private final ActorService actorService;
-    private final MedicationService medicationService;
-    private final UnitService unitService;
+    private final ActorFabricService actorFabricService;
+    private final MedicationFabricService medicationFabricService;
+    private final UnitFabricService unitFabricService;
     private final ObjectMapper objectMapper;
     private final ChaincodeEventLogRepository eventLogRepository;
 
     @Value("${fabric.chaincode-name}")
     private String chaincodeName;
 
-    // --- In-Memory State Caches ---
     private final AtomicReference<String> currentActorId = new AtomicReference<>();
     private final List<Actor> allActors = Collections.synchronizedList(new ArrayList<>());
     private final List<Medikament> allMedikamente = Collections.synchronizedList(new ArrayList<>());
@@ -61,14 +59,14 @@ public class SystemStateService {
     private CloseableIterator<ChaincodeEvent> chaincodeEventIterator;
 
     public SystemStateService(SystemStateRepository systemStateRepository, FabricClient fabricClient,
-                              ActorService actorService, MedicationService medicationService,
-                              UnitService unitService, ObjectMapper objectMapper,
+                              ActorFabricService actorFabricService, MedicationFabricService medicationFabricService,
+                              UnitFabricService unitFabricService, ObjectMapper objectMapper,
                               ChaincodeEventLogRepository eventLogRepository) {
         this.systemStateRepository = systemStateRepository;
         this.fabricClient = fabricClient;
-        this.actorService = actorService;
-        this.medicationService = medicationService;
-        this.unitService = unitService;
+        this.actorFabricService = actorFabricService;
+        this.medicationFabricService = medicationFabricService;
+        this.unitFabricService = unitFabricService;
         this.objectMapper = objectMapper;
         this.eventLogRepository = eventLogRepository;
     }
@@ -104,11 +102,12 @@ public class SystemStateService {
         }
     }
 
+    /**
+     * **ADAPTED**: Handles events based on their operation type (CREATED, UPDATED, DELETED).
+     */
     private void handleChaincodeEvent(ChaincodeEvent event) {
-        // Log to DB for long-term audit
         logEventForAudit(event);
 
-        // Process the event to update the state cache
         if (!GENERIC_EVENT_NAME.equals(event.getEventName())) {
             logger.debug("Received unhandled or legacy chaincode event: {}", event.getEventName());
             return;
@@ -122,12 +121,21 @@ public class SystemStateService {
             JsonNode payload = objectMapper.readTree(event.getPayload());
             String entityType = payload.path("entityType").asText();
             String entityId = payload.path("entityId").asText();
+            // Assume "UPDATED" if operation is not specified, for backward compatibility
+            String operation = payload.path("operation").asText("UPDATED");
 
             if (entityId.isEmpty() || entityType.isEmpty()) {
                 logger.error("Event payload is missing 'entityId' or 'entityType'. Payload: {}", payload);
                 return;
             }
 
+            // Route to the correct handler based on the operation
+            if ("DELETED".equalsIgnoreCase(operation)) {
+                handleDeletion(entityType, entityId);
+                return;
+            }
+
+            // For CREATED or UPDATED, use the update handlers
             switch (entityType) {
                 case "Actor":
                     handleActorUpdate(entityId);
@@ -164,43 +172,87 @@ public class SystemStateService {
         }
     }
 
-    // --- Cache Update Handlers ---
+    /**
+     * **NEW**: Removes an entity from the corresponding in-memory cache upon a DELETED event.
+     */
+    private void handleDeletion(String entityType, String entityId) {
+        switch (entityType) {
+            case "Actor":
+                synchronized (allActors) {
+                    if (allActors.removeIf(a -> a.getActorId().equals(entityId))) {
+                        logger.info("Actor {} removed from cache due to DELETED event.", entityId);
+                    }
+                }
+                break;
+            case "Medikament":
+                synchronized (allMedikamente) {
+                    if (allMedikamente.removeIf(m -> m.getMedId().equals(entityId))) {
+                        logger.info("Medikament {} removed from cache due to DELETED event.", entityId);
+                    }
+                }
+                break;
+            case "Unit":
+                synchronized (myUnits) {
+                    if (myUnits.removeIf(u -> u.getUnitId().equals(entityId))) {
+                        logger.info("Unit {} removed from 'myUnits' cache due to DELETED event.", entityId);
+                    }
+                }
+                break;
+            default:
+                logger.warn("Received DELETED event for unhandled entityType: {}", entityType);
+                break;
+        }
+    }
 
     private void handleActorUpdate(String actorId) {
-        actorService.getEnrichedActorById(actorId).ifPresent(updatedActor -> {
+        actorFabricService.getEnrichedActorById(actorId).ifPresent(updatedActor -> {
             synchronized (allActors) {
                 allActors.removeIf(a -> a.getActorId().equals(actorId));
                 allActors.add(updatedActor);
+                logger.info("Actor {} CREATED/UPDATED in cache.", actorId);
             }
-            logger.info("Actor {} cache updated due to chaincode event.", actorId);
         });
     }
 
     private void handleMedikamentUpdate(String medId) {
-        medicationService.getEnrichedMedikamentById(medId).ifPresent(updatedMedikament -> {
+        medicationFabricService.getEnrichedMedikamentById(medId).ifPresent(updatedMedikament -> {
             synchronized (allMedikamente) {
                 allMedikamente.removeIf(m -> m.getMedId().equals(medId));
                 allMedikamente.add(updatedMedikament);
+                logger.info("Medikament {} CREATED/UPDATED in cache.", medId);
             }
-            logger.info("Medikament {} cache updated due to chaincode event.", medId);
         });
     }
 
+    /**
+     * **ADAPTED**: Correctly handles creation, updates, and transfers of units.
+     * If a unit is transferred away, it's removed from the local cache.
+     */
     private void handleUnitUpdate(String unitId) {
-        unitService.getEnrichedUnitById(unitId).ifPresent(updatedUnit -> {
+        // Fetch the latest state of the unit from the service
+        Optional<Unit> updatedUnitOptional = unitFabricService.getEnrichedUnitById(unitId);
+
+        if (updatedUnitOptional.isPresent()) {
+            Unit updatedUnit = updatedUnitOptional.get();
             synchronized (myUnits) {
+                // Always remove the old version first to handle updates correctly
                 myUnits.removeIf(u -> u.getUnitId().equals(unitId));
+
+                // Add the unit to our cache ONLY if we are the current owner
                 if (Objects.equals(updatedUnit.getOwnerId(), currentActorId.get())) {
                     myUnits.add(updatedUnit);
-                    logger.info("Unit {} (owned by current actor) updated in cache.", unitId);
+                    logger.info("Unit {} now owned by current actor. Added/Updated in 'myUnits' cache.", unitId);
                 } else {
-                    logger.info("Unit {} is not owned by current actor, removed from 'myUnits' cache.", unitId);
+                    // This handles the case where the unit was transferred to someone else
+                    logger.info("Unit {} is no longer owned by current actor. Removed from 'myUnits' cache.", unitId);
                 }
             }
-        });
+        } else {
+            // This case should be handled by the 'DELETED' event, but as a fallback,
+            // we ensure the unit is removed if it can't be fetched anymore.
+            handleDeletion("Unit", unitId);
+        }
     }
-
-    // --- State and Cache Management ---
 
     public void reconcileAndCacheActorId(String actorId) {
         if (!Objects.equals(currentActorId.get(), actorId)) {
@@ -264,8 +316,6 @@ public class SystemStateService {
         logger.warn("Initial data load from chaincode failed. Attempting to load SystemState from database as a fallback.");
         loadStateFromDatabase();
     }
-
-    // --- Public Getters ---
 
     public List<Actor> getAllActors() {
         return Collections.unmodifiableList(allActors);

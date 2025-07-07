@@ -1,4 +1,4 @@
-package de.jklein.pharmalink.api.controller;
+package de.jklein.pharmalink.api.controller.fabric;
 
 import de.jklein.pharmalink.api.dto.AddTemperatureReadingRequestDto;
 import de.jklein.pharmalink.api.dto.CreateUnitsRequestDto;
@@ -6,7 +6,7 @@ import de.jklein.pharmalink.api.dto.TransferUnitRequestDto;
 import de.jklein.pharmalink.api.dto.UnitResponseDto;
 import de.jklein.pharmalink.api.mapper.UnitMapper; // NEU: UnitMapper importieren
 import de.jklein.pharmalink.domain.Unit; // NEU: Unit Domain-Objekt importieren
-import de.jklein.pharmalink.service.UnitService;
+import de.jklein.pharmalink.service.fabric.UnitFabricService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -19,14 +19,14 @@ import java.util.stream.Collectors; // NEU: Collectors importieren
 
 @RestController
 @RequestMapping("/api/v1/units")
-public class UnitController {
+public class UnitFabricController {
 
-    private final UnitService unitService;
+    private final UnitFabricService unitFabricService;
     private final UnitMapper unitMapper; // NEU: UnitMapper injizieren
 
     @Autowired
-    public UnitController(UnitService unitService, UnitMapper unitMapper) { // NEU: Im Konstruktor hinzufügen
-        this.unitService = unitService;
+    public UnitFabricController(UnitFabricService unitFabricService, UnitMapper unitMapper) { // NEU: Im Konstruktor hinzufügen
+        this.unitFabricService = unitFabricService;
         this.unitMapper = unitMapper; // NEU: Injektion zuweisen
     }
 
@@ -41,7 +41,7 @@ public class UnitController {
     @GetMapping("/{unitId}")
     public ResponseEntity<UnitResponseDto> getUnitById(@PathVariable final String unitId) {
         // Service gibt Optional<Unit> zurück
-        return unitService.getEnrichedUnitById(unitId)
+        return unitFabricService.getEnrichedUnitById(unitId)
                 // Optional<Unit> zu Optional<UnitResponseDto> mappen, dann zu ResponseEntity
                 .map(unitMapper::toDto) // Konvertierung von Domain zu DTO
                 .map(ResponseEntity::ok)
@@ -63,7 +63,7 @@ public class UnitController {
 
         try {
             // Service gibt List<Unit> zurück
-            List<Unit> createdUnits = unitService.createUnitsForMedication(medId, request);
+            List<Unit> createdUnits = unitFabricService.createUnitsForMedication(medId, request);
             // Konvertierung von Domain zu DTO-Liste für die API-Antwort
             List<UnitResponseDto> createdUnitDtos = createdUnits.stream()
                     .map(unitMapper::toDto)
@@ -87,7 +87,7 @@ public class UnitController {
     public ResponseEntity<?> getUnitsGroupedByCharge(@PathVariable final String medId) { // Rückgabetyp auf ResponseEntity<?> geändert
         try {
             // Service gibt Map<String, List<Unit>> zurück
-            Map<String, List<Unit>> groupedUnitsDomain = unitService.getUnitsByMedIdGroupedByCharge(medId);
+            Map<String, List<Unit>> groupedUnitsDomain = unitFabricService.getUnitsByMedIdGroupedByCharge(medId);
 
             // Konvertierung von Map<String, List<Unit>> zu Map<String, List<UnitResponseDto>> für die API-Antwort
             Map<String, List<UnitResponseDto>> groupedUnitDtos = groupedUnitsDomain.entrySet().stream()
@@ -120,7 +120,7 @@ public class UnitController {
 
         try {
             // Service gibt Unit (Domain-Objekt) zurück
-            Unit updatedUnit = unitService.transferUnit(unitId, request.getNewOwnerActorId());
+            Unit updatedUnit = unitFabricService.transferUnit(unitId, request.getNewOwnerActorId());
             // Konvertierung von Domain zu DTO für die API-Antwort
             UnitResponseDto updatedUnitDto = unitMapper.toDto(updatedUnit);
             return ResponseEntity.ok(updatedUnitDto);
@@ -146,7 +146,7 @@ public class UnitController {
 
         try {
             // Service gibt Unit (Domain-Objekt) zurück
-            Unit updatedUnit = unitService.addTemperatureReading(
+            Unit updatedUnit = unitFabricService.addTemperatureReading(
                     unitId,
                     request.getTemperature(),
                     request.getTimestamp()
