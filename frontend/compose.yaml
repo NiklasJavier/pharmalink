@@ -16,8 +16,6 @@ services:
       - backend
       - pharmalink-net
       - code-executor
-    depends_on:
-      - postgres
     restart: always
 
   jobs-runner:
@@ -44,8 +42,6 @@ services:
       - backend
       - pharmalink-net
       - code-executor
-    depends_on:
-      - postgres
     restart: always
 
   workflows-backend:
@@ -58,8 +54,6 @@ services:
       - backend
       - pharmalink-net
       - code-executor
-    depends_on:
-      - postgres
     restart: always
 
   code-executor:
