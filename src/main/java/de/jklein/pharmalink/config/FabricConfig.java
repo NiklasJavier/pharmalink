@@ -1,5 +1,10 @@
 package de.jklein.pharmalink.config;
 
+import java.time.LocalDateTime;
+import com.google.gson.Gson; // Import hinzugefügt
+import com.google.gson.GsonBuilder; // Import hinzugefügt
+import de.jklein.pharmalink.util.LocalDateTimeAdapter; // Import Ihres Adapters
+
 import io.grpc.ChannelCredentials;
 import io.grpc.Grpc;
 import io.grpc.ManagedChannel;
@@ -9,7 +14,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hyperledger.fabric.client.Contract;
 import org.hyperledger.fabric.client.Gateway;
-import org.hyperledger.fabric.client.Hash; // Import für Hash hinzugefügt
+import org.hyperledger.fabric.client.Hash;
 import org.hyperledger.fabric.client.identity.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -59,15 +64,13 @@ public class FabricConfig {
     public ManagedChannel grpcChannel() throws IOException {
         System.out.println("--> Initialisiere gRPC-Verbindung...");
 
-        // KORREKTUR: TLS-Zertifikatspfad korrekt auflösen
-        // Kombiniere den Basispfad (cryptoPath) mit dem relativen Pfad (tlsCertPath)
         Path resolvedTlsCertPath = cryptoPath.resolve(tlsCertPath);
 
         if (!Files.exists(resolvedTlsCertPath)) {
             throw new IOException("TLS Zertifikats-Datei nicht gefunden unter: " + resolvedTlsCertPath);
         }
         ChannelCredentials credentials = TlsChannelCredentials.newBuilder()
-                .trustManager(resolvedTlsCertPath.toFile()) // Nutze den korrekt aufgelösten Pfad
+                .trustManager(resolvedTlsCertPath.toFile())
                 .build();
         this.grpcChannel = Grpc.newChannelBuilder(peerEndpoint, credentials)
                 .overrideAuthority(overrideAuth)
@@ -78,7 +81,6 @@ public class FabricConfig {
 
     @Bean
     public Identity identity() throws IOException, CertificateException {
-        // Hier werden die Pfade bereits korrekt relativ zu cryptoPath aufgelöst
         Path certFile = getFirstFilePath(cryptoPath.resolve(certDir));
         try (Reader certReader = Files.newBufferedReader(certFile)) {
             X509Certificate certificate = Identities.readX509Certificate(certReader);
@@ -88,12 +90,21 @@ public class FabricConfig {
 
     @Bean
     public Signer signer() throws IOException, InvalidKeyException {
-        // Hier werden die Pfade bereits korrekt relativ zu cryptoPath aufgelöst
         Path keyFile = getFirstFilePath(cryptoPath.resolve(keyDirPath));
         try (Reader keyReader = Files.newBufferedReader(keyFile)) {
             PrivateKey privateKey = Identities.readPrivateKey(keyReader);
             return Signers.newPrivateKeySigner(privateKey);
         }
+    }
+
+    // KORREKTUR: Gson Bean mit registriertem TypeAdapter für LocalDateTime
+    @Bean
+    public Gson gson() {
+        return new GsonBuilder()
+                .setPrettyPrinting()
+                .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
+                // .registerTypeAdapter(LocalDate.class, new LocalDateAdapter()) // Falls LocalDate auch verwendet wird
+                .create();
     }
 
     @Bean
@@ -105,9 +116,9 @@ public class FabricConfig {
                 .hash(Hash.SHA256)
                 .connection(grpcChannel)
                 .evaluateOptions(options -> options.withDeadlineAfter(5, TimeUnit.SECONDS))
-                .endorseOptions(options -> options.withDeadlineAfter(15, TimeUnit.SECONDS)) // Endorse-Timeout hinzugefügt
+                .endorseOptions(options -> options.withDeadlineAfter(15, TimeUnit.SECONDS))
                 .submitOptions(options -> options.withDeadlineAfter(5, TimeUnit.SECONDS))
-                .commitStatusOptions(options -> options.withDeadlineAfter(1, TimeUnit.MINUTES)) // Commit-Status-Timeout hinzugefügt
+                .commitStatusOptions(options -> options.withDeadlineAfter(1, TimeUnit.MINUTES))
                 .connect();
 
         System.out.println("--> Gateway erfolgreich verbunden.");

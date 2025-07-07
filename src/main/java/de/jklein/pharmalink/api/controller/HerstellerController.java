@@ -63,7 +63,7 @@ public class HerstellerController {
      */
     @GetMapping("/me")
     public ResponseEntity<?> getMyInfo() {
-        final String actorId = systemStateService.getCurrentSystemState().getCurrentActorId();
+        final String actorId = systemStateService.getCurrentActorId().get();
 
         if (actorId == null || actorId.isBlank()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
@@ -105,7 +105,7 @@ public class HerstellerController {
      */
     @GetMapping("/id")
     public ResponseEntity<?> getMyActorId() {
-        final String actorId = systemStateService.getCurrentSystemState().getCurrentActorId();
+        final String actorId = systemStateService.getCurrentActorId().get();
 
         if (actorId == null || actorId.isBlank()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)

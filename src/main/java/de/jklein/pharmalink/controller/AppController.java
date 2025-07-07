@@ -65,7 +65,7 @@ public class AppController {
 
     @GetMapping("/dashboard")
     public String showDashboard(Model model, RedirectAttributes redirectAttributes) {
-        String initialActorId = systemStateService.getCurrentSystemState().getCurrentActorId();
+        String initialActorId = systemStateService.getCurrentActorId().get();
         if (initialActorId == null || initialActorId.isBlank()) {
             logger.warn("Initial Actor ID not found or is blank. Redirecting to unknown-actor error page.");
             redirectAttributes.addFlashAttribute("error", "Ihre Actor ID konnte nicht geladen werden oder ist ungültig. Bitte stellen Sie sicher, dass die Anwendung korrekt initialisiert ist.");

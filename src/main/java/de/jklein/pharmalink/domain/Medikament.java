@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Data
@@ -18,7 +19,7 @@ public class Medikament {
     private String ipfsLink;
     private String status;
     private String approvedById;
-    private Map<String, String> tags;
+    private Map<String, String> tags; // Angenommen, tags ist ein Map<String, String>
     private String docType;
 
     // NEU: Feld für IPFS-Daten im Domain-Objekt
@@ -34,7 +35,4 @@ public class Medikament {
         this.docType = "medikament"; // Standard DocType
         this.ipfsData = new HashMap<>(); // Initialisierung des neuen Feldes
     }
-
-    // Fügen Sie hier, falls nicht durch Lombok @Data abgedeckt,
-    // öffentliche Getter und Setter für 'ipfsData' hinzu.
 }

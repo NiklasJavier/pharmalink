@@ -42,20 +42,48 @@ public class IpfsClient {
 
     /**
      * Fügt ein Objekt als JSON zu IPFS hinzu und gibt dessen Hash zurück.
+     * Wenn das übergebene Objekt bereits ein String ist und als JSON-String-Literal erkannt wird,
+     * wird dieser "entmaskiert" und das resultierende Roh-JSON direkt verwendet,
+     * um eine doppelte Serialisierung zu vermeiden. Andernfalls wird das Objekt wie gewohnt serialisiert.
      *
      * @param object Das zu speichernde Objekt.
      * @return Der IPFS-Hash des hinzugefügten Objekts als String.
      * @throws IOException Wenn ein Fehler beim Serialisieren oder Hinzufügen zu IPFS auftritt.
      */
     public String addObject(Object object) throws IOException {
-        String json = objectMapper.writeValueAsString(object);
-        NamedStreamable.ByteArrayWrapper file = new NamedStreamable.ByteArrayWrapper(json.getBytes());
+        String jsonStringToSend;
+
+        if (object instanceof String) {
+            String inputString = (String) object;
+            try {
+                // Erster Versuch: Versuchen Sie, den Eingabestring als einen einfachen String aus JSON zu deserialisieren.
+                // Dies "entmaskiert" einen JSON-String-Literal (z.B. "{\"key\":\"value\"}" -> {"key":"value"}).
+                String unescapedContent = objectMapper.readValue(inputString, String.class);
+
+                // Zweiter Schritt: Prüfen Sie, ob der "entmaskierte" Inhalt tatsächlich eine gültige JSON-Struktur ist.
+                // Dies unterscheidet zwischen einem entmaskierten JSON-Literal und einem einfachen String (z.B. "hello").
+                objectMapper.readTree(unescapedContent);
+                jsonStringToSend = unescapedContent; // Es war ein JSON-String-Literal, verwenden Sie nun das Roh-JSON.
+
+            } catch (Exception e) {
+                // Wenn der `inputString` kein gültiges JSON-String-Literal war (z.B. ein einfacher String "hello",
+                // oder ein fehlerhaftes JSON wie '{...}' mit einfachen Anführungszeichen),
+                // dann serialisieren Sie das ursprüngliche `object` als ein Standard-Java-Objekt zu JSON.
+                jsonStringToSend = objectMapper.writeValueAsString(object);
+            }
+        } else {
+            // Wenn es kein String ist (z.B. ein Java-POJO), serialisieren Sie es immer zu JSON.
+            jsonStringToSend = objectMapper.writeValueAsString(object);
+        }
+
+        NamedStreamable.ByteArrayWrapper file = new NamedStreamable.ByteArrayWrapper(jsonStringToSend.getBytes());
         MerkleNode addResult = ipfs.add(file).get(0);
         String ipfsHash = addResult.hash.toBase58();
         logger.info("Object added to IPFS with hash: {}", ipfsHash);
 
         try {
-            IpfsCacheEntry cacheEntry = new IpfsCacheEntry(ipfsHash, json);
+            // Speichern Sie den tatsächlich an IPFS gesendeten JSON-String im Cache
+            IpfsCacheEntry cacheEntry = new IpfsCacheEntry(ipfsHash, jsonStringToSend);
             ipfsCacheRepository.save(cacheEntry);
             logger.debug("IPFS content for hash {} cached in database after adding.", ipfsHash);
         } catch (Exception e) {
@@ -125,7 +153,15 @@ public class IpfsClient {
         String jsonContent = getObject(ipfsHash); // Nutzt die Caching-Logik und Hash-Validierung
         if (jsonContent != null) {
             try {
-                return objectMapper.readValue(jsonContent, objectMapper.getTypeFactory().constructType(valueType));
+                // Überprüfen, ob der String mit ' beginnt und endet, und diese entfernen.
+                // Dies behebt das Problem der doppelten String-Kodierung/falscher Anführungszeichen.
+                String contentToParse = jsonContent;
+                if (contentToParse.startsWith("'") && contentToParse.endsWith("'") && contentToParse.length() > 1) {
+                    contentToParse = contentToParse.substring(1, contentToParse.length() - 1);
+                }
+
+                // Nun den (bereinigten) String deserialisieren
+                return objectMapper.readValue(contentToParse, objectMapper.getTypeFactory().constructType(valueType));
             } catch (IOException e) {
                 logger.error("Error deserializing IPFS content for hash {} to type {}: {}", ipfsHash, valueType.getTypeName(), e.getMessage());
                 throw e;

@@ -18,6 +18,7 @@ public class Actor {
     private String ipfsLink;
     private String docType;
 
+    // NEU: Feld für die angereicherten IPFS-Daten
     private Map<String, Object> ipfsData;
 
     public Actor(String actorId, String bezeichnung, String role, String email, String ipfsLink) {

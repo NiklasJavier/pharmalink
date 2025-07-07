@@ -95,7 +95,7 @@ public class MedicationController {
      */
     @GetMapping
     public ResponseEntity<?> getMyMedications() {
-        final String herstellerId = systemStateService.getCurrentSystemState().getCurrentActorId();
+        final String herstellerId = systemStateService.getCurrentActorId().get();
 
         if (herstellerId == null || herstellerId.isEmpty()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)

@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface SystemStateRepository extends JpaRepository<SystemState, Long> {
+public interface SystemStateRepository extends JpaRepository<SystemState, String> { // <<-- MUSS HIER STRING SEIN
     Optional<SystemState> findFirstByOrderByIdAsc();
     Optional<SystemState> findByCurrentActorId(String currentActorId);
 }
