@@ -1,6 +1,6 @@
 # Check Dockerhub for available tags: https://hub.docker.com/r/tryretool/backend/tags
 
-ARG VERSION=X.Y.Z-stable
+ARG VERSION=3.196.10-stable
 
 FROM tryretool/code-executor-service:${VERSION} AS code-executor
 
