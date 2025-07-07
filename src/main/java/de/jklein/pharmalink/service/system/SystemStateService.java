@@ -1,13 +1,14 @@
 package de.jklein.pharmalink.service.system;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.jklein.pharmalink.client.fabric.FabricClient;
 import de.jklein.pharmalink.domain.Actor;
 import de.jklein.pharmalink.domain.Medikament;
 import de.jklein.pharmalink.domain.Unit;
+import de.jklein.pharmalink.domain.audit.ChaincodeEventLog; // Angenommener Import
 import de.jklein.pharmalink.domain.system.SystemState;
+import de.jklein.pharmalink.repository.audit.ChaincodeEventLogRepository; // Angenommener Import
 import de.jklein.pharmalink.repository.system.SystemStateRepository;
 import de.jklein.pharmalink.service.ActorService;
 import de.jklein.pharmalink.service.MedicationService;
@@ -15,7 +16,6 @@ import de.jklein.pharmalink.service.UnitService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import org.hyperledger.fabric.client.ChaincodeEvent;
 import org.hyperledger.fabric.client.CloseableIterator;
 import org.slf4j.Logger;
@@ -23,25 +23,22 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException; // Import hinzugefügt
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Getter
 public class SystemStateService {
 
     private static final Logger logger = LoggerFactory.getLogger(SystemStateService.class);
     private static final String SYSTEM_STATE_ID = "pharmalink-system-state";
+    private static final String GENERIC_EVENT_NAME = "PharmalinkDataEvent";
 
     private final SystemStateRepository systemStateRepository;
     private final FabricClient fabricClient;
@@ -49,6 +46,7 @@ public class SystemStateService {
     private final MedicationService medicationService;
     private final UnitService unitService;
     private final ObjectMapper objectMapper;
+    private final ChaincodeEventLogRepository eventLogRepository; // NEU: Repository für Audit-Logs
 
     @Value("${fabric.chaincode-name}")
     private String chaincodeName;
@@ -60,25 +58,31 @@ public class SystemStateService {
 
     private CloseableIterator<ChaincodeEvent> chaincodeEventIterator;
 
+    // ANGEPASSTER KONSTRUKTOR
+    public SystemStateService(SystemStateRepository systemStateRepository, FabricClient fabricClient,
+                              ActorService actorService, MedicationService medicationService,
+                              UnitService unitService, ObjectMapper objectMapper,
+                              ChaincodeEventLogRepository eventLogRepository) { // NEU
+        this.systemStateRepository = systemStateRepository;
+        this.fabricClient = fabricClient;
+        this.actorService = actorService;
+        this.medicationService = medicationService;
+        this.unitService = unitService;
+        this.objectMapper = objectMapper;
+        this.eventLogRepository = eventLogRepository; // NEU
+    }
 
     @PostConstruct
     public void init() {
         logger.info("Initializing SystemStateService...");
-        systemStateRepository.findById(SYSTEM_STATE_ID).ifPresent(state -> {
-            currentActorId.set(state.getCurrentActorId());
-            Optional.ofNullable(state.getAllActors()).ifPresent(allActors::addAll);
-            Optional.ofNullable(state.getAllMedikamente()).ifPresent(allMedikamente::addAll);
-            Optional.ofNullable(state.getMyUnits()).ifPresent(myUnits::addAll);
-            logger.info("SystemState loaded from database. Current Actor ID: {}", currentActorId.get());
-        });
-
+        loadStateFromDatabase();
         startEventListening();
     }
 
     @PreDestroy
     public void shutdown() {
-        logger.info("Shutting down SystemStateService. Saving state to database...");
-        saveSystemState();
+        logger.info("Shutting down SystemStateService. Saving final state to database...");
+        saveStateToDatabase();
         if (chaincodeEventIterator != null) {
             try {
                 chaincodeEventIterator.close();
@@ -99,128 +103,111 @@ public class SystemStateService {
         }
     }
 
+    /**
+     * ANGEPASST: Loggt jedes Event zuerst für Auditzwecke und verarbeitet es dann.
+     */
     private void handleChaincodeEvent(ChaincodeEvent event) {
-        logger.debug("Processing Chaincode Event: EventName={}, TxId={}, Payload={}",
-                event.getEventName(), event.getTransactionId(), new String(event.getPayload(), StandardCharsets.UTF_8));
+        // Schritt 1: Event für Audit-Zwecke loggen
+        logEventForAudit(event);
 
-        String eventName = event.getEventName();
-        JsonNode payloadNode;
-        try {
-            // NEU: Überprüfen, ob die Payload leer ist
-            if (event.getPayload() == null || event.getPayload().length == 0) {
-                logger.warn("Received event '{}' with empty payload. Skipping payload parsing.", eventName);
-                return;
-            }
-            payloadNode = objectMapper.readTree(event.getPayload());
-        } catch (IOException e) { // NEU: Fange IOException, die JsonProcessingException ist eine Unterklasse davon
-            logger.error("Failed to parse event payload for event '{}' due to IOException: {}", eventName, e.getMessage());
+        // Schritt 2: Bestehende Logik zur Cache-Aktualisierung
+        if (!GENERIC_EVENT_NAME.equals(event.getEventName())) {
+            logger.debug("Received unhandled or legacy chaincode event: {}", event.getEventName());
             return;
         }
 
-        switch (eventName) {
-            case "ActorUpdated":
-            case "ActorCreated":
-                handleActorEvent(payloadNode);
-                break;
-            case "MedikamentUpdated":
-            case "MedikamentCreated":
-                handleMedikamentEvent(payloadNode);
-                break;
-            case "UnitUpdated":
-            case "UnitCreated":
-            case "UnitTransferred":
-                handleUnitEvent(payloadNode);
-                break;
-            default:
-                logger.warn("Received unhandled chaincode event: {}", eventName);
-                break;
-        }
-        saveSystemState();
-    }
-
-    private void handleActorEvent(JsonNode payloadNode) {
         try {
-            String actorId = payloadNode.has("actorId") ? payloadNode.get("actorId").asText() : null;
-            if (actorId == null) {
-                logger.warn("Actor event payload missing 'actorId'. Skipping update.");
+            if (event.getPayload() == null || event.getPayload().length == 0) {
+                logger.warn("Received event '{}' with empty payload. Skipping.", event.getEventName());
+                return;
+            }
+            JsonNode payload = objectMapper.readTree(event.getPayload());
+            String entityType = payload.path("entityType").asText();
+            String entityId = payload.path("entityId").asText();
+
+            if (entityId.isEmpty() || entityType.isEmpty()) {
+                logger.error("Event payload is missing 'entityId' or 'entityType'. Payload: {}", payload);
                 return;
             }
 
-            Optional<Actor> updatedActorOptional = actorService.getEnrichedActorById(actorId);
-            updatedActorOptional.ifPresent(updatedActor -> {
-                synchronized (allActors) {
-                    allActors.removeIf(a -> a.getActorId().equals(updatedActor.getActorId()));
-                    allActors.add(updatedActor);
-                }
-                logger.info("Actor {} updated in cache due to chaincode event.", actorId);
-            });
-            if (updatedActorOptional.isEmpty()) {
-                logger.warn("Could not re-fetch actor {} after chaincode event. Cache might be stale.", actorId);
+            switch (entityType) {
+                case "Actor":
+                    handleActorUpdate(entityId);
+                    break;
+                case "Medikament":
+                    handleMedikamentUpdate(entityId);
+                    break;
+                case "Unit":
+                    handleUnitUpdate(entityId);
+                    break;
+                default:
+                    logger.warn("Received event for unhandled entityType: {}", entityType);
+                    break;
             }
-        } catch (Exception e) {
-            logger.error("Error processing Actor event: {}", e.getMessage(), e);
+        } catch (IOException e) {
+            logger.error("Failed to parse event payload for event '{}' due to IOException: {}", event.getEventName(), e.getMessage());
         }
     }
 
-    private void handleMedikamentEvent(JsonNode payloadNode) {
+    /**
+     * NEUE METHODE: Erstellt und speichert einen Audit-Log-Eintrag.
+     */
+    private void logEventForAudit(ChaincodeEvent event) {
         try {
-            String medId = payloadNode.has("medId") ? payloadNode.get("medId").asText() : null;
-            if (medId == null) {
-                logger.warn("Medikament event payload missing 'medId'. Skipping update.");
-                return;
-            }
-
-            Optional<Medikament> updatedMedikamentOptional = medicationService.getEnrichedMedikamentById(medId);
-
-            updatedMedikamentOptional.ifPresent(updatedMedikament -> {
-                synchronized (allMedikamente) {
-                    allMedikamente.removeIf(m -> m.getMedId().equals(updatedMedikament.getMedId()));
-                    allMedikamente.add(updatedMedikament);
-                }
-                logger.info("Medikament {} updated in cache due to chaincode event.", medId);
-            });
-            if (updatedMedikamentOptional.isEmpty()) {
-                logger.warn("Could not re-fetch Medikament {} after chaincode event. Cache might be stale.", medId);
-            }
+            String payloadAsString = new String(event.getPayload(), StandardCharsets.UTF_8);
+            ChaincodeEventLog logEntry = new ChaincodeEventLog(
+                    event.getEventName(),
+                    event.getTransactionId(),
+                    event.getBlockNumber(),
+                    payloadAsString
+            );
+            eventLogRepository.save(logEntry);
+            logger.info("Chaincode event with TxId '{}' successfully audited.", event.getTransactionId());
         } catch (Exception e) {
-            logger.error("Error processing Medikament event: {}", e.getMessage(), e);
+            logger.error("!!! FAILED TO AUDIT CHAINCODE EVENT !!! TxId: {}. Reason: {}",
+                    event.getTransactionId(), e.getMessage());
         }
     }
 
-    private void handleUnitEvent(JsonNode payloadNode) {
-        try {
-            String unitId = payloadNode.has("unitId") ? payloadNode.get("unitId").asText() : null;
-            if (unitId == null) {
-                logger.warn("Unit event payload missing 'unitId'. Skipping update.");
-                return;
+    private void handleActorUpdate(String actorId) {
+        actorService.getEnrichedActorById(actorId).ifPresent(updatedActor -> {
+            synchronized (allActors) {
+                allActors.removeIf(a -> a.getActorId().equals(actorId));
+                allActors.add(updatedActor);
             }
+            logger.info("Actor {} cache updated due to chaincode event.", actorId);
+        });
+    }
 
-            Optional<Unit> updatedUnitOptional = unitService.getEnrichedUnitById(unitId);
+    private void handleMedikamentUpdate(String medId) {
+        medicationService.getEnrichedMedikamentById(medId).ifPresent(updatedMedikament -> {
+            synchronized (allMedikamente) {
+                allMedikamente.removeIf(m -> m.getMedId().equals(medId));
+                allMedikamente.add(updatedMedikament);
+            }
+            logger.info("Medikament {} cache updated due to chaincode event.", medId);
+        });
+    }
 
-            updatedUnitOptional.ifPresent(updatedUnit -> {
-                synchronized (myUnits) {
-                    myUnits.removeIf(u -> u.getUnitId().equals(updatedUnit.getUnitId()));
-                    if (updatedUnit.getOwnerId() != null && updatedUnit.getOwnerId().equals(currentActorId.get())) {
-                        myUnits.add(updatedUnit);
-                        logger.info("Unit {} (owned by current actor) updated in cache due to chaincode event.", unitId);
-                    } else {
-                        logger.info("Unit {} not owned by current actor, removed from myUnits cache.", unitId);
-                    }
+    private void handleUnitUpdate(String unitId) {
+        unitService.getEnrichedUnitById(unitId).ifPresent(updatedUnit -> {
+            synchronized (myUnits) {
+                myUnits.removeIf(u -> u.getUnitId().equals(unitId));
+                if (Objects.equals(updatedUnit.getOwnerId(), currentActorId.get())) {
+                    myUnits.add(updatedUnit);
+                    logger.info("Unit {} (owned by current actor) updated in cache.", unitId);
+                } else {
+                    logger.info("Unit {} is not owned by current actor, removed from 'myUnits' cache.", unitId);
                 }
-            });
-            if (updatedUnitOptional.isEmpty()) {
-                logger.warn("Could not re-fetch Unit {} after chaincode event. Cache might be stale.", unitId);
             }
-        } catch (Exception e) {
-            logger.error("Error processing Unit event: {}", e.getMessage(), e);
-        }
+        });
     }
 
     public void reconcileAndCacheActorId(String actorId) {
         if (!Objects.equals(currentActorId.get(), actorId)) {
             logger.info("Current actor ID changed from {} to {}. Updating SystemState.", currentActorId.get(), actorId);
             currentActorId.set(actorId);
-            saveSystemState();
+            saveStateToDatabase();
         }
     }
 
@@ -229,8 +216,7 @@ public class SystemStateService {
             allActors.clear();
             allActors.addAll(actors);
         }
-        saveSystemState();
-        logger.info("All actors cache updated with {} entries.", actors.size());
+        logger.info("Full actor cache refresh with {} entries.", actors.size());
     }
 
     public void updateAllMedikamente(List<Medikament> medikamente) {
@@ -238,8 +224,7 @@ public class SystemStateService {
             allMedikamente.clear();
             allMedikamente.addAll(medikamente);
         }
-        saveSystemState();
-        logger.info("All medications cache updated with {} entries.", medikamente.size());
+        logger.info("Full medication cache refresh with {} entries.", medikamente.size());
     }
 
     public void updateMyUnits(List<Unit> units) {
@@ -247,11 +232,10 @@ public class SystemStateService {
             myUnits.clear();
             myUnits.addAll(units);
         }
-        saveSystemState();
-        logger.info("My units cache updated with {} entries.", units.size());
+        logger.info("My units cache was refreshed with {} entries.", units.size());
     }
 
-    private void saveSystemState() {
+    private void saveStateToDatabase() {
         SystemState state = new SystemState();
         state.setId(SYSTEM_STATE_ID);
         state.setCurrentActorId(currentActorId.get());
@@ -267,15 +251,19 @@ public class SystemStateService {
         }
     }
 
-    public void loadFromDatabaseOnFailure() {
-        logger.warn("Initial data load from chaincode failed. Attempting to load SystemState from database.");
-        systemStateRepository.findById(SYSTEM_STATE_ID).ifPresentOrElse(state -> {
+    private void loadStateFromDatabase() {
+        systemStateRepository.findById(SYSTEM_STATE_ID).ifPresent(state -> {
             currentActorId.set(state.getCurrentActorId());
             Optional.ofNullable(state.getAllActors()).ifPresent(allActors::addAll);
             Optional.ofNullable(state.getAllMedikamente()).ifPresent(allMedikamente::addAll);
             Optional.ofNullable(state.getMyUnits()).ifPresent(myUnits::addAll);
-            logger.info("SystemState successfully loaded from database after initial chaincode failure. Current Actor ID: {}", currentActorId.get());
-        }, () -> logger.error("No SystemState found in database after initial chaincode failure. Application state will be empty."));
+            logger.info("SystemState loaded from database. Current Actor ID: {}", currentActorId.get());
+        });
+    }
+
+    public void loadFromDatabaseOnFailure() {
+        logger.warn("Initial data load from chaincode failed. Attempting to load SystemState from database as a fallback.");
+        loadStateFromDatabase();
     }
 
     public List<Actor> getAllActors() {
