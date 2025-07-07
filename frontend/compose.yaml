@@ -73,16 +73,7 @@ services:
     privileged: true
     restart: always
 
-  postgres:
-    image: postgres:16.8
-    env_file: docker.env
-    networks:
-      - backend
-      - pharmalink-net
-    volumes:
-      - data:/var/lib/postgresql/data
-    restart: always
-
+  # Optional Nginx container for handling TLS for your domain (requires setting DOMAINS and STAGE)
   https-portal:
     image: tryretool/https-portal:latest
     env_file: docker.env
