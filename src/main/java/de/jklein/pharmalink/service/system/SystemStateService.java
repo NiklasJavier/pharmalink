@@ -6,9 +6,9 @@ import de.jklein.pharmalink.client.fabric.FabricClient;
 import de.jklein.pharmalink.domain.Actor;
 import de.jklein.pharmalink.domain.Medikament;
 import de.jklein.pharmalink.domain.Unit;
-import de.jklein.pharmalink.domain.audit.ChaincodeEventLog; // Angenommener Import
+import de.jklein.pharmalink.domain.audit.ChaincodeEventLog;
 import de.jklein.pharmalink.domain.system.SystemState;
-import de.jklein.pharmalink.repository.audit.ChaincodeEventLogRepository; // Angenommener Import
+import de.jklein.pharmalink.repository.audit.ChaincodeEventLogRepository;
 import de.jklein.pharmalink.repository.system.SystemStateRepository;
 import de.jklein.pharmalink.service.ActorService;
 import de.jklein.pharmalink.service.MedicationService;
@@ -40,17 +40,19 @@ public class SystemStateService {
     private static final String SYSTEM_STATE_ID = "pharmalink-system-state";
     private static final String GENERIC_EVENT_NAME = "PharmalinkDataEvent";
 
+    // --- Services and Repositories ---
     private final SystemStateRepository systemStateRepository;
     private final FabricClient fabricClient;
     private final ActorService actorService;
     private final MedicationService medicationService;
     private final UnitService unitService;
     private final ObjectMapper objectMapper;
-    private final ChaincodeEventLogRepository eventLogRepository; // NEU: Repository für Audit-Logs
+    private final ChaincodeEventLogRepository eventLogRepository;
 
     @Value("${fabric.chaincode-name}")
     private String chaincodeName;
 
+    // --- In-Memory State Caches ---
     private final AtomicReference<String> currentActorId = new AtomicReference<>();
     private final List<Actor> allActors = Collections.synchronizedList(new ArrayList<>());
     private final List<Medikament> allMedikamente = Collections.synchronizedList(new ArrayList<>());
@@ -58,18 +60,17 @@ public class SystemStateService {
 
     private CloseableIterator<ChaincodeEvent> chaincodeEventIterator;
 
-    // ANGEPASSTER KONSTRUKTOR
     public SystemStateService(SystemStateRepository systemStateRepository, FabricClient fabricClient,
                               ActorService actorService, MedicationService medicationService,
                               UnitService unitService, ObjectMapper objectMapper,
-                              ChaincodeEventLogRepository eventLogRepository) { // NEU
+                              ChaincodeEventLogRepository eventLogRepository) {
         this.systemStateRepository = systemStateRepository;
         this.fabricClient = fabricClient;
         this.actorService = actorService;
         this.medicationService = medicationService;
         this.unitService = unitService;
         this.objectMapper = objectMapper;
-        this.eventLogRepository = eventLogRepository; // NEU
+        this.eventLogRepository = eventLogRepository;
     }
 
     @PostConstruct
@@ -103,14 +104,11 @@ public class SystemStateService {
         }
     }
 
-    /**
-     * ANGEPASST: Loggt jedes Event zuerst für Auditzwecke und verarbeitet es dann.
-     */
     private void handleChaincodeEvent(ChaincodeEvent event) {
-        // Schritt 1: Event für Audit-Zwecke loggen
+        // Log to DB for long-term audit
         logEventForAudit(event);
 
-        // Schritt 2: Bestehende Logik zur Cache-Aktualisierung
+        // Process the event to update the state cache
         if (!GENERIC_EVENT_NAME.equals(event.getEventName())) {
             logger.debug("Received unhandled or legacy chaincode event: {}", event.getEventName());
             return;
@@ -149,9 +147,6 @@ public class SystemStateService {
         }
     }
 
-    /**
-     * NEUE METHODE: Erstellt und speichert einen Audit-Log-Eintrag.
-     */
     private void logEventForAudit(ChaincodeEvent event) {
         try {
             String payloadAsString = new String(event.getPayload(), StandardCharsets.UTF_8);
@@ -168,6 +163,8 @@ public class SystemStateService {
                     event.getTransactionId(), e.getMessage());
         }
     }
+
+    // --- Cache Update Handlers ---
 
     private void handleActorUpdate(String actorId) {
         actorService.getEnrichedActorById(actorId).ifPresent(updatedActor -> {
@@ -202,6 +199,8 @@ public class SystemStateService {
             }
         });
     }
+
+    // --- State and Cache Management ---
 
     public void reconcileAndCacheActorId(String actorId) {
         if (!Objects.equals(currentActorId.get(), actorId)) {
@@ -265,6 +264,8 @@ public class SystemStateService {
         logger.warn("Initial data load from chaincode failed. Attempting to load SystemState from database as a fallback.");
         loadStateFromDatabase();
     }
+
+    // --- Public Getters ---
 
     public List<Actor> getAllActors() {
         return Collections.unmodifiableList(allActors);
