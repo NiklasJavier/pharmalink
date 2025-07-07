@@ -27,8 +27,6 @@ services:
     networks:
       - backend
       - pharmalink-net
-    depends_on:
-      - postgres
     restart: always
 
   workflows-worker:
