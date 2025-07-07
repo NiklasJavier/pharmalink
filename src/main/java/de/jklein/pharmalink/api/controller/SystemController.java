@@ -1,13 +1,15 @@
 package de.jklein.pharmalink.api.controller;
 
-import de.jklein.pharmalink.api.dto.SystemStateDto; // NEU
+import de.jklein.pharmalink.api.dto.SystemStateDto;
+import de.jklein.pharmalink.api.dto.SystemStatsDto;
 import de.jklein.pharmalink.service.system.SystemStateService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping; // NEU
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.Map; // NEU: Import hinzufügen
 
 @RestController
 @RequestMapping("/api/system")
@@ -20,39 +22,39 @@ public class SystemController {
     }
 
     /**
-     * NEUE METHODE: Gibt den aktuellen In-Memory-Zustand des SystemStateService zurück.
+     * **NEUER ENDPUNKT**: Gibt die ID des aktuell im System registrierten Akteurs zurück.
      */
+    @GetMapping("/current-actor-id")
+    @Operation(summary = "Get Current Actor ID", description = "Retrieves the ID of the actor currently registered in the system state.")
+    public ResponseEntity<Map<String, String>> getCurrentActorId() {
+        String actorId = systemStateService.getCurrentActorId().get();
+        if (actorId == null || actorId.isEmpty()) {
+            return ResponseEntity.noContent().build(); // Gibt 204 zurück, wenn kein Akteur gesetzt ist
+        }
+        return ResponseEntity.ok(Map.of("actorId", actorId));
+    }
+
+    // --- Bestehende Endpunkte bleiben unverändert ---
+
+    @GetMapping("/cache/stats")
+    @Operation(summary = "Get Cache Statistics", description = "Returns a quick summary of the number of items currently held in the in-memory cache.")
+    public ResponseEntity<SystemStatsDto> getCacheStats() {
+        SystemStatsDto statsDto = new SystemStatsDto(
+                systemStateService.getAllActors().size(),
+                systemStateService.getAllMedikamente().size(),
+                systemStateService.getMyUnits().size()
+        );
+        return ResponseEntity.ok(statsDto);
+    }
+
     @GetMapping("/cache/state")
-    @Operation(summary = "Get Live Cache State", description = "Returns the complete current in-memory state of the application cache (actors, medications, units).")
+    @Operation(summary = "Get Live Cache State", description = "Returns the complete current in-memory state of the application cache.")
     public ResponseEntity<SystemStateDto> getCacheState() {
-        // Ruft die Listen und die ID aus dem Service ab
         String actorId = systemStateService.getCurrentActorId().get();
         var actors = systemStateService.getAllActors();
         var medikamente = systemStateService.getAllMedikamente();
         var units = systemStateService.getMyUnits();
-
-        // Erstellt das DTO für eine saubere Antwort
-        SystemStateDto stateDto = new SystemStateDto(
-                actorId,
-                actors.size(),
-                medikamente.size(),
-                units.size(),
-                actors,
-                medikamente,
-                units
-        );
-
+        SystemStateDto stateDto = new SystemStateDto(actorId, actors.size(), medikamente.size(), units.size(), actors, medikamente, units);
         return ResponseEntity.ok(stateDto);
-    }
-
-    @PostMapping("/cache/persist")
-    @Operation(summary = "Persist Cache to DB", description = "Forces the application to write the current in-memory cache state to the database. Useful for debugging.")
-    public ResponseEntity<String> persistCache() {
-        try {
-            systemStateService.saveStateToDatabase(); // Annahme: Methode wurde öffentlich gemacht
-            return ResponseEntity.ok("System state cache was successfully persisted to the database.");
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Failed to persist cache: " + e.getMessage());
-        }
     }
 }
