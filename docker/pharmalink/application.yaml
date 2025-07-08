@@ -8,26 +8,26 @@ springdoc:
 
 spring:
   application:
-    name: pharmalink
+    name: "pharmalink"
   datasource:
-    url: jdbc:postgresql://host.docker.internal:5432/pharmalinkdb
-    username: user
-    password: user
+    url: "jdbc:postgresql://host.docker.internal:5432/pharmalinkdb"
+    username: "user"
+    password: "user"
   jpa:
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        dialect: "org.hibernate.dialect.PostgreSQLDialect"
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: "update"
+    show-sql: "true"
   thymeleaf:
-    prefix: classpath:/web/
-    suffix: .html
-    mode: HTML
+    prefix: "classpath:/web/"
+    suffix: ".html"
+    mode: "HTML"
     cache: true
     check-template-location: true
     enabled: true
-    encoding: UTF-8
+    encoding: "UTF-8"
 
 app:
   initial-users:
@@ -38,22 +38,22 @@ app:
         - "ROLE_ADMIN"
 
 actor:
-  bezeichnung: company2
+  bezeichnung: "company2"
 
 fabric:
-  msp-id: Org1MSP
-  crypto-path: /fabric-crypto/organizations/peerOrganizations/org1.example.com
-  cert-path: users/hersteller-user1@org1.example.com/msp/signcerts
-  key-dir-path: users/hersteller-user1@org1.example.com/msp/keystore
-  tls-cert-path: peers/peer0.org1.example.com/tls/ca.crt
+  msp-id: "Org1MSP"
+  crypto-path: "/fabric-crypto/organizations/peerOrganizations/org1.example.com"
+  cert-path: "users/hersteller-user1@org1.example.com/msp/signcerts"
+  key-dir-path: "users/hersteller-user1@org1.example.com/msp/keystore"
+  tls-cert-path: "peers/peer0.org1.example.com/tls/ca.crt"
   peer:
-    endpoint: node.d1.navine.tech:7051
-    override-auth: peer0.org1.example.com
-  channel-name: pharmalink
-  chaincode-name: pharmalink_chaincode_main
+    endpoint: "node.d1.navine.tech:7051"
+    override-auth: "peer0.org1.example.com"
+  channel-name: "pharmalink"
+  chaincode-name: "pharmalink_chaincode_main"
 
 ipfs:
-  email: ipfs@example.com
-  ipfs-link: 12
-  host: host.docker.internal
-  port: 5001
+  email: "ipfs@example.com"
+  ipfs-link: "12"
+  host: "host.docker.internal"
+  port: "5001"
