@@ -7,9 +7,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
-      APP_INITIAL_USERS_0_USERNAME: "admin"
-      APP_INITIAL_USERS_0_PASSWORD: "$2a$10$nZYgNvdSmcF6Nw.AtWBwLeapUQrLxRTZSkXWlOaD/xZyvFw8DkBke"
-      APP_INITIAL_USERS_0_ROLES: "ROLE_ADMIN"
+      system.benutzername: "admin"
+      system.passwort: "admin123"
     ports:
       - "8080:8080"
     volumes:

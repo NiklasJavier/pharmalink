@@ -4,10 +4,12 @@ import de.jklein.pharmalink.domain.auth.Role;
 import de.jklein.pharmalink.domain.auth.User;
 import de.jklein.pharmalink.repository.auth.RoleRepository;
 import de.jklein.pharmalink.repository.auth.UserRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -19,6 +21,12 @@ import java.util.Set;
  */
 @Component
 public class AppSecDataInitializer implements CommandLineRunner {
+
+    @Value("${system.benutzername}")
+    private String benutzername;
+
+    @Value("${system.passwort}")
+    private Path passwort;
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -59,30 +67,16 @@ public class AppSecDataInitializer implements CommandLineRunner {
             System.out.println("Rolle 'USER' existiert bereits.");
         }
 
-        // --- 2. Testbenutzer erstellen (falls nicht vorhanden) ---
-
         // Admin-Benutzer
-        if (userRepository.findByUsername("admin") == null) {
+        if (userRepository.findByUsername(benutzername.toString()) == null) {
             User adminUser = new User();
-            adminUser.setUsername("admin");
-            adminUser.setPassword(passwordEncoder.encode("niklas")); // Passwort hashen!
+            adminUser.setUsername(benutzername.toString());
+            adminUser.setPassword(passwordEncoder.encode(passwort.toString()));
             adminUser.setRoles(Collections.singleton(adminRole));
             userRepository.save(adminUser);
-            System.out.println("Admin-Benutzer 'admin' erstellt.");
+            System.out.println("Admin-Benutzer '" + benutzername.toString() +"' erstellt.");
         } else {
-            System.out.println("Admin-Benutzer 'admin' existiert bereits.");
-        }
-
-        // Standard-Benutzer (z.B. für "HERSTELLER")
-        if (userRepository.findByUsername("testuser") == null) {
-            User testUser = new User();
-            testUser.setUsername("testuser");
-            testUser.setPassword(passwordEncoder.encode("testpass"));
-            testUser.setRoles(Collections.singleton(userRole));
-            userRepository.save(testUser);
-            System.out.println("Test-Benutzer 'testuser' erstellt.");
-        } else {
-            System.out.println("Test-Benutzer 'testuser' existiert bereits.");
+            System.out.println("Admin-Benutzer '" + benutzername.toString() + "' existiert bereits.");
         }
     }
 }

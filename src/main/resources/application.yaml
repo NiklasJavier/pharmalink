@@ -30,6 +30,11 @@ app:
       roles:
         - ROLE_USER
         - ROLE_ADMIN
+
+system:
+  benutzername: admin
+  passwort: admin123
+
 springdoc:
   info:
     title: Pharmalink API

@@ -6,6 +6,10 @@ springdoc:
   api-docs:
     path: "/api/api-docs"
 
+system:
+  benutzername: "admin"
+  passwort: "admin123"
+
 spring:
   application:
     name: "pharmalink"
