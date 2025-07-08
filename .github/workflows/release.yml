@@ -57,14 +57,14 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}-explorer
 
-      - name: Build and push Explorer Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./explorer # Annahme: Dockerfile liegt in /frontend
-          file: ./explorer/Dockerfile
-          push: true
-          tags: ${{ steps.meta-explorer.outputs.tags }}
-          labels: ${{ steps.meta-explorer.outputs.labels }}
+      #- name: Build and push Explorer Docker image
+      #  uses: docker/build-push-action@v5
+          #with:
+          #context: ./explorer # Annahme: Dockerfile liegt in /frontend
+          #file: ./explorer/Dockerfile
+          #push: true
+          #tags: ${{ steps.meta-explorer.outputs.tags }}
+          #labels: ${{ steps.meta-explorer.outputs.labels }}
 
       - name: Set up JDK 11 for Chaincode Build
         uses: actions/setup-java@v4
