@@ -10,6 +10,10 @@ system:
   benutzername: "admin"
   passwort: "admin123"
 
+jwt: #  Base64 wie ksdasd8312nAsdj2nrAsdmkdlfNADf923ekJASDkmlpgADaSDg
+  secret: a3NkYXNkODMxMm5Bc2RqMm5yQXNkbWtkbGZOQURmOTIzZWtKQVNEa21scGdBRGFTRGc=
+  expiration: 3600000
+
 spring:
   application:
     name: "pharmalink"
