@@ -1,3 +1,11 @@
+springdoc:
+  info:
+    title: "Pharmalink API"
+    description: "API-Dokumentation für die Pharmalink Lieferkettenanwendung auf Hyperledger Fabric."
+    path: "/api/swagger"
+  api-docs:
+    path: "/api/api-docs"
+
 spring:
   application:
     name: pharmalink
@@ -23,19 +31,11 @@ spring:
 
 app:
   initial-users:
-    - username: admin
-      password: $2a$10$nZYgNvdSmcF6Nw.AtWBwLeapUQrLxRTZSkXWlOaD/xZyvFw8DkBke
+    - username: "admin"
+      password: "$2a$10$nZYgNvdSmcF6Nw.AtWBwLeapUQrLxRTZSkXWlOaD/xZyvFw8DkBke"
       roles:
-        - ROLE_USER
-        - ROLE_ADMIN
-
-springdoc:
-  info:
-    title: Pharmalink API
-    description: API-Dokumentation für die Pharmalink Lieferkettenanwendung auf Hyperledger Fabric.
-    path: /api/swagger
-  api-docs:
-    path: /api/api-docs
+        - "ROLE_USER"
+        - "ROLE_ADMIN"
 
 actor:
   bezeichnung: company2

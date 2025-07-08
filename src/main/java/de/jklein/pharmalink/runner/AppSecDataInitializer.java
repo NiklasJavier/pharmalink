@@ -65,7 +65,7 @@ public class AppSecDataInitializer implements CommandLineRunner {
         if (userRepository.findByUsername("admin") == null) {
             User adminUser = new User();
             adminUser.setUsername("admin");
-            adminUser.setPassword(passwordEncoder.encode("adminpass")); // Passwort hashen!
+            adminUser.setPassword(passwordEncoder.encode("niklas")); // Passwort hashen!
             adminUser.setRoles(Collections.singleton(adminRole));
             userRepository.save(adminUser);
             System.out.println("Admin-Benutzer 'admin' erstellt.");
