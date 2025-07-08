@@ -1,36 +1,44 @@
 package de.jklein.pharmalink.config;
 
+import de.jklein.pharmalink.filter.auth.JwtRequestFilter;
 import de.jklein.pharmalink.service.auth.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.AuthenticationManager; // Import hinzufügen
+import org.springframework.security.authentication.ProviderManager; // Import hinzufügen
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy; // Import hinzufügen
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfiguration; // Import für CORS hinzugefügt
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource; // Import für CORS hinzugefügt
-import org.springframework.web.filter.CorsFilter; // Import für CORS hinzugefügt
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter; // Import hinzufügen
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.Arrays; // Import für CORS hinzugefügt
-import java.util.Collections; // Import für CORS hinzugefügt
+import java.util.Arrays;
+import java.util.Collections;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
     private final CustomUserDetailsService customUserDetailsService;
+    private final JwtRequestFilter jwtRequestFilter; // JwtRequestFilter injizieren
 
-    public SecurityConfig(CustomUserDetailsService customUserDetailsService) {
+    // Im Konstruktor nun auch JwtRequestFilter injizieren
+    public SecurityConfig(CustomUserDetailsService customUserDetailsService, JwtRequestFilter jwtRequestFilter) {
         this.customUserDetailsService = customUserDetailsService;
+        this.jwtRequestFilter = jwtRequestFilter;
     }
 
     /**
@@ -54,23 +62,42 @@ public class SecurityConfig {
     }
 
     /**
+     * NEU: Definiert den AuthenticationManager als Bean.
+     * Dieser Manager wird vom AuthController verwendet, um die Authentifizierung durchzuführen.
+     */
+    @Bean
+    public AuthenticationManager authenticationManager() {
+        // Der ProviderManager kann einen oder mehrere AuthenticationProvider verwalten.
+        return new ProviderManager(authenticationProvider());
+    }
+
+
+    /**
      * Sicherheitskonfiguration für die stateless REST-API (/api/**).
      * @Order(1) sorgt dafür, dass diese Kette vor der allgemeineren Web-Konfiguration geprüft wird.
+     * Hier wird der JwtRequestFilter integriert.
      */
     @Bean
     @Order(1)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .securityMatcher("/api/**") // Diese Kette nur für Pfade unter /api/ anwenden
-                .authorizeHttpRequests(authorize -> authorize
-                        .anyRequest().authenticated() // Alle API-Anfragen erfordern Authentifizierung
+                .csrf(AbstractHttpConfigurer::disable) // CSRF für stateless APIs deaktivieren
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // Wichtig für JWT-basierte APIs
                 )
-                .httpBasic(Customizer.withDefaults()) // HTTP Basic Authentifizierung für die API aktivieren
-                .csrf(AbstractHttpConfigurer::disable) // CSRF für stateless APIs deaktivieren ist hier korrekt
+                .authorizeHttpRequests(authorize -> authorize
+                        // Öffentliche Endpunkte für Authentifizierung und Swagger/API-Dokus
+                        .requestMatchers("/api/v1/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/api/api-docs/**").permitAll()
+                        .anyRequest().authenticated() // Alle anderen API-Anfragen erfordern Authentifizierung
+                )
+                // Hinzufügen des JWT-Filters vor dem Standard-Authentifizierungsfilter
+                .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(exceptions -> exceptions
-                        // Bei Fehlern eine JSON-Antwort senden, statt einer HTML-Seite
+                        // Bei Authentifizierungsfehlern für die API eine JSON-Antwort senden
                         .authenticationEntryPoint(getApiAuthenticationEntryPoint())
                 );
+        // .httpBasic(Customizer.withDefaults()) // HTTP Basic ist für JWT-Flow nicht mehr direkt nötig und kann entfernt werden
 
         return http.build();
     }
@@ -108,16 +135,8 @@ public class SecurityConfig {
                 )
                 // CSRF-Konfiguration für die stateful Webanwendung
                 .csrf(csrf -> {
-                    // Standardmäßig ist CSRF in Spring Security aktiviert und wichtig für Formular-basierte Logins.
-                    // Wenn Vaadin als serverseitige Anwendung läuft und Spring-Formulare verwendet,
-                    // wird der CSRF-Token normalerweise automatisch in die Formulare eingefügt.
-                    // Wenn Vaadin eine separate JavaScript-Anwendung ist, die POST-Requests sendet,
-                    // müssten Sie entweder den CSRF-Token vom Backend abrufen und in Ihre Requests einfügen,
-                    // oder CSRF für diese spezifischen Endpunkte deaktivieren (was nicht empfohlen wird).
-                    // In diesem Setup für eine integrierte Vaadin-App kann es standardmäßig bleiben.
-                    csrf.ignoringRequestMatchers("/h2-console/**"); // Beispiel: Wenn Sie h2-console nutzen und es deaktivieren müssen
+                    csrf.ignoringRequestMatchers("/h2-console/**"); // Beispiel: Wenn Sie h2-console nutzen
                 });
-
 
         return http.build();
     }
@@ -134,12 +153,16 @@ public class SecurityConfig {
             );
         };
     }
-    
+
+    /**
+     * Konfiguriert CORS (Cross-Origin Resource Sharing), um Anfragen von Ihrem Frontend zu erlauben.
+     */
     @Bean
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
+        // ACHTUNG: Für die Produktion sollten Sie hier spezifische URLs anstelle von "*" verwenden!
         config.setAllowedOrigins(Collections.singletonList("*"));
         config.setAllowedHeaders(Collections.singletonList("*"));
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"));
