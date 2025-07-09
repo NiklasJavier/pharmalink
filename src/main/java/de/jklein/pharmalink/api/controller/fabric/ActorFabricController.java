@@ -34,6 +34,7 @@ public class ActorFabricController {
             Actor updatedActor = actorFabricService.updateActor(
                     actorId,
                     requestDto.getName(),
+                    requestDto.getEmail(),
                     requestDto.getIpfsData()
             );
             ActorResponseDto responseDto = actorMapper.toDto(updatedActor);

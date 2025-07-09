@@ -5,6 +5,7 @@ import java.util.Map;
 public class UpdateActorRequestDto {
 
     private String name;
+    private String email;
     private Map<String, Object> ipfsData;
 
     // Getter and Setter
@@ -23,5 +24,13 @@ public class UpdateActorRequestDto {
 
     public void setIpfsData(Map<String, Object> ipfsData) {
         this.ipfsData = ipfsData;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 }

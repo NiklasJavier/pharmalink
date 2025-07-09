@@ -133,7 +133,7 @@ public class ActorFabricService {
         return actor;
     }
 
-    public Actor updateActor(String actorId, String name, Map<String, Object> ipfsData) throws Exception {
+    public Actor updateActor(String actorId, String name, String email, Map<String, Object> ipfsData) throws Exception {
         String finalIpfsLink = "";
 
         // 1. IPFS-Daten verarbeiten, falls vorhanden
@@ -145,7 +145,7 @@ public class ActorFabricService {
                 // Lade das JSON-Objekt auf IPFS hoch und erhalte den Hash
                 String ipfsHash = ipfsClient.addObject(ipfsJson);
                 if (StringUtils.hasText(ipfsHash)) {
-                    finalIpfsLink = "ipfs://" + ipfsHash; // Erstelle den standardisierten IPFS-Link
+                    finalIpfsLink = ipfsHash;
                     logger.info("Neuer IPFS-Link für Actor-Update erstellt: {}", finalIpfsLink);
                 }
             } catch (Exception e) {
@@ -160,6 +160,7 @@ public class ActorFabricService {
                 "updateActor",
                 actorId,
                 name,
+                email,
                 finalIpfsLink
         );
 
