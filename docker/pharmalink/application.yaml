@@ -2,9 +2,9 @@ springdoc:
   info:
     title: "Pharmalink API"
     description: "API-Dokumentation für die Pharmalink Lieferkettenanwendung auf Hyperledger Fabric."
-    path: "/api/swagger"
+    path: "/swagger"
   api-docs:
-    path: "/api/api-docs"
+    path: "/api-docs"
 
 system:
   benutzername: "admin"
