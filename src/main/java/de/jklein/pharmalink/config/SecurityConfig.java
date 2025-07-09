@@ -5,26 +5,24 @@ import de.jklein.pharmalink.service.auth.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.security.authentication.AuthenticationManager; // Import hinzufügen
-import org.springframework.security.authentication.ProviderManager; // Import hinzufügen
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.http.SessionCreationPolicy; // Import hinzufügen
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter; // Import hinzufügen
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.MediaType;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -33,26 +31,19 @@ import java.util.Collections;
 public class SecurityConfig {
 
     private final CustomUserDetailsService customUserDetailsService;
-    private final JwtRequestFilter jwtRequestFilter; // JwtRequestFilter injizieren
+    private final JwtRequestFilter jwtRequestFilter;
 
-    // Im Konstruktor nun auch JwtRequestFilter injizieren
     public SecurityConfig(CustomUserDetailsService customUserDetailsService, JwtRequestFilter jwtRequestFilter) {
         this.customUserDetailsService = customUserDetailsService;
         this.jwtRequestFilter = jwtRequestFilter;
     }
 
-    /**
-     * Definiert den Passwort-Encoder als Bean. Verwendet BCrypt.
-     */
+    // ... (Bean-Methoden für passwordEncoder, authenticationProvider, authenticationManager bleiben unverändert) ...
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * Konfiguriert den AuthenticationProvider, der den CustomUserDetailsService
-     * und den PasswordEncoder für die Authentifizierung verwendet.
-     */
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -61,69 +52,53 @@ public class SecurityConfig {
         return authProvider;
     }
 
-    /**
-     * NEU: Definiert den AuthenticationManager als Bean.
-     * Dieser Manager wird vom AuthController verwendet, um die Authentifizierung durchzuführen.
-     */
     @Bean
     public AuthenticationManager authenticationManager() {
-        // Der ProviderManager kann einen oder mehrere AuthenticationProvider verwalten.
         return new ProviderManager(authenticationProvider());
     }
 
-
     /**
-     * Sicherheitskonfiguration für die stateless REST-API (/api/**).
-     * @Order(1) sorgt dafür, dass diese Kette vor der allgemeineren Web-Konfiguration geprüft wird.
-     * Hier wird der JwtRequestFilter integriert.
+     * Kette #1: Ausschließlich für die stateless REST-API.
      */
     @Bean
     @Order(1)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/api/**") // Diese Kette nur für Pfade unter /api/ anwenden
-                .csrf(AbstractHttpConfigurer::disable) // CSRF für stateless APIs deaktivieren
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // Wichtig für JWT-basierte APIs
-                )
+                .securityMatcher("/api/**")
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        // Öffentliche Endpunkte für Authentifizierung und Swagger/API-Dokus
-                        .requestMatchers("/api/v1/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/api/api-docs/**").permitAll()
-                        .anyRequest().authenticated() // Alle anderen API-Anfragen erfordern Authentifizierung
+                        .requestMatchers("/api/v1/auth/**").permitAll() // Nur JWT-Login ist frei
+                        .anyRequest().authenticated()
                 )
-                // Hinzufügen des JWT-Filters vor dem Standard-Authentifizierungsfilter
                 .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class)
-                .exceptionHandling(exceptions -> exceptions
-                        // Bei Authentifizierungsfehlern für die API eine JSON-Antwort senden
-                        .authenticationEntryPoint(getApiAuthenticationEntryPoint())
-                );
-        // .httpBasic(Customizer.withDefaults()) // HTTP Basic ist für JWT-Flow nicht mehr direkt nötig und kann entfernt werden
+                .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(getApiAuthenticationEntryPoint()));
 
         return http.build();
     }
 
     /**
-     * Sicherheitskonfiguration für die stateful Webanwendung (alle anderen Pfade).
-     * Sichert die Anwendung mit einem Formular-Login. Relevant für Vaadin, wenn es serverseitig rendert.
+     * Kette #2: Für die stateful Webanwendung (UI und Swagger).
      */
     @Bean
     @Order(2)
-    public SecurityFilterChain formLoginFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain uiSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(authorize -> authorize
-                        // Statische Ressourcen und öffentliche Seiten für alle freigeben
-                        .requestMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
-                        .requestMatchers("/error", "/app/login", "/").permitAll()
-                        // Der Endpunkt für die Authentifizierung muss ebenfalls frei sein für den POST-Request des Formulars
-                        .requestMatchers(HttpMethod.POST, "/authenticate").permitAll()
-                        // Alle anderen Anfragen müssen authentifiziert sein
+                        // Öffentliche Pfade für Login, Assets und die Swagger-Doku-Definition
+                        .requestMatchers(
+                                "/", "/error", "/app/login", "/authenticate",
+                                "/css/**", "/js/**", "/images/**", "/favicon.ico",
+                                "/webjars/**", "/v3/api-docs/**"
+                        ).permitAll()
+                        // Alle anderen Anfragen (inkl. /app/** und /swagger-ui.html) erfordern Authentifizierung
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
-                        .loginPage("/app/login")           // URL zur Login-Seite in Ihrer Vaadin-App
-                        .loginProcessingUrl("/authenticate") // URL, an die das Login-Formular gesendet wird (Standard für Spring Security Form-Login)
-                        .defaultSuccessUrl("/app/dashboard", true) // Ziel nach erfolgreichem Login in Ihrer Vaadin-App
-                        .failureUrl("/app/login?error")     // Ziel bei fehlerhaftem Login
+                        .loginPage("/app/login")
+                        .loginProcessingUrl("/authenticate")
+                        .defaultSuccessUrl("/app/dashboard", true)
+                        .failureUrl("/app/login?error")
                         .permitAll()
                 )
                 .logout(logout -> logout
@@ -132,18 +107,12 @@ public class SecurityConfig {
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID")
                         .permitAll()
-                )
-                // CSRF-Konfiguration für die stateful Webanwendung
-                .csrf(csrf -> {
-                    csrf.ignoringRequestMatchers("/h2-console/**"); // Beispiel: Wenn Sie h2-console nutzen
-                });
+                );
+        // CSRF ist hier standardmäßig aktiviert, was für die UI korrekt ist.
 
         return http.build();
     }
 
-    /**
-     * Definiert den AuthenticationEntryPoint für die API, der einen 401-Status und eine JSON-Fehlermeldung zurückgibt.
-     */
     private AuthenticationEntryPoint getApiAuthenticationEntryPoint() {
         return (request, response, authException) -> {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -154,15 +123,11 @@ public class SecurityConfig {
         };
     }
 
-    /**
-     * Konfiguriert CORS (Cross-Origin Resource Sharing), um Anfragen von Ihrem Frontend zu erlauben.
-     */
     @Bean
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
-        // ACHTUNG: Für die Produktion sollten Sie hier spezifische URLs anstelle von "*" verwenden!
         config.setAllowedOrigins(Collections.singletonList("*"));
         config.setAllowedHeaders(Collections.singletonList("*"));
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"));
