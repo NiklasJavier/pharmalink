@@ -43,7 +43,8 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         UNIT_NOT_FOUND,
         UNIT_ALREADY_EXISTS,
         MEDIKAMENT_NOT_APPROVED,
-        INVALID_UNIT_OWNER
+        INVALID_UNIT_OWNER,
+        MEDIKAMENT_HAS_UNITS
     }
 
     private static final String UNIT_COUNTER_PREFIX = "unitCounter_";
@@ -316,16 +317,17 @@ public final class PharmaSupplyChainContract implements ContractInterface {
 
         if (!actorState.isEmpty()) {
             System.out.println("Akteur mit ID " + actorId + " ist bereits registriert. Rückgabe der Informationen.");
-            // emitEvent(ctx, "ActorAlreadyRegistered", JsonUtil.fromJson(actorState, Actor.class)); // Optional: Event für bestehenden Akteur
             return actorState;
         }
 
-        final Actor newActor = new Actor(actorId, bezeichnung, actualRoleFromCert.toLowerCase(), email, ipfsLink);
+        // Wir erstellen den neuen Akteur mit leeren Strings für Bezeichnung, E-Mail und IPFS-Link.
+        final Actor newActor = new Actor(actorId, "", actualRoleFromCert.toLowerCase(), "", "");
+
         final String newActorJson = JsonUtil.toJson(newActor);
         stub.putStringState(actorId, newActorJson);
-        emitEvent(ctx, "ActorInitialized", newActor); // Event emittieren für den initialisierten Akteur
+        emitEvent(ctx, "ActorInitialized", newActor);
 
-        System.out.println("Neuer Akteur registriert: " + newActorJson);
+        System.out.println("Neuer Akteur mit leeren Stammdaten registriert: " + newActorJson);
         return newActorJson;
     }
 
@@ -1016,5 +1018,161 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         }
 
         return JsonUtil.toJson(actorList);
+    }
+
+    /**
+     * Überträgt einen Bereich von Einheiten (Units) an einen neuen Besitzer in einer einzigen Transaktion.
+     * Die Funktion prüft zuerst, ob der Aufrufer der Besitzer ALLER Einheiten im angegebenen Bereich ist.
+     * Wenn eine einzige Einheit nicht existiert oder nicht dem Aufrufer gehört, wird die gesamte Transaktion abgebrochen.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param medId Die ID des Medikaments.
+     * @param chargeBezeichnung Die Bezeichnung der Charge.
+     * @param startCounter Der Startzähler des Bereichs (inklusiv).
+     * @param endCounter Der Endzähler des Bereichs (inklusiv).
+     * @param newOwnerActorId Die ActorId des neuen Besitzers.
+     * @param transferTimestamp Der Zeitstempel des Transfers als ISO 8601 String.
+     * @return Eine Bestätigungsnachricht über den erfolgreichen Transfer.
+     * Example: {"function":"transferUnitRange","Args":["MED-HASH123","Charge-XYZ","1","50","grosshaendler-abc","2025-07-15T14:30:00Z"]}
+     */
+    @Transaction()
+    public String transferUnitRange(final Context ctx, final String medId, final String chargeBezeichnung,
+                                    final int startCounter, final int endCounter,
+                                    final String newOwnerActorId, final String transferTimestamp) {
+
+        if (startCounter <= 0 || endCounter < startCounter) {
+            throw new ChaincodeException("Ungültiger Zählerbereich.", PharmaSupplyChainErrors.INVALID_ARGUMENT.toString());
+        }
+
+        final Actor callingActor = getCallingActorFromContext(ctx);
+        final String previousOwnerId = callingActor.getActorId();
+
+        if (!actorExists(ctx, newOwnerActorId)) {
+            throw new ChaincodeException(String.format("Neuer Eigentümer Akteur %s nicht gefunden.", newOwnerActorId), PharmaSupplyChainErrors.ACTOR_NOT_FOUND.toString());
+        }
+
+        List<Unit> unitsToTransfer = new ArrayList<>();
+
+        // 1. Verifizierungsphase: Alle Einheiten prüfen, bevor eine Änderung erfolgt.
+        for (int i = startCounter; i <= endCounter; i++) {
+            String unitId = medId + "-" + chargeBezeichnung + "-" + String.format("%04d", i);
+
+            byte[] unitStateBytes = ctx.getStub().getState(unitId);
+            if (unitStateBytes == null || unitStateBytes.length == 0) {
+                throw new ChaincodeException(String.format("Einheit %s im Bereich nicht gefunden. Transaktion abgebrochen.", unitId), PharmaSupplyChainErrors.UNIT_NOT_FOUND.toString());
+            }
+
+            Unit unit = JsonUtil.fromJson(new String(unitStateBytes, StandardCharsets.UTF_8), Unit.class);
+
+            if (!Objects.equals(previousOwnerId, unit.getCurrentOwnerActorId())) {
+                throw new ChaincodeException(String.format("Sie sind nicht der Besitzer der Einheit %s. Transaktion abgebrochen.", unitId), PharmaSupplyChainErrors.INVALID_UNIT_OWNER.toString());
+            }
+            unitsToTransfer.add(unit);
+        }
+
+        // 2. Schreibphase: Alle Einheiten aktualisieren, da die Verifizierung erfolgreich war.
+        for (Unit unit : unitsToTransfer) {
+            unit.addTransferEntry(previousOwnerId, newOwnerActorId, transferTimestamp);
+            unit.setCurrentOwnerActorId(newOwnerActorId);
+            ctx.getStub().putState(unit.getUnitId(), JsonUtil.toJson(unit).getBytes(StandardCharsets.UTF_8));
+            emitEvent(ctx, "UnitTransferred", unit); // Event für jede einzelne Einheit emittieren
+        }
+
+        String successMessage = String.format("%d Einheiten (Bereich %d-%d) erfolgreich an %s übertragen.",
+                (endCounter - startCounter + 1), startCounter, endCounter, newOwnerActorId);
+        System.out.println(successMessage);
+        return successMessage;
+    }
+
+    /**
+     * Löscht eine Liste von Chargen (Units) in einer einzigen Transaktion.
+     * Die Transaktion schlägt fehl, wenn auch nur eine der angegebenen Chargen nicht existiert oder
+     * nicht im Besitz des aufrufenden Akteurs ist (Alles-oder-Nichts-Prinzip).
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param unitIdsJson Ein JSON-String-Array mit den IDs der zu löschenden Chargen.
+     * @throws ChaincodeException Wenn eine der Bedingungen fehlschlägt.
+     * Example: {"function":"deleteUnits","Args":["[\"ID-001\", \"ID-002\"]"]}
+     */
+    @Transaction()
+    public void deleteUnits(final Context ctx, final String unitIdsJson) {
+        final ChaincodeStub stub = ctx.getStub();
+        final Actor callingActor = getCallingActorFromContext(ctx);
+        final String callerId = callingActor.getActorId();
+
+        final String[] unitIds = JsonUtil.fromJson(unitIdsJson, String[].class);
+        if (unitIds == null || unitIds.length == 0) {
+            throw new ChaincodeException("Keine Chargen-IDs zum Löschen angegeben.", PharmaSupplyChainErrors.INVALID_ARGUMENT.toString());
+        }
+
+        // 1. Verifizierungsphase: Sicherstellen, dass der Aufrufer alle Chargen besitzt.
+        for (final String unitId : unitIds) {
+            final byte[] unitStateBytes = stub.getState(unitId);
+            if (unitStateBytes == null || unitStateBytes.length == 0) {
+                throw new ChaincodeException(String.format("Charge %s nicht gefunden. Transaktion wird abgebrochen.", unitId), PharmaSupplyChainErrors.UNIT_NOT_FOUND.toString());
+            }
+            final Unit unit = JsonUtil.fromJson(new String(unitStateBytes, StandardCharsets.UTF_8), Unit.class);
+            if (!Objects.equals(callerId, unit.getCurrentOwnerActorId())) {
+                throw new ChaincodeException(String.format("Sie sind nicht der Besitzer der Charge %s. Transaktion wird abgebrochen.", unitId), PharmaSupplyChainErrors.INVALID_UNIT_OWNER.toString());
+            }
+        }
+
+        // 2. Löschphase: Alle Chargen löschen, da die Verifizierung erfolgreich war.
+        for (final String unitId : unitIds) {
+            stub.delState(unitId);
+            Map<String, String> deletePayload = new TreeMap<>();
+            deletePayload.put("unitId", unitId);
+            deletePayload.put("docType", "unit");
+            emitEvent(ctx, "UnitDeleted", deletePayload);
+        }
+
+        System.out.printf("%d Chargen erfolgreich gelöscht.%n", unitIds.length);
+    }
+
+
+    /**
+     * Löscht ein Medikament, aber nur, wenn noch keine Chargen dafür erstellt wurden.
+     * Nur eine Behörde oder der anlegende Hersteller (falls Status noch "angelegt") darf dies tun.
+     *
+     * @param ctx Der Transaktionskontext.
+     * @param medId Die ID des zu löschenden Medikaments.
+     * @throws ChaincodeException Wenn das Medikament nicht gefunden wird, der Aufrufer nicht autorisiert ist
+     * oder bereits Chargen für dieses Medikament existieren.
+     * Example: {"function":"deleteMedikamentIfNoUnits","Args":["MED-HASH123"]}
+     */
+    @Transaction()
+    public void deleteMedikamentIfNoUnits(final Context ctx, final String medId) {
+        final ChaincodeStub stub = ctx.getStub();
+
+        // Schritt 1: Berechtigungsprüfung (gleiche Logik wie in der bestehenden deleteMedikament-Funktion)
+        final byte[] medikamentStateBytes = stub.getState(medId);
+        if (medikamentStateBytes == null || medikamentStateBytes.length == 0) {
+            throw new ChaincodeException(String.format("Medikament %s nicht gefunden", medId), PharmaSupplyChainErrors.MEDIKAMENT_NOT_FOUND.toString());
+        }
+        final Medikament existingMedikament = JsonUtil.fromJson(new String(medikamentStateBytes, StandardCharsets.UTF_8), Medikament.class);
+        final Actor callingActor = getCallingActorFromContext(ctx);
+
+        if (!(callingActor.getRole().equalsIgnoreCase("behoerde")
+                || (callingActor.getRole().equalsIgnoreCase("hersteller")
+                        && Objects.equals(callingActor.getActorId(), existingMedikament.getHerstellerId())
+                        && existingMedikament.getStatus().equalsIgnoreCase("angelegt")))) {
+            throw new ChaincodeException("Nicht autorisiert, dieses Medikament zu löschen.", PharmaSupplyChainErrors.UNAUTHORIZED_ACCESS.toString());
+        }
+
+        // Schritt 2: NEUE PRÜFUNG: Sicherstellen, dass keine Chargen existieren
+        final String unitsJson = queryUnitsByMedId(ctx, medId);
+        final Unit[] units = JsonUtil.fromJson(unitsJson, Unit[].class);
+        if (units.length > 0) {
+            throw new ChaincodeException(String.format("Medikament %s kann nicht gelöscht werden, da bereits %d Charge(n) existieren.", medId, units.length), PharmaSupplyChainErrors.MEDIKAMENT_HAS_UNITS.toString());
+        }
+
+        // Schritt 3: Löschen, wenn alle Prüfungen erfolgreich waren
+        stub.delState(medId);
+        stub.delState(UNIT_COUNTER_PREFIX + medId); // Auch den Zähler löschen
+
+        Map<String, String> deletePayload = new TreeMap<>();
+        deletePayload.put("medId", medId);
+        deletePayload.put("docType", "medikament");
+        emitEvent(ctx, "MedikamentDeleted", deletePayload);
     }
 }
