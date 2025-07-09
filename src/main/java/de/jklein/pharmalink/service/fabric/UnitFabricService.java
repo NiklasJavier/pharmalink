@@ -162,4 +162,36 @@ public class UnitFabricService {
         }
         return unit;
     }
+
+    public void deleteUnit(String unitId) throws Exception {
+        logger.debug("Sende 'deleteUnit' Transaktion für ID: {}", unitId);
+        fabricClient.submitGenericTransaction("deleteUnit", unitId);
+        logger.info("Charge {} erfolgreich zur Löschung eingereicht.", unitId);
+    }
+
+    public void deleteUnits(List<String> unitIds) throws Exception {
+        logger.debug("Sende 'deleteUnits' Transaktion für {} Chargen.", unitIds.size());
+        // Die Liste der IDs muss als einzelner JSON-String-Parameter übergeben werden
+        String unitIdsJson = fabricClient.getGson().toJson(unitIds);
+        fabricClient.submitGenericTransaction("deleteUnits", unitIdsJson);
+        logger.info("{} Chargen erfolgreich zur Löschung eingereicht.", unitIds.size());
+    }
+
+    public String transferUnitRange(String medId, String chargeBezeichnung, int start, int end, String newOwnerId) throws Exception {
+        logger.debug("Sende 'transferUnitRange' Transaktion für Bereich {}-{}", start, end);
+        // Zeitstempel wird im Backend generiert
+        String timestamp = java.time.Instant.now().toString();
+
+        String result = fabricClient.submitGenericTransaction(
+                "transferUnitRange",
+                medId,
+                chargeBezeichnung,
+                String.valueOf(start),
+                String.valueOf(end),
+                newOwnerId,
+                timestamp
+        );
+        logger.info("Chargenbereich erfolgreich zur Übertragung eingereicht.");
+        return result;
+    }
 }

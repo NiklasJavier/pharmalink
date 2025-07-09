@@ -168,4 +168,22 @@ public class MedicationFabricController {
                     .body(Map.of("error", "Fehler beim Aktualisieren des Medikaments: " + e.getMessage()));
         }
     }
+
+    @DeleteMapping("/{medId}/conditional-delete")
+    public ResponseEntity<?> deleteMedikamentIfNoUnits(@PathVariable String medId) {
+        try {
+            medicationFabricService.deleteMedikamentIfNoUnits(medId);
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            // Hier könnte man den Fehlertext parsen, um bei 'MEDIKAMENT_HAS_UNITS' einen
+            // spezifischeren HTTP-Status wie 409 Conflict zurückzugeben.
+            if (e.getMessage().contains("MEDIKAMENT_HAS_UNITS")) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(Map.of("error", "Löschen nicht möglich, da bereits Chargen für dieses Medikament existieren."));
+            }
+            return ResponseEntity
+                    .internalServerError()
+                    .body(Map.of("error", "Fehler beim Löschen des Medikaments: " + e.getMessage()));
+        }
+    }
 }

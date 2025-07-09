@@ -187,4 +187,10 @@ public class MedicationFabricService {
         // 3. Ergebnis deserialisieren und zurückgeben
         return fabricClient.getGson().fromJson(resultJson, Medikament.class);
     }
+
+    public void deleteMedikamentIfNoUnits(String medId) throws Exception {
+        logger.debug("Sende 'deleteMedikamentIfNoUnits' Transaktion für ID: {}", medId);
+        fabricClient.submitGenericTransaction("deleteMedikamentIfNoUnits", medId);
+        logger.info("Medikament {} erfolgreich zur bedingten Löschung eingereicht.", medId);
+    }
 }

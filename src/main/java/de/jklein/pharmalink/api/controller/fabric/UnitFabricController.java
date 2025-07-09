@@ -1,9 +1,6 @@
 package de.jklein.pharmalink.api.controller.fabric;
 
-import de.jklein.pharmalink.api.dto.AddTemperatureReadingRequestDto;
-import de.jklein.pharmalink.api.dto.CreateUnitsRequestDto;
-import de.jklein.pharmalink.api.dto.TransferUnitRequestDto;
-import de.jklein.pharmalink.api.dto.UnitResponseDto;
+import de.jklein.pharmalink.api.dto.*;
 import de.jklein.pharmalink.api.mapper.UnitMapper; // NEU: UnitMapper importieren
 import de.jklein.pharmalink.domain.Unit; // NEU: Unit Domain-Objekt importieren
 import de.jklein.pharmalink.service.fabric.UnitFabricService;
@@ -158,6 +155,48 @@ public class UnitFabricController {
             return ResponseEntity
                     .internalServerError()
                     .body(Map.of("error", "Fehler beim Hinzufügen der Temperaturdaten: " + e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{unitId}")
+    public ResponseEntity<?> deleteUnit(@PathVariable String unitId) {
+        try {
+            unitFabricService.deleteUnit(unitId);
+            return ResponseEntity.noContent().build(); // Standard-Antwort für erfolgreiches DELETE
+        } catch (Exception e) {
+            return ResponseEntity
+                    .internalServerError()
+                    .body(Map.of("error", "Fehler beim Löschen der Charge: " + e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/batch")
+    public ResponseEntity<?> deleteUnitsInBatch(@RequestBody DeleteUnitsRequestDto requestDto) {
+        try {
+            unitFabricService.deleteUnits(requestDto.getUnitIds());
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            return ResponseEntity
+                    .internalServerError()
+                    .body(Map.of("error", "Fehler beim Batch-Löschen der Chargen: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/transfer-range")
+    public ResponseEntity<?> transferUnitRange(@RequestBody TransferUnitRangeRequestDto requestDto) {
+        try {
+            String resultMessage = unitFabricService.transferUnitRange(
+                    requestDto.getMedId(),
+                    requestDto.getChargeBezeichnung(),
+                    requestDto.getStartCounter(),
+                    requestDto.getEndCounter(),
+                    requestDto.getNewOwnerId()
+            );
+            return ResponseEntity.ok(Map.of("message", resultMessage));
+        } catch (Exception e) {
+            return ResponseEntity
+                    .internalServerError()
+                    .body(Map.of("error", "Fehler bei der Bereichsübertragung: " + e.getMessage()));
         }
     }
 }
