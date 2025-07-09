@@ -133,6 +133,44 @@ public class ActorFabricService {
         return actor;
     }
 
+    public Actor updateActor(String actorId, String name, String role, Map<String, Object> ipfsData) throws Exception {
+        String finalIpfsLink = "";
+
+        // 1. IPFS-Daten verarbeiten, falls vorhanden
+        if (ipfsData != null && !ipfsData.isEmpty()) {
+            logger.info("Verarbeite neue 'ipfsData' für Actor-ID: {}", actorId);
+            try {
+                // Konvertiere die Map in einen JSON-String
+                String ipfsJson = fabricClient.getGson().toJson(ipfsData);
+                // Lade das JSON-Objekt auf IPFS hoch und erhalte den Hash
+                String ipfsHash = ipfsClient.addObject(ipfsJson);
+                if (StringUtils.hasText(ipfsHash)) {
+                    finalIpfsLink = "ipfs://" + ipfsHash; // Erstelle den standardisierten IPFS-Link
+                    logger.info("Neuer IPFS-Link für Actor-Update erstellt: {}", finalIpfsLink);
+                }
+            } catch (Exception e) {
+                logger.error("Fehler beim Hochladen der IPFS-Daten für Actor {}: {}", actorId, e.getMessage(), e);
+                throw new RuntimeException("Fehler beim IPFS-Upload.", e);
+            }
+        }
+
+        // 2. Transaktion an den Chaincode senden
+        logger.debug("Sende 'updateActor' Transaktion für ID: {}", actorId);
+        String resultJson = fabricClient.submitGenericTransaction(
+                "updateActor",
+                actorId,
+                name,
+                role,
+                finalIpfsLink
+        );
+
+        // 3. Ergebnis deserialisieren, anreichern und zurückgeben
+        Actor updatedActor = fabricClient.getGson().fromJson(resultJson, Actor.class);
+        return enrichSingleActorWithIpfs(updatedActor);
+    }
+
+
+
     public ActorMapper getActorMapper() {
         return actorMapper;
     }

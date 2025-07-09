@@ -161,4 +161,30 @@ public class MedicationFabricService {
         }
         return medikament;
     }
+
+    public Medikament updateMedikament(String medId, String bezeichnung, String infoblattHash, Map<String, Object> ipfsData) throws Exception {
+        String finalIpfsLink = "";
+
+        // 1. IPFS-Daten verarbeiten, falls vorhanden
+        if (ipfsData != null && !ipfsData.isEmpty()) {
+            logger.info("Verarbeite neue 'ipfsData' für Medikament-ID: {}", medId);
+            String ipfsJson = fabricClient.getGson().toJson(ipfsData);
+            // Lade das JSON-Objekt auf IPFS hoch und erstelle den Link
+            finalIpfsLink = "ipfs://" + ipfsClient.addObject(ipfsJson);
+            logger.info("Neuer IPFS-Link für Update erstellt: {}", finalIpfsLink);
+        }
+
+        // 2. Transaktion an den Chaincode senden
+        logger.debug("Sende 'updateMedikament' Transaktion für ID: {}", medId);
+        String resultJson = fabricClient.submitGenericTransaction(
+                "updateMedikament",
+                medId,
+                bezeichnung,
+                infoblattHash,
+                finalIpfsLink
+        );
+
+        // 3. Ergebnis deserialisieren und zurückgeben
+        return fabricClient.getGson().fromJson(resultJson, Medikament.class);
+    }
 }

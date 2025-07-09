@@ -3,6 +3,7 @@ package de.jklein.pharmalink.api.controller.fabric;
 import de.jklein.pharmalink.api.dto.CreateMedikamentRequestDto;
 import de.jklein.pharmalink.api.dto.MedikamentResponseDto;
 import de.jklein.pharmalink.api.dto.UpdateMedicationStatusRequestDto;
+import de.jklein.pharmalink.api.dto.UpdateMedikamentRequestDto;
 import de.jklein.pharmalink.api.mapper.MedikamentMapper;
 import de.jklein.pharmalink.domain.Medikament;
 import de.jklein.pharmalink.service.fabric.MedicationFabricService;
@@ -146,5 +147,25 @@ public class MedicationFabricController {
         List<Medikament> medikamente = medicationFabricService.searchMedicationsByBezeichnung(searchQuery);
         List<MedikamentResponseDto> medikamentDtos = medikamentMapper.toDtoList(medikamente);
         return ResponseEntity.ok(medikamentDtos);
+    }
+
+    @PutMapping("/{medId}")
+    public ResponseEntity<?> updateMedication(
+            @PathVariable final String medId,
+            @RequestBody final UpdateMedikamentRequestDto requestDto) {
+        try {
+            Medikament updatedMedikament = medicationFabricService.updateMedikament(
+                    medId,
+                    requestDto.getBezeichnung(),
+                    requestDto.getInfoblattHash(),
+                    requestDto.getIpfsData()
+            );
+            MedikamentResponseDto responseDto = medikamentMapper.toDto(updatedMedikament);
+            return ResponseEntity.ok(responseDto);
+        } catch (Exception e) {
+            return ResponseEntity
+                    .internalServerError()
+                    .body(Map.of("error", "Fehler beim Aktualisieren des Medikaments: " + e.getMessage()));
+        }
     }
 }
