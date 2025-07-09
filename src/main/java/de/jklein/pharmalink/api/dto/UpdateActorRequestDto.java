@@ -5,7 +5,6 @@ import java.util.Map;
 public class UpdateActorRequestDto {
 
     private String name;
-    private String role;
     private Map<String, Object> ipfsData;
 
     // Getter and Setter
@@ -16,14 +15,6 @@ public class UpdateActorRequestDto {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    public void setRole(String role) {
-        this.role = role;
     }
 
     public Map<String, Object> getIpfsData() {

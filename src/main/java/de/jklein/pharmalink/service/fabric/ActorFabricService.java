@@ -133,7 +133,7 @@ public class ActorFabricService {
         return actor;
     }
 
-    public Actor updateActor(String actorId, String name, String role, Map<String, Object> ipfsData) throws Exception {
+    public Actor updateActor(String actorId, String name, Map<String, Object> ipfsData) throws Exception {
         String finalIpfsLink = "";
 
         // 1. IPFS-Daten verarbeiten, falls vorhanden
@@ -160,7 +160,6 @@ public class ActorFabricService {
                 "updateActor",
                 actorId,
                 name,
-                role,
                 finalIpfsLink
         );
 

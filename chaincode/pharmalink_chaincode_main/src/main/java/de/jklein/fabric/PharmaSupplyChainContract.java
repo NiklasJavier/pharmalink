@@ -182,10 +182,10 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * @param newEmail   Die neue E-Mail-Adresse des Akteurs.
      * @param newIpfsLink Der neue optionale IPFS-Link.
      * @return Der aktualisierte Akteur als JSON-String.
-     * Example: {"function":"updateActor","Args":["actor1","hersteller","new_email@example.com","newQm..."]}
+     * Example: {"function":"updateActor","Args":["actor1","new_email@example.com","newQm..."]}
      */
     @Transaction()
-    public String updateActor(final Context ctx, final String actorId, final String newBezeichnung, final String newRole, final String newEmail, final String newIpfsLink) {
+    public String updateActor(final Context ctx, final String actorId, final String newBezeichnung, final String newEmail, final String newIpfsLink) {
         byte[] actorStateBytes = ctx.getStub().getState(actorId);
 
         if (actorStateBytes == null || actorStateBytes.length == 0) {
@@ -200,7 +200,6 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         }
 
         existingActor.setBezeichnung(newBezeichnung);
-        existingActor.setRole(newRole);
         existingActor.setEmail(newEmail);
         existingActor.setIpfsLink(newIpfsLink);
 
