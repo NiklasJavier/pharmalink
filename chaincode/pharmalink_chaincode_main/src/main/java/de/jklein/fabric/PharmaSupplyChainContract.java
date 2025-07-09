@@ -1130,6 +1130,18 @@ public final class PharmaSupplyChainContract implements ContractInterface {
     }
 
 
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String queryAllMedikamente(final Context ctx) {
+        List<Medikament> medikamentList = new ArrayList<>();
+        String queryString = "{\"selector\":{\"docType\":\"medikament\"}}";
+        final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = ctx.getStub().getQueryResult(queryString);
+        for (final org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
+            final Medikament medikament = JsonUtil.fromJson(kv.getStringValue(), Medikament.class);
+            medikamentList.add(medikament);
+        }
+        return JsonUtil.toJson(medikamentList);
+    }
+
     /**
      * Löscht ein Medikament, aber nur, wenn noch keine Chargen dafür erstellt wurden.
      * Nur eine Behörde oder der anlegende Hersteller (falls Status noch "angelegt") darf dies tun.
