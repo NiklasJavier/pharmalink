@@ -3,7 +3,6 @@ package de.jklein.pharmalink.api.mapper;
 import de.jklein.pharmalink.api.dto.ActorResponseDto;
 import de.jklein.pharmalink.domain.Actor;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
@@ -12,9 +11,8 @@ import java.util.stream.Collectors;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ActorMapper {
 
-    // ipfsData wird im ActorService separat aus IPFS geladen und dem DTO hinzugefügt.
-    // Daher wird es hier beim direkten Mapping vom Domain-Objekt ignoriert.
-    @Mapping(target = "ipfsData", ignore = true)
+    // Die Annotation @Mapping(target = "ipfsData", ignore = true) wurde entfernt.
+    // MapStruct wird das Feld "ipfsData" jetzt automatisch mappen.
     ActorResponseDto toDto(Actor actor);
 
     // Wandelt ein ActorResponseDto in ein Actor-Domain-Objekt um.

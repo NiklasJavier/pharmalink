@@ -3,21 +3,19 @@ package de.jklein.pharmalink.api.mapper;
 import de.jklein.pharmalink.api.dto.UnitResponseDto;
 import de.jklein.pharmalink.domain.Unit;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
-import java.util.stream.Collectors; // Import für Collectors hinzufügen
+import java.util.stream.Collectors;
 
 /**
  * MapStruct-Mapper zur Umwandlung zwischen Unit-Domain-Objekten und DTOs.
  */
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE) // ReportingPolicy.IGNORE ist gut, wenn nicht alle Felder gemappt werden sollen
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface UnitMapper {
 
-    // NEU: isConsumed und consumedRefId werden direkt gemappt, wenn Feldnamen übereinstimmen.
-    // ipfsData wird im Service befüllt, daher ignorieren wir es hier beim Mapping von Domain zu DTO.
-    @Mapping(target = "ipfsData", ignore = true)
+    // Die Annotation @Mapping(target = "ipfsData", ignore = true) wurde entfernt.
+    // MapStruct wird das Feld "ipfsData" jetzt automatisch mappen.
     UnitResponseDto toDto(Unit unit);
 
     /**
