@@ -38,6 +38,9 @@ public final class Unit {
     @Property()
     private String consumedRefId;
 
+    @Property()
+    private String docType;
+
     public Unit() {
         this.transferHistory = new ArrayList<>();
         this.temperatureReadings = new ArrayList<>();
@@ -77,6 +80,14 @@ public final class Unit {
 
     public void setMedId(final String newMedId) {
         this.medId = newMedId;
+    }
+
+    public String getDocType() {
+        return docType;
+    }
+
+    public void setDocType(final String newDocType) {
+        this.docType = newDocType;
     }
 
     public String getChargeBezeichnung() {
