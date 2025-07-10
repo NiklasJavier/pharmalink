@@ -39,7 +39,12 @@ public class SystemStateService {
 
     private static final Logger logger = LoggerFactory.getLogger(SystemStateService.class);
     private static final String SYSTEM_STATE_ID = "pharmalink-state-state";
+
+    // --- Event Name Constants ---
     private static final String GENERIC_EVENT_NAME = "PharmalinkDataEvent";
+    private static final String LEGACY_ACTOR_INIT_EVENT = "ActorInitialized";
+    private static final String LEGACY_ACTOR_UPDATE_EVENT = "ActorUpdated";
+    private static final String LEGACY_MED_UPDATE_EVENT = "MedicationUpdated"; // Assuming this name
 
     private final SystemStateRepository systemStateRepository;
     private final FabricClient fabricClient;
@@ -104,57 +109,89 @@ public class SystemStateService {
     }
 
     /**
-     * **ADAPTED**: Handles events based on their operation type (CREATED, UPDATED, DELETED).
+     * ## HYBRID EVENT HANDLER ##
+     * Handles both new generic events and legacy specific events.
      */
     private void handleChaincodeEvent(ChaincodeEvent event) {
         logEventForAudit(event);
-
-        if (!GENERIC_EVENT_NAME.equals(event.getEventName())) {
-            logger.debug("Received unhandled or legacy chaincode event: {}", event.getEventName());
-            return;
-        }
 
         try {
             if (event.getPayload() == null || event.getPayload().length == 0) {
                 logger.warn("Received event '{}' with empty payload. Skipping.", event.getEventName());
                 return;
             }
+
             JsonNode payload = objectMapper.readTree(event.getPayload());
-            String entityType = payload.path("entityType").asText();
-            String entityId = payload.path("entityId").asText();
-            // Assume "UPDATED" if operation is not specified, for backward compatibility
-            String operation = payload.path("operation").asText("UPDATED");
 
-            if (entityId.isEmpty() || entityType.isEmpty()) {
-                logger.error("Event payload is missing 'entityId' or 'entityType'. Payload: {}", payload);
-                return;
-            }
+            // Route based on the event name
+            switch (event.getEventName()) {
+                // --- New Generic Event Handling ---
+                case GENERIC_EVENT_NAME:
+                    processGenericEvent(payload);
+                    break;
 
-            // Route to the correct handler based on the operation
-            if ("DELETED".equalsIgnoreCase(operation)) {
-                handleDeletion(entityType, entityId);
-                return;
-            }
+                // --- Legacy Event Handling ---
+                case LEGACY_ACTOR_INIT_EVENT:
+                case LEGACY_ACTOR_UPDATE_EVENT:
+                    String actorId = payload.path("actorId").asText();
+                    if (!actorId.isEmpty()) {
+                        logger.debug("Handling legacy actor event for ID: {}", actorId);
+                        handleActorUpdate(actorId);
+                    }
+                    break;
 
-            // For CREATED or UPDATED, use the update handlers
-            switch (entityType) {
-                case "Actor":
-                    handleActorUpdate(entityId);
+                case LEGACY_MED_UPDATE_EVENT:
+                    // Assuming the legacy payload contains a field like "medikamentId" or "id"
+                    String medId = payload.has("id") ? payload.path("id").asText() : payload.path("medikamentId").asText();
+                    if (!medId.isEmpty()) {
+                        logger.debug("Handling legacy medication event for ID: {}", medId);
+                        handleMedikamentUpdate(medId);
+                    }
                     break;
-                case "Medikament":
-                    handleMedikamentUpdate(entityId);
-                    break;
-                case "Unit":
-                    handleUnitUpdate(entityId);
-                    break;
+
                 default:
-                    logger.warn("Received event for unhandled entityType: {}", entityType);
+                    logger.warn("Received unhandled event name: {}", event.getEventName());
                     break;
             }
         } catch (IOException e) {
-            logger.error("Failed to parse event payload for event '{}' due to IOException: {}", event.getEventName(), e.getMessage());
+            logger.error("Failed to parse event payload for event '{}' due to IOException: {}", event.getEventName(), e.getMessage(), e);
         }
     }
+
+    /**
+     * Processes the new, generic "PharmalinkDataEvent".
+     */
+    private void processGenericEvent(JsonNode payload) {
+        String entityType = payload.path("entityType").asText();
+        String entityId = payload.path("entityId").asText();
+        String operation = payload.path("operation").asText("UPDATED").toUpperCase();
+
+        if (entityId.isEmpty() || entityType.isEmpty()) {
+            logger.error("Generic event payload is missing 'entityId' or 'entityType'. Payload: {}", payload);
+            return;
+        }
+
+        if ("DELETED".equals(operation)) {
+            handleDeletion(entityType, entityId);
+            return;
+        }
+
+        switch (entityType) {
+            case "Actor":
+                handleActorUpdate(entityId);
+                break;
+            case "Medikament":
+                handleMedikamentUpdate(entityId);
+                break;
+            case "Unit":
+                handleUnitUpdate(entityId);
+                break;
+            default:
+                logger.warn("Received generic event for unhandled entityType: {}", entityType);
+                break;
+        }
+    }
+
 
     private void logEventForAudit(ChaincodeEvent event) {
         try {
@@ -166,16 +203,12 @@ public class SystemStateService {
                     payloadAsString
             );
             eventLogRepository.save(logEntry);
-            logger.info("Chaincode event with TxId '{}' successfully audited.", event.getTransactionId());
         } catch (Exception e) {
             logger.error("!!! FAILED TO AUDIT CHAINCODE EVENT !!! TxId: {}. Reason: {}",
-                    event.getTransactionId(), e.getMessage());
+                    event.getTransactionId(), e.getMessage(), e);
         }
     }
 
-    /**
-     * **NEW**: Removes an entity from the corresponding in-memory cache upon a DELETED event.
-     */
     private void handleDeletion(String entityType, String entityId) {
         switch (entityType) {
             case "Actor":
@@ -225,32 +258,21 @@ public class SystemStateService {
         });
     }
 
-    /**
-     * **ADAPTED**: Correctly handles creation, updates, and transfers of units.
-     * If a unit is transferred away, it's removed from the local cache.
-     */
     private void handleUnitUpdate(String unitId) {
-        // Fetch the latest state of the unit from the service
         Optional<Unit> updatedUnitOptional = unitFabricService.getEnrichedUnitById(unitId);
 
         if (updatedUnitOptional.isPresent()) {
             Unit updatedUnit = updatedUnitOptional.get();
             synchronized (myUnits) {
-                // Always remove the old version first to handle updates correctly
                 myUnits.removeIf(u -> u.getUnitId().equals(unitId));
-
-                // Add the unit to our cache ONLY if we are the current owner
                 if (Objects.equals(updatedUnit.getOwnerId(), currentActorId.get())) {
                     myUnits.add(updatedUnit);
                     logger.info("Unit {} now owned by current actor. Added/Updated in 'myUnits' cache.", unitId);
                 } else {
-                    // This handles the case where the unit was transferred to someone else
                     logger.info("Unit {} is no longer owned by current actor. Removed from 'myUnits' cache.", unitId);
                 }
             }
         } else {
-            // This case should be handled by the 'DELETED' event, but as a fallback,
-            // we ensure the unit is removed if it can't be fetched anymore.
             handleDeletion("Unit", unitId);
         }
     }
@@ -313,11 +335,6 @@ public class SystemStateService {
         });
     }
 
-    public void loadFromDatabaseOnFailure() {
-        logger.warn("Initial data load from chaincode failed. Attempting to load SystemState from database as a fallback.");
-        loadStateFromDatabase();
-    }
-
     public List<Actor> getAllActors() {
         return Collections.unmodifiableList(allActors);
     }
@@ -330,31 +347,20 @@ public class SystemStateService {
         return Collections.unmodifiableList(myUnits);
     }
 
-    /**
-     * Gibt alle Akteure im SystemState als JSON-String zurück.
-     * @return JSON-String der Akteure.
-     * @throws JsonProcessingException wenn die Serialisierung fehlschlägt.
-     */
     public String getAllActorsAsJsonString() throws JsonProcessingException {
         return objectMapper.writeValueAsString(this.allActors);
     }
 
-    /**
-     * Gibt alle Medikamente im SystemState als JSON-String zurück.
-     *
-     * @return JSON-String der Medikamente.
-     * @throws JsonProcessingException wenn die Serialisierung fehlschlägt.
-     */
     public String getAllMedikamenteAsJsonString() throws JsonProcessingException {
         return objectMapper.writeValueAsString(this.allMedikamente);
     }
 
-    /**
-     * Gibt alle Units des aktuellen Benutzers im SystemState als JSON-String zurück.
-     * @return JSON-String der Units.
-     * @throws JsonProcessingException wenn die Serialisierung fehlschlägt.
-     */
     public String getMyUnitsAsJsonString() throws JsonProcessingException {
         return objectMapper.writeValueAsString(this.myUnits);
+    }
+
+    public void loadFromDatabaseOnFailure() {
+        logger.warn("Initial data load from chaincode failed. Attempting to load SystemState from database as a fallback.");
+        loadStateFromDatabase();
     }
 }
