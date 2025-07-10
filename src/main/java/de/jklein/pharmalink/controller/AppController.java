@@ -109,15 +109,15 @@ public class AppController {
                     tableTitle = "Meine Medikamente";
                     kpiData.put("Eigene Medikamente", mainTableData.size());
                     kpiData.put("Meine Einheiten", systemStateService.getMyUnits().size());
-                    kpiData.put("Alle Grosshändler", searchService.searchActors("grosshaendler", null).size());
+                    kpiData.put("Alle Grosshändler", searchService.searchActors("grosshaendler", null, null).size());
                     break;
                 case "grosshaendler":
                 case "apotheke":
                     mainTableData = systemStateService.getMyUnits();
                     tableTitle = "Mein Inventar (Einheiten)";
                     kpiData.put("Besessene Einheiten", mainTableData.size());
-                    kpiData.put("Alle Apotheken", searchService.searchActors("apotheke", null).size());
-                    kpiData.put("Alle Großhändler", searchService.searchActors("grosshaendler", null).size());
+                    kpiData.put("Alle Apotheken", searchService.searchActors("apotheke", null, null).size());
+                    kpiData.put("Alle Großhändler", searchService.searchActors("grosshaendler", null, null).size());
                     break;
                 case "behoerde":
                     mainTableData = systemStateService.getAllMedikamente();

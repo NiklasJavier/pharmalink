@@ -169,7 +169,7 @@ public class MedicationFabricController {
         }
     }
 
-    @DeleteMapping("/{medId}/conditional-delete")
+    @DeleteMapping("/{medId}/conditional-delete") // nicht aktualisiert im state
     public ResponseEntity<?> deleteMedikamentIfNoUnits(@PathVariable String medId) {
         try {
             medicationFabricService.deleteMedikamentIfNoUnits(medId);

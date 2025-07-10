@@ -92,19 +92,24 @@ public class SearchService {
 
     // --- searchActors and searchUnitsByCharge remain unchanged ---
 
-    public List<Actor> searchActors(String role, String bezeichnungQuery) {
+    public List<Actor> searchActors(String role, String bezeichnung, String actorId) {
         Stream<Actor> actorStream = systemStateService.getAllActors().stream();
+
         if (StringUtils.hasText(role)) {
-            actorStream = actorStream.filter(actor -> role.equalsIgnoreCase(actor.getRole()));
+            actorStream = actorStream.filter(actor -> actor.getRole().equalsIgnoreCase(role));
         }
-        if (StringUtils.hasText(bezeichnungQuery)) {
-            final String lowercaseQuery = bezeichnungQuery.toLowerCase(Locale.ROOT);
-            actorStream = actorStream.filter(actor ->
-                    actor.getBezeichnung().toLowerCase(Locale.ROOT).contains(lowercaseQuery)
-            );
+
+        if (StringUtils.hasText(bezeichnung)) {
+            actorStream = actorStream.filter(actor -> actor.getBezeichnung().toLowerCase().contains(bezeichnung.toLowerCase()));
         }
+
+        if (StringUtils.hasText(actorId)) {
+            actorStream = actorStream.filter(actor -> actor.getActorId().equals(actorId));
+        }
+
         return actorStream.collect(Collectors.toList());
     }
+
 
     public List<Unit> searchUnitsByCharge(String query) {
         final String lowercaseQuery = query.toLowerCase(Locale.ROOT);

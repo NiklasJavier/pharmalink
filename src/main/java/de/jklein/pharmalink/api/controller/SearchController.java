@@ -38,10 +38,12 @@ public class SearchController {
     @Operation(summary = "Search for actors", description = "Searches for actors by their role and/or name. All parameters are optional.")
     public ResponseEntity<List<ActorResponseDto>> searchActors(
             @Parameter(description = "Filter by a specific role.") @RequestParam(required = false) String role,
-            @Parameter(description = "Search query for the actor's name.") @RequestParam(required = false) String bezeichnung) {
-        var foundActors = searchService.searchActors(role, bezeichnung);
+            @Parameter(description = "Search query for the actor's name.") @RequestParam(required = false) String bezeichnung,
+            @Parameter(description = "Filter by a specific actor ID.") @RequestParam(required = false) String actorId) {
+        var foundActors = searchService.searchActors(role, bezeichnung, actorId);
         return ResponseEntity.ok(actorMapper.toDtoList(foundActors));
     }
+
 
     /**
      * **ADAPTED ENDPOINT**: Now accepts the optional 'ownedByMe' parameter.
