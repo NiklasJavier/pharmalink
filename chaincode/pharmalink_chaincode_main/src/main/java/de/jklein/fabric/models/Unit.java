@@ -43,6 +43,7 @@ public final class Unit {
         this.temperatureReadings = new ArrayList<>();
         this.isConsumed = false;
         this.consumedRefId = "";
+        this.docType = "unit";
     }
 
     public Unit(@JsonProperty("unitId") final String unitId,
@@ -57,6 +58,7 @@ public final class Unit {
         this.currentOwnerActorId = currentOwnerActorId;
         this.transferHistory = new ArrayList<>();
         this.temperatureReadings = new ArrayList<>();
+        this.docType = "unit";
         this.isConsumed = false;
         this.consumedRefId = "";
     }
