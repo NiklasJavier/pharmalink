@@ -44,7 +44,7 @@ public class SystemStateService {
     private static final String GENERIC_EVENT_NAME = "PharmalinkDataEvent";
     private static final String LEGACY_ACTOR_INIT_EVENT = "ActorInitialized";
     private static final String LEGACY_ACTOR_UPDATE_EVENT = "ActorUpdated";
-    private static final String LEGACY_MED_UPDATE_EVENT = "MedicationUpdated"; // Assuming this name
+    private static final String LEGACY_MED_UPDATE_EVENT = "MedikamentUpdated"; // ANGEPASST: Von "MedicationUpdated" zu "MedikamentUpdated"
     private static final String MEDIKAMENT_CREATED_EVENT = "MedikamentCreated"; // NEU hinzugefügt
 
     private final SystemStateRepository systemStateRepository;
@@ -141,8 +141,8 @@ public class SystemStateService {
                     }
                     break;
 
-                case LEGACY_MED_UPDATE_EVENT:
-                case MEDIKAMENT_CREATED_EVENT: // NEU: Behandlung des MedikamentCreated Events
+                case LEGACY_MED_UPDATE_EVENT: // Hier wird jetzt "MedikamentUpdated" abgefangen
+                case MEDIKAMENT_CREATED_EVENT:
                     // Assuming the payload contains a field like "medId" or "id"
                     String medId = payload.has("medId") ? payload.path("medId").asText() : payload.path("id").asText();
                     if (!medId.isEmpty()) {
