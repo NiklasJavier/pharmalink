@@ -30,22 +30,12 @@ public class AppDataInitializer implements CommandLineRunner {
     private final MedicationFabricService medicationFabricService;
     private final UnitFabricService unitFabricService;
 
-
-    @Value("${ipfs.email}")
-    private String userEmail;
-
-    @Value("${actor.bezeichnung}")
-    private String actorDescription;
-
-    @Value("${ipfs.ipfs-link}")
-    private String userIpfsLink;
-
     @Override
     public void run(String... args) {
         log.info("Starting application data initialization...");
         try {
             log.info("Performing init call to chaincode to get initial actor...");
-            String actorJson = fabricClient.submitGenericTransaction("initCall", actorDescription, userEmail, userIpfsLink);
+            String actorJson = fabricClient.submitGenericTransaction("initCall");
             Actor initializedActor = fabricClient.getGson().fromJson(actorJson, Actor.class);
             String actorIdFromChaincode = initializedActor.getActorId();
             log.info("Chaincode initialization returned Actor ID: {}", actorIdFromChaincode);
