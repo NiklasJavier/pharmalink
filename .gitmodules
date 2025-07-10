@@ -1,0 +1,3 @@
+[submodule "chaincode/pharmalink_chaincode_main/client"]
+	path = chaincode/pharmalink_chaincode_main/client
+	url = git@github.com:NiklasJavier/pharmalink-client.git
