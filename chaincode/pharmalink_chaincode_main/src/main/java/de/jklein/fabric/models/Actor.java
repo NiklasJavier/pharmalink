@@ -43,6 +43,13 @@ public final class Actor {
         this.docType = "actor";
     }
 
+    public Actor(@JsonProperty("actorId") final String actorId,
+                 @JsonProperty("role") final String role) {
+        this.actorId = actorId;
+        this.role = role;
+        this.docType = "actor";
+    }
+
     public String getActorId() {
         return actorId;
     }

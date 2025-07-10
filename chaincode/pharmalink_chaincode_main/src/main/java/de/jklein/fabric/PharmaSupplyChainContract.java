@@ -273,7 +273,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
      * {"function":"initCall","Args":["erika.musterfrau@example.com",""]}
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public String initCall(final Context ctx, final String bezeichnung, final String email, final String ipfsLink) {
+    public String initCall(final Context ctx) {
         final ChaincodeStub stub = ctx.getStub();
         final String mspId = ctx.getClientIdentity().getMSPID();
         final String clientId = ctx.getClientIdentity().getId();
@@ -320,7 +320,7 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         }
 
         // Wir erstellen den neuen Akteur mit leeren Strings für Bezeichnung, E-Mail und IPFS-Link.
-        final Actor newActor = new Actor(actorId, "", actualRoleFromCert.toLowerCase(), "", "");
+        final Actor newActor = new Actor(actorId, actualRoleFromCert.toLowerCase());
 
         final String newActorJson = JsonUtil.toJson(newActor);
         stub.putStringState(actorId, newActorJson);
