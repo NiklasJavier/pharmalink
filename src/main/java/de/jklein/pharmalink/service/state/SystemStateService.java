@@ -45,6 +45,7 @@ public class SystemStateService {
     private static final String LEGACY_ACTOR_INIT_EVENT = "ActorInitialized";
     private static final String LEGACY_ACTOR_UPDATE_EVENT = "ActorUpdated";
     private static final String LEGACY_MED_UPDATE_EVENT = "MedicationUpdated"; // Assuming this name
+    private static final String MEDIKAMENT_CREATED_EVENT = "MedikamentCreated"; // NEU hinzugefügt
 
     private final SystemStateRepository systemStateRepository;
     private final FabricClient fabricClient;
@@ -141,10 +142,11 @@ public class SystemStateService {
                     break;
 
                 case LEGACY_MED_UPDATE_EVENT:
-                    // Assuming the legacy payload contains a field like "medikamentId" or "id"
-                    String medId = payload.has("id") ? payload.path("id").asText() : payload.path("medikamentId").asText();
+                case MEDIKAMENT_CREATED_EVENT: // NEU: Behandlung des MedikamentCreated Events
+                    // Assuming the payload contains a field like "medId" or "id"
+                    String medId = payload.has("medId") ? payload.path("medId").asText() : payload.path("id").asText();
                     if (!medId.isEmpty()) {
-                        logger.debug("Handling legacy medication event for ID: {}", medId);
+                        logger.debug("Handling medication event for ID: {}", medId);
                         handleMedikamentUpdate(medId);
                     }
                     break;
