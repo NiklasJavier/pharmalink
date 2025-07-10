@@ -1,8 +1,8 @@
 package de.jklein.pharmalink.api.controller.fabric;
 
 import de.jklein.pharmalink.api.dto.*;
-import de.jklein.pharmalink.api.mapper.UnitMapper; // NEU: UnitMapper importieren
-import de.jklein.pharmalink.domain.Unit; // NEU: Unit Domain-Objekt importieren
+import de.jklein.pharmalink.api.mapper.UnitMapper;
+import de.jklein.pharmalink.domain.Unit;
 import de.jklein.pharmalink.service.fabric.UnitFabricService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,19 +12,19 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors; // NEU: Collectors importieren
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/units")
 public class UnitFabricController {
 
     private final UnitFabricService unitFabricService;
-    private final UnitMapper unitMapper; // NEU: UnitMapper injizieren
+    private final UnitMapper unitMapper;
 
     @Autowired
-    public UnitFabricController(UnitFabricService unitFabricService, UnitMapper unitMapper) { // NEU: Im Konstruktor hinzufügen
+    public UnitFabricController(UnitFabricService unitFabricService, UnitMapper unitMapper) {
         this.unitFabricService = unitFabricService;
-        this.unitMapper = unitMapper; // NEU: Injektion zuweisen
+        this.unitMapper = unitMapper;
     }
 
     /**
@@ -40,7 +40,7 @@ public class UnitFabricController {
         // Service gibt Optional<Unit> zurück
         return unitFabricService.getEnrichedUnitById(unitId)
                 // Optional<Unit> zu Optional<UnitResponseDto> mappen, dann zu ResponseEntity
-                .map(unitMapper::toDto) // Konvertierung von Domain zu DTO
+                .map(unitMapper::toDto)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -54,9 +54,9 @@ public class UnitFabricController {
      * @return Eine Liste der erstellten Units als DTOs mit Status 201 (Created) oder eine Fehlermeldung.
      */
     @PostMapping("/{medId}/units")
-    public ResponseEntity<?> createUnitsForMedication( // Rückgabetyp auf ResponseEntity<?> geändert
-                                                       @PathVariable final String medId,
-                                                       @Valid @RequestBody final CreateUnitsRequestDto request) {
+    public ResponseEntity<?> createUnitsForMedication(
+            @PathVariable final String medId,
+            @Valid @RequestBody final CreateUnitsRequestDto request) {
 
         try {
             // Service gibt List<Unit> zurück
@@ -81,7 +81,7 @@ public class UnitFabricController {
      * @return Eine Map, die die Units nach Charge gruppiert enthält, oder eine Fehlermeldung.
      */
     @GetMapping("/{medId}/units-by-charge")
-    public ResponseEntity<?> getUnitsGroupedByCharge(@PathVariable final String medId) { // Rückgabetyp auf ResponseEntity<?> geändert
+    public ResponseEntity<?> getUnitsGroupedByCharge(@PathVariable final String medId) {
         try {
             // Service gibt Map<String, List<Unit>> zurück
             Map<String, List<Unit>> groupedUnitsDomain = unitFabricService.getUnitsByMedIdGroupedByCharge(medId);
@@ -111,9 +111,9 @@ public class UnitFabricController {
      * @return Die aktualisierte Unit als DTO bei Erfolg, oder eine Fehlermeldung bei Fehler.
      */
     @PostMapping("/{unitId}/transfer")
-    public ResponseEntity<?> transferUnit( // Rückgabetyp auf ResponseEntity<?> geändert
-                                           @PathVariable final String unitId,
-                                           @Valid @RequestBody final TransferUnitRequestDto request) {
+    public ResponseEntity<?> transferUnit(
+            @PathVariable final String unitId,
+            @Valid @RequestBody final TransferUnitRequestDto request) {
 
         try {
             // Service gibt Unit (Domain-Objekt) zurück
@@ -137,9 +137,9 @@ public class UnitFabricController {
      * @return Die aktualisierte Unit als DTO bei Erfolg, oder eine Fehlermeldung bei Fehler.
      */
     @PostMapping("/{unitId}/temperature-readings")
-    public ResponseEntity<?> addTemperatureReading( // Rückgabetyp auf ResponseEntity<?> geändert
-                                                    @PathVariable final String unitId,
-                                                    @Valid @RequestBody final AddTemperatureReadingRequestDto request) {
+    public ResponseEntity<?> addTemperatureReading(
+            @PathVariable final String unitId,
+            @Valid @RequestBody final AddTemperatureReadingRequestDto request) {
 
         try {
             // Service gibt Unit (Domain-Objekt) zurück
@@ -197,6 +197,25 @@ public class UnitFabricController {
             return ResponseEntity
                     .internalServerError()
                     .body(Map.of("error", "Fehler bei der Bereichsübertragung: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Ruft die Chargenbezeichnungen und die Anzahl der Einheiten pro Charge für ein bestimmtes Medikament ab.
+     * Endpunkt: GET /api/v1/units/medications/{medId}/charge-counts
+     *
+     * @param medId Die ID des Medikaments.
+     * @return Eine Map von Chargenbezeichnungen zu der jeweiligen Einheitenanzahl, oder eine Fehlermeldung.
+     */
+    @GetMapping("/medications/{medId}/charge-counts")
+    public ResponseEntity<?> getChargeCountsByMedId(@PathVariable final String medId) {
+        try {
+            Map<String, Integer> chargeCounts = unitFabricService.getChargeCountsByMedId(medId);
+            return ResponseEntity.ok(chargeCounts);
+        } catch (Exception e) {
+            return ResponseEntity
+                    .internalServerError()
+                    .body(Map.of("error", "Fehler beim Abrufen der Chargenanzahlen: " + e.getMessage()));
         }
     }
 }

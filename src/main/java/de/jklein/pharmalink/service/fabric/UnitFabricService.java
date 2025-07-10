@@ -194,4 +194,23 @@ public class UnitFabricService {
         logger.info("Chargenbereich erfolgreich zur Übertragung eingereicht.");
         return result;
     }
+
+    /**
+     * Ruft die Chargenbezeichnungen und die Anzahl der Einheiten pro Charge für ein bestimmtes Medikament ab.
+     * @param medId Die ID des Medikaments.
+     * @return Eine Map von Chargenbezeichnungen zu der jeweiligen Einheitenanzahl.
+     */
+    public Map<String, Integer> getChargeCountsByMedId(String medId) {
+        try {
+            // Aufruf der neuen Chaincode-Transaktion
+            String resultJson = fabricClient.evaluateGenericTransaction("queryChargeCountsByMedId", medId);
+
+            // TypeToken für die korrekte Deserialisierung von Map<String, Integer>
+            Type mapType = new TypeToken<Map<String, Integer>>() {}.getType();
+            return fabricClient.getGson().fromJson(resultJson, mapType);
+        } catch (Exception e) {
+            logger.error("Fehler beim Abrufen der Chargenanzahl für medId '{}': {}", medId, e.getMessage(), e);
+            return Collections.emptyMap();
+        }
+    }
 }

@@ -1186,4 +1186,40 @@ public final class PharmaSupplyChainContract implements ContractInterface {
         deletePayload.put("docType", "medikament");
         emitEvent(ctx, "MedikamentDeleted", deletePayload);
     }
+
+    /**
+     * Gibt die Chargenbezeichnungen und die Anzahl der Einheiten pro Charge für ein bestimmtes Medikament zurück.
+     * Gruppiert alle Einheiten eines Medikaments nach ihrer Chargenbezeichnung und zählt die Einheiten in jeder Charge.
+     *
+     * @param ctx Der Smart Contract Kontext.
+     * @param medId Die ID des Medikaments, für das die Chargeninformationen abgerufen werden sollen.
+     * @return Ein JSON-String, der eine Map von Chargenbezeichnungen zu der jeweiligen Einheitenanzahl enthält.
+     * Example: {"function":"queryChargeCountsByMedId","Args":["MED-f7b7e8d9c0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7"]}
+     * Beispiel-Rückgabe: {"Charge-XYZ": 10, "Charge-ABC": 5}
+     */
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String queryChargeCountsByMedId(final Context ctx, final String medId) {
+        final ChaincodeStub stub = ctx.getStub();
+        final Map<String, Integer> chargeCounts = new TreeMap<>(); // TreeMap für sortierte Ausgabe
+
+        // Überprüfen, ob das Medikament existiert
+        byte[] medikamentStateBytes = stub.getState(medId);
+        if (medikamentStateBytes == null || medikamentStateBytes.length == 0) {
+            throw new ChaincodeException(String.format("Medikament mit ID '%s' nicht gefunden.", medId), PharmaSupplyChainErrors.MEDIKAMENT_NOT_FOUND.toString());
+        }
+
+        // Alle Einheiten für die gegebene medId abfragen
+        // Nutzt einen Rich-Query mit Selector für docType und medId
+        String queryString = String.format("{\"selector\":{\"docType\":\"unit\",\"medId\":\"%s\"}}", medId);
+        final QueryResultsIterator<org.hyperledger.fabric.shim.ledger.KeyValue> resultsIterator = stub.getQueryResult(queryString);
+
+        // Einheiten nach Chargenbezeichnung gruppieren und zählen
+        for (final org.hyperledger.fabric.shim.ledger.KeyValue kv : resultsIterator) {
+            final Unit unit = JsonUtil.fromJson(kv.getStringValue(), Unit.class);
+            String chargeBezeichnung = unit.getChargeBezeichnung();
+            chargeCounts.put(chargeBezeichnung, chargeCounts.getOrDefault(chargeBezeichnung, 0) + 1);
+        }
+
+        return JsonUtil.toJson(chargeCounts);
+    }
 }

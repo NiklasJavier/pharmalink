@@ -40,12 +40,28 @@ public class SystemStateService {
     private static final Logger logger = LoggerFactory.getLogger(SystemStateService.class);
     private static final String SYSTEM_STATE_ID = "pharmalink-state-state";
 
-    // --- Event Name Constants ---
+    // --- Event Name Constants (Updated to cover all specific events from Chaincode) ---
+    private static final String ACTOR_INITIALIZED_EVENT = "ActorInitialized";
+    private static final String ACTOR_CREATED_EVENT = "ActorCreated";
+    private static final String ACTOR_UPDATED_EVENT = "ActorUpdated";
+    private static final String ACTOR_IPFS_LINK_UPDATED_EVENT = "ActorIpfsLinkUpdated";
+    private static final String ACTOR_DELETED_EVENT = "ActorDeleted";
+
+    private static final String MEDIKAMENT_CREATED_EVENT = "MedikamentCreated";
+    private static final String MEDIKAMENT_STATUS_UPDATED_EVENT = "MedikamentStatusUpdated";
+    private static final String MEDIKAMENT_UPDATED_EVENT = "MedikamentUpdated";
+    private static final String MEDIKAMENT_TAG_ADDED_EVENT = "MedikamentTagAdded";
+    private static final String MEDIKAMENT_DELETED_EVENT = "MedikamentDeleted";
+
+    private static final String UNIT_CREATED_EVENT = "UnitCreated";
+    private static final String UNIT_TEMPERATURE_ADDED_EVENT = "UnitTemperatureAdded";
+    private static final String UNIT_TRANSFERRED_EVENT = "UnitTransferred";
+    private static final String UNIT_DELETED_EVENT = "UnitDeleted";
+
+    // This generic event name does not seem to be emitted by PharmaSupplyChainContract.
+    // Keeping it for now but the explicit event handling is the primary mechanism.
     private static final String GENERIC_EVENT_NAME = "PharmalinkDataEvent";
-    private static final String LEGACY_ACTOR_INIT_EVENT = "ActorInitialized";
-    private static final String LEGACY_ACTOR_UPDATE_EVENT = "ActorUpdated";
-    private static final String LEGACY_MED_UPDATE_EVENT = "MedikamentUpdated"; // ANGEPASST: Von "MedicationUpdated" zu "MedikamentUpdated"
-    private static final String MEDIKAMENT_CREATED_EVENT = "MedikamentCreated"; // NEU hinzugefügt
+
 
     private final SystemStateRepository systemStateRepository;
     private final FabricClient fabricClient;
@@ -110,8 +126,7 @@ public class SystemStateService {
     }
 
     /**
-     * ## HYBRID EVENT HANDLER ##
-     * Handles both new generic events and legacy specific events.
+     * Handles specific chaincode events for various entities (Actor, Medikament, Unit).
      */
     private void handleChaincodeEvent(ChaincodeEvent event) {
         logEventForAudit(event);
@@ -124,35 +139,79 @@ public class SystemStateService {
 
             JsonNode payload = objectMapper.readTree(event.getPayload());
 
+            // Determine entity ID based on the event context
+            String id = "";
+            String entityType = "";
+
+            if (payload.has("actorId")) {
+                id = payload.path("actorId").asText();
+                entityType = "Actor";
+            } else if (payload.has("medId")) {
+                id = payload.path("medId").asText();
+                entityType = "Medikament";
+            } else if (payload.has("unitId")) {
+                id = payload.path("unitId").asText();
+                entityType = "Unit";
+            } else if (payload.has("id")) { // Fallback for some payloads
+                id = payload.path("id").asText();
+                // We'll determine entity type based on event name in switch for these cases
+            }
+
+
+            if (id.isEmpty() && !event.getEventName().equals(GENERIC_EVENT_NAME)) {
+                logger.warn("Received event '{}' with unrecognized payload structure or missing ID. Payload: {}", event.getEventName(), payload.toString());
+                return;
+            }
+
             // Route based on the event name
             switch (event.getEventName()) {
-                // --- New Generic Event Handling ---
+                case ACTOR_INITIALIZED_EVENT:
+                case ACTOR_CREATED_EVENT:
+                case ACTOR_UPDATED_EVENT:
+                case ACTOR_IPFS_LINK_UPDATED_EVENT:
+                    logger.debug("Handling actor update/creation event for ID: {}", id);
+                    handleActorUpdate(id);
+                    break;
+
+                case ACTOR_DELETED_EVENT:
+                    logger.debug("Handling actor deletion event for ID: {}", id);
+                    handleDeletion("Actor", id);
+                    break;
+
+                case MEDIKAMENT_CREATED_EVENT:
+                case MEDIKAMENT_STATUS_UPDATED_EVENT:
+                case MEDIKAMENT_UPDATED_EVENT:
+                case MEDIKAMENT_TAG_ADDED_EVENT:
+                    logger.debug("Handling medication update/creation event for ID: {}", id);
+                    handleMedikamentUpdate(id);
+                    break;
+
+                case MEDIKAMENT_DELETED_EVENT:
+                    logger.debug("Handling medication deletion event for ID: {}", id);
+                    handleDeletion("Medikament", id);
+                    break;
+
+                case UNIT_CREATED_EVENT:
+                case UNIT_TEMPERATURE_ADDED_EVENT:
+                case UNIT_TRANSFERRED_EVENT:
+                    logger.debug("Handling unit update/creation event for ID: {}", id);
+                    handleUnitUpdate(id);
+                    break;
+
+                case UNIT_DELETED_EVENT:
+                    logger.debug("Handling unit deletion event for ID: {}", id);
+                    handleDeletion("Unit", id);
+                    break;
+
                 case GENERIC_EVENT_NAME:
+                    // This block will only be executed if the chaincode actually emits "PharmalinkDataEvent"
+                    // and includes 'entityType', 'entityId', and 'operation' fields.
+                    // Based on the current PharmaSupplyChainContract, this is not happening.
                     processGenericEvent(payload);
                     break;
 
-                // --- Legacy Event Handling ---
-                case LEGACY_ACTOR_INIT_EVENT:
-                case LEGACY_ACTOR_UPDATE_EVENT:
-                    String actorId = payload.path("actorId").asText();
-                    if (!actorId.isEmpty()) {
-                        logger.debug("Handling legacy actor event for ID: {}", actorId);
-                        handleActorUpdate(actorId);
-                    }
-                    break;
-
-                case LEGACY_MED_UPDATE_EVENT: // Hier wird jetzt "MedikamentUpdated" abgefangen
-                case MEDIKAMENT_CREATED_EVENT:
-                    // Assuming the payload contains a field like "medId" or "id"
-                    String medId = payload.has("medId") ? payload.path("medId").asText() : payload.path("id").asText();
-                    if (!medId.isEmpty()) {
-                        logger.debug("Handling medication event for ID: {}", medId);
-                        handleMedikamentUpdate(medId);
-                    }
-                    break;
-
                 default:
-                    logger.warn("Received unhandled event name: {}", event.getEventName());
+                    logger.warn("Received unhandled event name: {}. Payload: {}", event.getEventName(), payload.toString());
                     break;
             }
         } catch (IOException e) {
@@ -162,6 +221,8 @@ public class SystemStateService {
 
     /**
      * Processes the new, generic "PharmalinkDataEvent".
+     * Note: Based on the provided chaincode, this event is not currently emitted.
+     * This method is kept for potential future use if the chaincode's event emission strategy changes.
      */
     private void processGenericEvent(JsonNode payload) {
         String entityType = payload.path("entityType").asText();
@@ -267,14 +328,16 @@ public class SystemStateService {
             Unit updatedUnit = updatedUnitOptional.get();
             synchronized (myUnits) {
                 myUnits.removeIf(u -> u.getUnitId().equals(unitId));
-                if (Objects.equals(updatedUnit.getOwnerId(), currentActorId.get())) {
+                // Only add to myUnits if the current actor is the owner
+                if (Objects.equals(updatedUnit.getCurrentOwnerId(), currentActorId.get())) {
                     myUnits.add(updatedUnit);
                     logger.info("Unit {} now owned by current actor. Added/Updated in 'myUnits' cache.", unitId);
                 } else {
-                    logger.info("Unit {} is no longer owned by current actor. Removed from 'myUnits' cache.", unitId);
+                    logger.info("Unit {} is no longer owned by current actor or never was. Removed from 'myUnits' cache.", unitId);
                 }
             }
         } else {
+            // If the unit is not found, it implies it might have been deleted from the ledger
             handleDeletion("Unit", unitId);
         }
     }
@@ -322,7 +385,8 @@ public class SystemStateService {
         try {
             systemStateRepository.save(state);
             logger.debug("SystemState successfully saved to database.");
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             logger.error("Failed to save SystemState to database: {}", e.getMessage(), e);
         }
     }

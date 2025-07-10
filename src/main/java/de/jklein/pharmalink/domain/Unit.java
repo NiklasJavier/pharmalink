@@ -1,9 +1,7 @@
 package de.jklein.pharmalink.domain;
 
 import com.fasterxml.jackson.annotation.JsonFilter;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -11,6 +9,8 @@ import java.util.Map;
 import java.util.HashMap; // Hinzugefügt für HashMap Initialisierung
 
 @Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class Unit {
@@ -18,6 +18,7 @@ public class Unit {
     private String medId;
     private String chargeBezeichnung;
     private String ownerId;
+
     private String currentOwnerId; // Kann für detailliertere Nachverfolgung verwendet werden
     private String ipfsLink;
     private String status; // z.B. "erstellt", "im_transport", "angekommen", "ausgegeben"
