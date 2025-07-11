@@ -55,7 +55,7 @@ public class AppController {
     public String showDashboard(Model model, RedirectAttributes redirectAttributes) throws IOException {
         String currentActorId = systemStateService.getCurrentActorId().get();
         if (!StringUtils.hasText(currentActorId)) {
-            redirectAttributes.addFlashAttribute("error", "Anwendungsfehler: Keine Akteur-ID initialisiert.");
+            redirectAttributes.addFlashAttribute("error", "Keine Akteur-ID initialisiert.");
             return "redirect:/app/errors/unknown-actor";
         }
 
