@@ -1,8 +1,5 @@
 package de.jklein.pharmalink.api.dto;
 
-import de.jklein.pharmalink.domain.Actor;
-import de.jklein.pharmalink.domain.Medikament;
-import de.jklein.pharmalink.domain.Unit;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -17,7 +14,9 @@ public class SystemStateDto {
     private int actorCount;
     private int medikamentCount;
     private int myUnitsCount;
-    private List<Actor> allActors;
-    private List<Medikament> allMedikamente;
-    private List<Unit> myUnits;
+
+    // Empfehlung: Verwenden Sie DTOs anstelle von Domänenobjekten
+    private List<ActorResponseDto> allActors;
+    private List<MedikamentResponseDto> allMedikamente;
+    private List<UnitResponseDto> myUnits;
 }

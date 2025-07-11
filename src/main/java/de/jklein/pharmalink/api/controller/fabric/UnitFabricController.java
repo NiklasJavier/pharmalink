@@ -4,6 +4,7 @@ import de.jklein.pharmalink.api.dto.*;
 import de.jklein.pharmalink.api.mapper.UnitMapper;
 import de.jklein.pharmalink.domain.Unit;
 import de.jklein.pharmalink.service.fabric.UnitFabricService;
+import de.jklein.pharmalink.service.state.SystemStateService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,11 +21,13 @@ public class UnitFabricController {
 
     private final UnitFabricService unitFabricService;
     private final UnitMapper unitMapper;
+    private final SystemStateService systemStateService;
 
     @Autowired
-    public UnitFabricController(UnitFabricService unitFabricService, UnitMapper unitMapper) {
+    public UnitFabricController(UnitFabricService unitFabricService, UnitMapper unitMapper, SystemStateService systemStateService) {
         this.unitFabricService = unitFabricService;
         this.unitMapper = unitMapper;
+        this.systemStateService = systemStateService;
     }
 
     /**
@@ -218,4 +221,15 @@ public class UnitFabricController {
                     .body(Map.of("error", "Fehler beim Abrufen der Chargenanzahlen: " + e.getMessage()));
         }
     }
+
+    @GetMapping("/mine")
+    public ResponseEntity<List<UnitResponseDto>> getMyUnits() {
+        String ownerActorId = systemStateService.getCurrentActorId().get();
+        List<Unit> units = unitFabricService.getUnitsByOwner(ownerActorId);
+        List<UnitResponseDto> dtos = units.stream()
+                .map(unitMapper::toDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
+    }
+
 }

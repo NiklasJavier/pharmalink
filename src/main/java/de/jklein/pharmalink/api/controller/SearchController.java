@@ -6,6 +6,7 @@ import de.jklein.pharmalink.api.dto.UnitResponseDto;
 import de.jklein.pharmalink.api.mapper.ActorMapper;
 import de.jklein.pharmalink.api.mapper.MedikamentMapper;
 import de.jklein.pharmalink.api.mapper.UnitMapper;
+import de.jklein.pharmalink.domain.Unit;
 import de.jklein.pharmalink.service.search.SearchService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -71,5 +72,14 @@ public class SearchController {
             @RequestParam String query) {
         var foundUnits = searchService.searchUnitsByCharge(query);
         return ResponseEntity.ok(unitMapper.toDtoList(foundUnits));
+    }
+
+    @GetMapping("/my-units")
+    public ResponseEntity<List<UnitResponseDto>> getMyCachedUnits() {
+        // Der Service gibt eine Liste von Domain-Objekten zurück
+        List<Unit> myUnits = searchService.getMyUnits();
+        // Die Domain-Objekte werden in DTOs für die API-Antwort umgewandelt
+        List<UnitResponseDto> myUnitsDto = unitMapper.toDtoList(myUnits);
+        return ResponseEntity.ok(myUnitsDto);
     }
 }

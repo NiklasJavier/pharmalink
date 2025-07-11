@@ -1,46 +1,53 @@
 package de.jklein.pharmalink.domain;
 
-import com.fasterxml.jackson.annotation.JsonFilter;
-import lombok.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap; // Hinzugefügt für HashMap Initialisierung
 
+/**
+ * Repräsentiert eine einzelne Einheit (Unit) im Domänenmodell des Backends.
+ * Dieses Modell ist exakt an die Datenstruktur angepasst, die vom Hyperledger Fabric Chaincode geliefert wird,
+ * um eine korrekte Deserialisierung der JSON-Daten zu gewährleisten.
+ */
 @Data
-@Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
 public class Unit {
+
+    // Felder, die direkt aus dem Chaincode-Modell übernommen werden
     private String unitId;
     private String medId;
     private String chargeBezeichnung;
-    private String ownerId;
-
-    private String currentOwnerId; // Kann für detailliertere Nachverfolgung verwendet werden
     private String ipfsLink;
-    private String status; // z.B. "erstellt", "im_transport", "angekommen", "ausgegeben"
-    private LocalDateTime createdAt;
-    private String createdById;
+    private String currentOwnerActorId; // Umbenannt von currentOwnerId, um dem Chaincode zu entsprechen
+    private List<TransferEntry> transferHistory;
+    private List<TemperatureReading> temperatureReadings;
+    private boolean isConsumed;
+    private String consumedRefId;
     private String docType;
 
-    // NEU: Feld für die angereicherten IPFS-Daten
+    // Dieses Feld ist backend-spezifisch und wird nach dem Abruf von IPFS befüllt.
     private Map<String, Object> ipfsData;
 
-    // Beispiel-Konstruktor (falls nicht durch Lombok @AllArgsConstructor abgedeckt und benötigt)
-    public Unit(String unitId, String medId, String chargeBezeichnung, String ownerId, String currentOwnerId, String ipfsLink, String status, LocalDateTime createdAt, String createdById) {
-        this.unitId = unitId;
-        this.medId = medId;
-        this.chargeBezeichnung = chargeBezeichnung;
-        this.ownerId = ownerId;
-        this.currentOwnerId = currentOwnerId;
-        this.ipfsLink = ipfsLink;
-        this.status = status;
-        this.createdAt = createdAt;
-        this.createdById = createdById;
-        this.docType = "unit";
-        this.ipfsData = new HashMap<>(); // Standardinitialisierung
+    /**
+     * Innere Klasse zur Abbildung der Transfer-Historie aus dem Chaincode.
+     */
+    @Data
+    @NoArgsConstructor
+    public static class TransferEntry {
+        private String fromActorId;
+        private String toActorId;
+        private String timestamp;
+    }
+
+    /**
+     * Innere Klasse zur Abbildung der Temperaturmessungen aus dem Chaincode.
+     */
+    @Data
+    @NoArgsConstructor
+    public static class TemperatureReading {
+        private String timestamp;
+        private String temperature;
     }
 }

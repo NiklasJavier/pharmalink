@@ -5,55 +5,86 @@ import de.jklein.pharmalink.domain.Unit;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
  * MapStruct-Mapper zur Umwandlung zwischen Unit-Domain-Objekten und DTOs.
+ * Beinhaltet die Logik für beide Konvertierungsrichtungen (toDto und toEntity).
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface UnitMapper {
 
-    // Die Annotation @Mapping(target = "ipfsData", ignore = true) wurde entfernt.
-    // MapStruct wird das Feld "ipfsData" jetzt automatisch mappen.
+    // ===== Domain -> DTO =====
     UnitResponseDto toDto(Unit unit);
 
-    /**
-     * Wandelt eine Liste von Unit-Domain-Objekten in eine Liste von UnitResponseDtos um.
-     *
-     * @param units Die Liste der Domain-Objekte.
-     * @return Die Liste der entsprechenden DTOs.
-     */
-    default List<UnitResponseDto> toDtoList(List<Unit> units) {
-        if (units == null) {
-            return null;
-        }
-        return units.stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-    }
+    List<UnitResponseDto> toDtoList(List<Unit> units);
 
-    /**
-     * Wandelt ein UnitResponseDto in ein Unit-Domain-Objekt um.
-     * MapStruct versucht, alle passenden Felder zu mappen.
-     *
-     * @param dto Das DTO.
-     * @return Das entsprechende Domain-Objekt.
-     */
+    // ===== DTO -> Domain (Entity) =====
     Unit toEntity(UnitResponseDto dto);
 
-    /**
-     * NEU: Wandelt eine Liste von UnitResponseDtos in eine Liste von Unit-Domain-Objekten um.
-     *
-     * @param dtos Die Liste der DTOs.
-     * @return Die Liste der entsprechenden Domain-Objekte.
-     */
-    default List<Unit> toEntityList(List<UnitResponseDto> dtos) {
-        if (dtos == null) {
-            return null;
-        }
-        return dtos.stream()
-                .map(this::toEntity)
-                .collect(Collectors.toList());
+    List<Unit> toEntityList(List<UnitResponseDto> dtos);
+
+
+    // ===== Hilfsmethoden für die Konvertierung der verschachtelten Listen =====
+
+    // --- Richtung: Domain -> DTO ---
+
+    default Map<String, String> transferEntryToMap(Unit.TransferEntry entry) {
+        if (entry == null) return null;
+        return Map.of(
+                "fromActorId", entry.getFromActorId(),
+                "toActorId", entry.getToActorId(),
+                "timestamp", entry.getTimestamp()
+        );
+    }
+
+    default Map<String, String> temperatureReadingToMap(Unit.TemperatureReading reading) {
+        if (reading == null) return null;
+        return Map.of(
+                "timestamp", reading.getTimestamp(),
+                "temperature", reading.getTemperature()
+        );
+    }
+
+    default List<Map<String, String>> mapTransferHistoryToDto(List<Unit.TransferEntry> entries) {
+        if (entries == null) return Collections.emptyList();
+        return entries.stream().map(this::transferEntryToMap).collect(Collectors.toList());
+    }
+
+    default List<Map<String, String>> mapTemperatureReadingsToDto(List<Unit.TemperatureReading> readings) {
+        if (readings == null) return Collections.emptyList();
+        return readings.stream().map(this::temperatureReadingToMap).collect(Collectors.toList());
+    }
+
+    // --- Richtung: DTO -> Domain (Entity) (NEU) ---
+
+    default Unit.TransferEntry mapToTransferEntry(Map<String, String> map) {
+        if (map == null) return null;
+        Unit.TransferEntry entry = new Unit.TransferEntry();
+        entry.setFromActorId(map.get("fromActorId"));
+        entry.setToActorId(map.get("toActorId"));
+        entry.setTimestamp(map.get("timestamp"));
+        return entry;
+    }
+
+    default Unit.TemperatureReading mapToTemperatureReading(Map<String, String> map) {
+        if (map == null) return null;
+        Unit.TemperatureReading reading = new Unit.TemperatureReading();
+        reading.setTimestamp(map.get("timestamp"));
+        reading.setTemperature(map.get("temperature"));
+        return reading;
+    }
+
+    default List<Unit.TransferEntry> mapToTransferEntryList(List<Map<String, String>> list) {
+        if (list == null) return Collections.emptyList();
+        return list.stream().map(this::mapToTransferEntry).collect(Collectors.toList());
+    }
+
+    default List<Unit.TemperatureReading> mapToTemperatureReadingList(List<Map<String, String>> list) {
+        if (list == null) return Collections.emptyList();
+        return list.stream().map(this::mapToTemperatureReading).collect(Collectors.toList());
     }
 }

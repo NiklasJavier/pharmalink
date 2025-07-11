@@ -1,17 +1,15 @@
 package de.jklein.pharmalink.runner;
 
 import de.jklein.pharmalink.client.fabric.FabricClient;
-import de.jklein.pharmalink.domain.Actor; // Import Domain-Objekt
+import de.jklein.pharmalink.domain.Actor;
 import de.jklein.pharmalink.domain.Medikament;
 import de.jklein.pharmalink.domain.Unit;
-
 import de.jklein.pharmalink.service.fabric.ActorFabricService;
 import de.jklein.pharmalink.service.fabric.MedicationFabricService;
 import de.jklein.pharmalink.service.fabric.UnitFabricService;
 import de.jklein.pharmalink.service.state.SystemStateService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -38,34 +36,30 @@ public class AppDataInitializer implements CommandLineRunner {
             String actorJson = fabricClient.submitGenericTransaction("initCall");
             Actor initializedActor = fabricClient.getGson().fromJson(actorJson, Actor.class);
             String actorIdFromChaincode = initializedActor.getActorId();
-            log.info("Chaincode initialization returned Actor ID: {}", actorIdFromChaincode);
             systemStateService.reconcileAndCacheActorId(actorIdFromChaincode);
 
             log.info("Loading initial application data...");
 
-            // 1. Einheiten, die der aktuelle Akteur hält
             log.info("Loading units for current actor: {}", actorIdFromChaincode);
             List<Unit> myUnits = unitFabricService.getUnitsByOwner(actorIdFromChaincode);
             systemStateService.updateMyUnits(myUnits);
             log.info("Loaded {} units for current actor.", myUnits.size());
 
-            // 2. Alle Akteure (Hersteller, Behörde, Großhändler, Apotheken)
             log.info("Loading all actors by role...");
-            List<Actor> allHersteller = actorFabricService.getActorsByRole("hersteller"); // Rückgabetyp geändert
-            List<Actor> allGrosshaendler = actorFabricService.getActorsByRole("grosshaendler"); // Rückgabetyp geändert
-            List<Actor> allApotheken = actorFabricService.getActorsByRole("apotheke"); // Rückgabetyp geändert
-            List<Actor> allBehoerden = actorFabricService.getActorsByRole("behoerde"); // Rückgabetyp geändert
+            List<Actor> allHersteller = actorFabricService.getActorsByRole("hersteller");
+            List<Actor> allGrosshaendler = actorFabricService.getActorsByRole("grosshaendler");
+            List<Actor> allApotheken = actorFabricService.getActorsByRole("apotheke");
+            List<Actor> allBehoerden = actorFabricService.getActorsByRole("behoerde");
 
             List<Actor> combinedActors = Stream.of(allHersteller, allGrosshaendler, allApotheken, allBehoerden)
                     .flatMap(List::stream)
                     .collect(Collectors.toList());
-            systemStateService.updateAllActors(combinedActors); // NEU: Direkte Übergabe der Domain-Objekte
+            systemStateService.updateAllActors(combinedActors);
             log.info("Loaded {} total actors ({} Hersteller, {} Grosshaendler, {} Apotheken, {} Behörden).",
                     combinedActors.size(), allHersteller.size(), allGrosshaendler.size(), allApotheken.size(), allBehoerden.size());
 
 
-            // 3. Alle Medikamente
-            log.info("Loading all medications using direct chaincode query...");
+            log.info("Loading all medications...");
             List<Medikament> allMedikamente = medicationFabricService.getAllMedikamente();
             systemStateService.updateAllMedikamente(allMedikamente);
             log.info("Loaded {} medications in total.", allMedikamente.size());
