@@ -193,7 +193,8 @@ public class UnitFabricController {
                     requestDto.getChargeBezeichnung(),
                     requestDto.getStartCounter(),
                     requestDto.getEndCounter(),
-                    requestDto.getNewOwnerId()
+                    requestDto.getNewOwnerId(),
+                    requestDto.getTransferTimestamp() // NEUER PARAMETER
             );
             return ResponseEntity.ok(Map.of("message", resultMessage));
         } catch (Exception e) {
