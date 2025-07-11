@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Service
@@ -40,7 +39,6 @@ public class SystemStateService {
     private static final Logger logger = LoggerFactory.getLogger(SystemStateService.class);
     private static final String SYSTEM_STATE_ID = "pharmalink-state-state";
 
-    // --- Event Name Constants ---
     private static final String ACTOR_INITIALIZED_EVENT = "ActorInitialized";
     private static final String ACTOR_CREATED_EVENT = "ActorCreated";
     private static final String ACTOR_UPDATED_EVENT = "ActorUpdated";
@@ -89,14 +87,33 @@ public class SystemStateService {
 
     @PostConstruct
     public void init() {
-        logger.info("Initializing SystemStateService...");
-        loadStateFromDatabase();
+        logger.info("Initialisiere System-Status-Dienst...");
+        loadStateFromChaincode();
         startEventListening();
+    }
+
+    private void loadStateFromChaincode() {
+        logger.info("Versuche, den Anfangszustand vom Hyperledger Fabric Chaincode zu laden...");
+        try {
+            List<Actor> actors = actorFabricService.getAllActors();
+            updateAllActors(actors);
+            logger.info("{} Akteure erfolgreich vom Chaincode geladen.", actors.size());
+
+            List<Medikament> medikamente = medicationFabricService.getAllMedikamente();
+            updateAllMedikamente(medikamente);
+            logger.info("{} Medikamente erfolgreich vom Chaincode geladen.", medikamente.size());
+
+            updateMyUnits(new ArrayList<>());
+            logger.info("Initialer Akteur noch nicht bekannt. Der Zwischenspeicher für 'meine Einheiten' ist leer.");
+
+        } catch (Exception e) {
+            logger.error("KRITISCH: Initialer Zustand konnte nicht vom Chaincode geladen werden. Der lokale Zwischenspeicher ist möglicherweise leer oder unvollständig. Grund: {}", e.getMessage(), e);
+        }
     }
 
     @PreDestroy
     public void shutdown() {
-        logger.info("Shutting down SystemStateService. Saving final state to database...");
+        logger.info("Fahre System-Status-Dienst herunter. Speichere finalen Zustand in der Datenbank...");
         saveStateToDatabase();
         if (chaincodeEventIterator != null) {
             chaincodeEventIterator.close();
@@ -107,9 +124,9 @@ public class SystemStateService {
     private void startEventListening() {
         try {
             chaincodeEventIterator = fabricClient.startChaincodeEventListening(chaincodeName, this::handleChaincodeEvent);
-            logger.info("Successfully started chaincode event listening for chaincode: {}", chaincodeName);
+            logger.info("Chaincode-Ereignisüberwachung für Chaincode '{}' erfolgreich gestartet.", chaincodeName);
         } catch (Exception e) {
-            logger.error("Failed to start chaincode event listening: {}", e.getMessage(), e);
+            logger.error("Fehler beim Starten der Chaincode-Ereignisüberwachung: {}", e.getMessage(), e);
         }
     }
 
@@ -117,13 +134,13 @@ public class SystemStateService {
         logEventForAudit(event);
         try {
             if (event.getPayload() == null || event.getPayload().length == 0) {
-                logger.warn("Received event '{}' with empty payload. Skipping.", event.getEventName());
+                logger.warn("Ereignis '{}' mit leerem Inhalt empfangen. Wird übersprungen.", event.getEventName());
                 return;
             }
             JsonNode payload = objectMapper.readTree(event.getPayload());
             String id = extractIdFromPayload(payload);
             if (id.isEmpty()) {
-                logger.warn("Received event '{}' with unrecognized payload structure or missing ID. Payload: {}", event.getEventName(), payload.toString());
+                logger.warn("Ereignis '{}' mit unbekannter Struktur oder fehlender ID empfangen. Inhalt: {}", event.getEventName(), payload.toString());
                 return;
             }
             switch (event.getEventName()) {
@@ -133,10 +150,10 @@ public class SystemStateService {
                 case MEDIKAMENT_DELETED_EVENT -> handleDeletion("Medikament", id);
                 case UNIT_CREATED_EVENT, UNIT_TEMPERATURE_ADDED_EVENT, UNIT_TRANSFERRED_EVENT -> handleUnitUpdate(id);
                 case UNIT_DELETED_EVENT -> handleDeletion("Unit", id);
-                default -> logger.warn("Received unhandled event name: {}. Payload: {}", event.getEventName(), payload.toString());
+                default -> logger.warn("Unbehandeltes Ereignis empfangen: {}. Inhalt: {}", event.getEventName(), payload.toString());
             }
         } catch (IOException e) {
-            logger.error("Failed to parse event payload for event '{}': {}", event.getEventName(), e.getMessage(), e);
+            logger.error("Fehler beim Verarbeiten des Ereignisinhalts für Ereignis '{}': {}", event.getEventName(), e.getMessage(), e);
         }
     }
 
@@ -153,7 +170,7 @@ public class SystemStateService {
             ChaincodeEventLog logEntry = new ChaincodeEventLog(event.getEventName(), event.getTransactionId(), event.getBlockNumber(), payloadAsString);
             eventLogRepository.save(logEntry);
         } catch (Exception e) {
-            logger.error("!!! FAILED TO AUDIT CHAINCODE EVENT !!! TxId: {}. Reason: {}", event.getTransactionId(), e.getMessage(), e);
+            logger.error("!!! FEHLER BEI DER PRÜFUNG DES CHAINCODE-EREIGNISSES !!! Tx-ID: {}. Grund: {}", event.getTransactionId(), e.getMessage(), e);
         }
     }
 
@@ -162,16 +179,16 @@ public class SystemStateService {
             case "Actor" -> allActors.removeIf(a -> a.getActorId().equals(entityId));
             case "Medikament" -> allMedikamente.removeIf(m -> m.getMedId().equals(entityId));
             case "Unit" -> myUnits.removeIf(u -> u.getUnitId().equals(entityId));
-            default -> logger.warn("Received DELETED event for unhandled entityType: {}", entityType);
+            default -> logger.warn("LÖSCH-Ereignis für unbekannten Objekttyp '{}' empfangen.", entityType);
         }
-        logger.info("{} {} removed from cache due to DELETED event.", entityType, entityId);
+        logger.info("{} {} aufgrund eines LÖSCH-Ereignisses aus dem Zwischenspeicher entfernt.", entityType, entityId);
     }
 
     private void handleActorUpdate(String actorId) {
         actorFabricService.getEnrichedActorById(actorId).ifPresent(updatedActor -> {
             allActors.removeIf(a -> a.getActorId().equals(actorId));
             allActors.add(updatedActor);
-            logger.info("Actor {} CREATED/UPDATED in cache.", actorId);
+            logger.info("Akteur {} im Zwischenspeicher erstellt/aktualisiert.", actorId);
         });
     }
 
@@ -179,7 +196,7 @@ public class SystemStateService {
         medicationFabricService.getEnrichedMedikamentById(medId).ifPresent(updatedMedikament -> {
             allMedikamente.removeIf(m -> m.getMedId().equals(medId));
             allMedikamente.add(updatedMedikament);
-            logger.info("Medikament {} CREATED/UPDATED in cache.", medId);
+            logger.info("Medikament {} im Zwischenspeicher erstellt/aktualisiert.", medId);
         });
     }
 
@@ -188,11 +205,11 @@ public class SystemStateService {
             if (Objects.equals(updatedUnit.getCurrentOwnerActorId(), currentActorId.get())) {
                 myUnits.removeIf(u -> u.getUnitId().equals(unitId));
                 myUnits.add(updatedUnit);
-                logger.info("Unit {} now owned by current actor. Added/Updated in 'myUnits' cache.", unitId);
+                logger.info("Einheit {} gehört nun dem aktuellen Akteur. Im Zwischenspeicher für 'meine Einheiten' hinzugefügt/aktualisiert.", unitId);
             } else {
                 boolean removed = myUnits.removeIf(u -> u.getUnitId().equals(unitId));
                 if (removed) {
-                    logger.info("Unit {} is no longer owned by current actor. Removed from 'myUnits' cache.", unitId);
+                    logger.info("Einheit {} gehört nicht mehr dem aktuellen Akteur. Aus dem Zwischenspeicher für 'meine Einheiten' entfernt.", unitId);
                 }
             }
         });
@@ -200,8 +217,22 @@ public class SystemStateService {
 
     public void reconcileAndCacheActorId(String actorId) {
         if (!Objects.equals(currentActorId.get(), actorId)) {
-            logger.info("Current actor ID changed from {} to {}. Updating SystemState.", currentActorId.get(), actorId);
+            logger.info("Aktuelle Akteur-ID von {} auf {} geändert. Aktualisiere System-Status und hole zugehörige Einheiten.", currentActorId.get(), actorId);
             currentActorId.set(actorId);
+
+            if (actorId != null) {
+                try {
+                    List<Unit> units = unitFabricService.getUnitsByOwner(actorId);
+                    updateMyUnits(units);
+                    logger.info("{} Einheiten für neue Akteur-ID {} erfolgreich geladen.", units.size(), actorId);
+                } catch (Exception e) {
+                    logger.error("Fehler beim Abrufen der Einheiten für Akteur {}: {}", actorId, e.getMessage(), e);
+                    updateMyUnits(new ArrayList<>());
+                }
+            } else {
+                updateMyUnits(new ArrayList<>());
+                logger.info("Aktuelle Akteur-ID auf null gesetzt. Zwischenspeicher für 'meine Einheiten' geleert.");
+            }
             saveStateToDatabase();
         }
     }
@@ -237,21 +268,6 @@ public class SystemStateService {
         systemStateRepository.save(state);
     }
 
-    private void loadStateFromDatabase() {
-        systemStateRepository.findById(SYSTEM_STATE_ID).ifPresent(state -> {
-            currentActorId.set(state.getCurrentActorId());
-            Optional.ofNullable(state.getAllActors()).ifPresent(allActors::addAll);
-            Optional.ofNullable(state.getAllMedikamente()).ifPresent(allMedikamente::addAll);
-            Optional.ofNullable(state.getMyUnits()).ifPresent(myUnits::addAll);
-            logger.info("SystemState loaded from database. Current Actor ID: {}", currentActorId.get());
-        });
-    }
-
-    public void loadFromDatabaseOnFailure() {
-        logger.warn("Initial data load from chaincode failed. Attempting to load SystemState from database as a fallback.");
-        loadStateFromDatabase();
-    }
-
     public String getAllActorsAsJsonString() throws JsonProcessingException {
         return objectMapper.writeValueAsString(this.allActors);
     }
@@ -260,12 +276,6 @@ public class SystemStateService {
         return objectMapper.writeValueAsString(this.allMedikamente);
     }
 
-    /**
-     * **KORREKTUR:** Fehlende Methode hinzugefügt.
-     * Wandelt die Liste der zwischengespeicherten Units des aktuellen Benutzers in einen JSON-String um.
-     * @return Ein JSON-String, der die Liste der Units darstellt.
-     * @throws JsonProcessingException wenn ein Fehler bei der Serialisierung auftritt.
-     */
     public String getMyUnitsAsJsonString() throws JsonProcessingException {
         return objectMapper.writeValueAsString(this.myUnits);
     }

@@ -26,7 +26,6 @@ public class ErrorController implements org.springframework.boot.web.servlet.err
         Object path = request.getAttribute(RequestDispatcher.ERROR_REQUEST_URI);
         Object exception = request.getAttribute(RequestDispatcher.ERROR_EXCEPTION);
 
-        // --- Vorabprüfung für spezifische Fehler (z.B. unknown-actor) ---
         if (model.containsAttribute("flashErrorForUnknownActor")) {
             model.addAttribute("errorMessage", model.getAttribute("flashErrorForUnknownActor"));
             if (model.containsAttribute("initialActorId")) {
@@ -36,15 +35,12 @@ public class ErrorController implements org.springframework.boot.web.servlet.err
             return "errors/unknown-actor";
         }
 
-        // --- Standardattribute zum Model hinzufügen (robuster gegen null) ---
         String statusString = (status != null) ? status.toString() : "Unbekannt";
         model.addAttribute("status", statusString);
         model.addAttribute("error", (errorType != null) ? errorType.toString() : "Unbekannter Fehler");
-        // Verbessert die Anzeige des Pfades:
         model.addAttribute("path", (path != null && !path.toString().isEmpty()) ? path.toString() : "Unbekannter Pfad");
         model.addAttribute("timestamp", new java.util.Date());
 
-        // Exception-Details für 500er Fehler
         if (exception instanceof Throwable) {
             java.io.StringWriter sw = new java.io.StringWriter();
             java.io.PrintWriter pw = new java.io.PrintWriter(sw);
@@ -53,7 +49,6 @@ public class ErrorController implements org.springframework.boot.web.servlet.err
             model.addAttribute("exceptionMessage", ((Throwable) exception).getMessage());
         }
 
-        // --- Priorisierte Nachrichten basierend auf Statuscode ---
         if (status instanceof Integer) {
             int statusCode = (Integer) status;
             if (statusCode == HttpStatus.UNAUTHORIZED.value()) { // 401 Unauthorized
@@ -86,7 +81,7 @@ public class ErrorController implements org.springframework.boot.web.servlet.err
         return "errors/error";
     }
 
-    @GetMapping("/web/error/{code}") // Dies ist ein separates Mapping, das Sie explizit aufrufen könnten
+    @GetMapping("/web/error/{code}")
     public String showSpecificErrorPage(@PathVariable int code, Model model) {
         addGlobalAttributesForErrorPage(model);
         model.addAttribute("status", code);

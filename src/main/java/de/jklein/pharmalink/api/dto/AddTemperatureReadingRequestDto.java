@@ -3,9 +3,6 @@ package de.jklein.pharmalink.api.dto;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
-/**
- * DTO für die Anfrage zum Hinzufügen eines neuen Temperaturmesswerts.
- */
 @Data
 public class AddTemperatureReadingRequestDto {
 

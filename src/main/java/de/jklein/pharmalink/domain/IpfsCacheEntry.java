@@ -6,10 +6,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
-/**
- * Entität zum Zwischenspeichern von IPFS-Inhalten in der Datenbank.
- * Der IPFS-Hash dient als Primärschlüssel.
- */
 @Entity
 @Table(name = "ipfs_cache")
 public class IpfsCacheEntry {
@@ -18,7 +14,6 @@ public class IpfsCacheEntry {
     @Column(name = "ipfs_hash", nullable = false, unique = true)
     private String ipfsHash;
 
-    // Speichert den Inhalt als Text (z.B. JSON-String)
     @Column(name = "content", columnDefinition = "TEXT", nullable = false)
     private String content;
 
@@ -28,7 +23,6 @@ public class IpfsCacheEntry {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    // Standardkonstruktor für JPA
     public IpfsCacheEntry() {
     }
 
@@ -39,7 +33,6 @@ public class IpfsCacheEntry {
         this.createdAt = LocalDateTime.now();
     }
 
-    // Getter und Setter
     public String getIpfsHash() {
         return ipfsHash;
     }

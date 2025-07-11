@@ -27,61 +27,54 @@ import java.util.Optional;
 @AllArgsConstructor
 public class SystemState {
 
-    // Logger Instanz für die Entity-Klasse
-    private static final Logger entityLogger = LoggerFactory.getLogger(SystemState.class); // <<-- Hinzugefügt
+    private static final Logger entityLogger = LoggerFactory.getLogger(SystemState.class);
 
     @Id
-    private String id; // <<-- Dies muss ein String sein, passend zu SYSTEM_STATE_ID in SystemStateService
+    private String id;
 
     private String currentActorId;
 
-    @Lob // Für große Textfelder in PostgreSQL (TEXT/CLOB)
-    @Column(columnDefinition = "TEXT") // <<-- WICHTIG: Stellt sicher, dass der SQL-Typ TEXT ist
+    @Lob
+    @Column(columnDefinition = "TEXT")
     private String allActorsJson;
     @Lob
-    @Column(columnDefinition = "TEXT") // <<-- WICHTIG: Stellt sicher, dass der SQL-Typ TEXT ist
+    @Column(columnDefinition = "TEXT")
     private String allMedikamenteJson;
     @Lob
-    @Column(columnDefinition = "TEXT") // <<-- WICHTIG: Stellt sicher, dass der SQL-Typ TEXT ist
+    @Column(columnDefinition = "TEXT")
     private String myUnitsJson;
 
-    // Transient fields for actual object lists (werden nicht direkt in DB gemappt)
     private transient List<Actor> allActors;
     private transient List<Medikament> allMedikamente;
     private transient List<Unit> myUnits;
 
-    // ObjectMapper Instanz zum Serialisieren/Deserialisieren von JSON
-    private static final ObjectMapper staticObjectMapper = new ObjectMapper(); // <<-- WICHTIG: Dies ist Ihre Instanz
+    private static final ObjectMapper staticObjectMapper = new ObjectMapper();
 
-    // Konstruktor für die initiale Erstellung
     public SystemState(String id, String currentActorId) {
         this.id = id;
         this.currentActorId = currentActorId;
-        // Listen initialisieren
         this.allActors = new ArrayList<>();
         this.allMedikamente = new ArrayList<>();
         this.myUnits = new ArrayList<>();
-        // JSON-Strings initialisieren (optional, können auch null bleiben bis zum ersten Speichern)
         try {
             this.allActorsJson = staticObjectMapper.writeValueAsString(this.allActors);
             this.allMedikamenteJson = staticObjectMapper.writeValueAsString(this.allMedikamente);
             this.myUnitsJson = staticObjectMapper.writeValueAsString(this.myUnits);
         } catch (JsonProcessingException e) {
             entityLogger.error("Error initializing SystemState JSON fields", e);
-            this.allActorsJson = "[]"; // Fallback zu leerem Array JSON
+            this.allActorsJson = "[]";
             this.allMedikamenteJson = "[]";
             this.myUnitsJson = "[]";
         }
     }
 
-    // Custom Getter/Setter für JPA-Persistenz der Listen als JSON-Strings
     public List<Actor> getAllActors() {
         if (this.allActors == null && this.allActorsJson != null) {
             try {
                 this.allActors = staticObjectMapper.readValue(this.allActorsJson, new TypeReference<List<Actor>>() {});
             } catch (IOException e) {
                 entityLogger.error("Error deserializing allActors from JSON: {}", this.allActorsJson, e);
-                this.allActors = new ArrayList<>(); // Bei Fehler leere Liste zurückgeben
+                this.allActors = new ArrayList<>();
             }
         } else if (this.allActors == null) {
             this.allActors = new ArrayList<>();
@@ -93,10 +86,10 @@ public class SystemState {
         this.allActors = allActors;
         try {
             this.allActorsJson = staticObjectMapper.writeValueAsString(allActors);
-            entityLogger.info("Serialized allActors to JSON: {}", this.allActorsJson); // <<-- Logging hinzugefügt
+            entityLogger.info("Serialized allActors to JSON: {}", this.allActorsJson);
         } catch (JsonProcessingException e) {
             entityLogger.error("Error serializing allActors: {}", e.getMessage(), e);
-            this.allActorsJson = null; // Setzt auf null bei Fehler
+            this.allActorsJson = null;
         }
     }
 
@@ -118,7 +111,7 @@ public class SystemState {
         this.allMedikamente = allMedikamente;
         try {
             this.allMedikamenteJson = staticObjectMapper.writeValueAsString(allMedikamente);
-            entityLogger.info("Serialized allMedikamente to JSON: {}", this.allMedikamenteJson); // <<-- Logging hinzugefügt
+            entityLogger.info("Serialized allMedikamente to JSON: {}", this.allMedikamenteJson);
         } catch (JsonProcessingException e) {
             entityLogger.error("Error serializing allMedikamente: {}", e.getMessage(), e);
             this.allMedikamenteJson = null;
@@ -143,7 +136,7 @@ public class SystemState {
         this.myUnits = myUnits;
         try {
             this.myUnitsJson = staticObjectMapper.writeValueAsString(myUnits);
-            entityLogger.info("Serialized myUnits to JSON: {}", this.myUnitsJson); // <<-- Logging hinzugefügt
+            entityLogger.info("Serialized myUnits to JSON: {}", this.myUnitsJson);
         } catch (JsonProcessingException e) {
             entityLogger.error("Error serializing myUnits: {}", e.getMessage(), e);
             this.myUnitsJson = null;

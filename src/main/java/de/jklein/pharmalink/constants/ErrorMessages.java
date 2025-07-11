@@ -4,7 +4,7 @@ public final class ErrorMessages {
 
     private ErrorMessages() { }
 
-    public static final String DEFAULT_TITLE = "Uups! Ein Fehler ist aufgetreten.";
+    public static final String DEFAULT_TITLE = "Ein Fehler ist aufgetreten.";
     public static final String DEFAULT_MESSAGE = "Entschuldigen Sie die Unannehmlichkeiten. Es gab ein Problem beim Verarbeiten Ihrer Anfrage. Bitte versuchen Sie es später erneut oder kehren Sie zur Startseite zurück.";
 
     public static final String TITLE_404 = "Seite nicht gefunden";
@@ -15,25 +15,19 @@ public final class ErrorMessages {
 
     public static final String NAV_HOME = "Startseite";
 
-    public static String getTitleForCode(Object code) {
-        if (code instanceof Integer) {
-            switch ((int) code) {
-                case 404: return TITLE_404;
-                case 500: return TITLE_500;
-                default: return DEFAULT_TITLE;
-            }
-        }
-        return DEFAULT_TITLE;
+    public static String getTitleForCode(int code) {
+        return switch (code) {
+            case 404 -> TITLE_404;
+            case 500 -> TITLE_500;
+            default -> DEFAULT_TITLE;
+        };
     }
 
-    public static String getMessageForCode(Object code) {
-        if (code instanceof Integer) {
-            switch ((int) code) {
-                case 404: return MESSAGE_404;
-                case 500: return MESSAGE_500;
-                default: return DEFAULT_MESSAGE;
-            }
-        }
-        return DEFAULT_MESSAGE;
+    public static String getMessageForCode(int code) {
+        return switch (code) {
+            case 404 -> MESSAGE_404;
+            case 500 -> MESSAGE_500;
+            default -> DEFAULT_MESSAGE;
+        };
     }
 }

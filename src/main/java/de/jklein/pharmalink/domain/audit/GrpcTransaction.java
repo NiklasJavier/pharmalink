@@ -21,7 +21,7 @@ public class GrpcTransaction {
     private String transactionName;
 
     @Column(name = "transaction_args", columnDefinition = "TEXT")
-    private String transactionArgs; // JSON-String der Argumente
+    private String transactionArgs;
 
     @Column(name = "timestamp", nullable = false)
     private LocalDateTime timestamp;
@@ -30,10 +30,10 @@ public class GrpcTransaction {
     private boolean successful;
 
     @Column(name = "error_message", columnDefinition = "TEXT")
-    private String errorMessage; // Nur bei Fehlschlag
+    private String errorMessage;
 
     @Column(name = "response_payload", columnDefinition = "TEXT")
-    private String responsePayload; // Optional: Antwort-Payload (z.B. JSON-String)
+    private String responsePayload;
 
     public GrpcTransaction(String transactionName, String transactionArgs, LocalDateTime timestamp, boolean successful, String errorMessage, String responsePayload) {
         this.transactionName = transactionName;

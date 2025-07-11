@@ -24,22 +24,22 @@ public class ApiTransaction {
     private String httpMethod;
 
     @Column(name = "username")
-    private String username; // Benutzer (Principal.getName()), falls verfügbar
+    private String username;
 
     @Column(name = "request_body", columnDefinition = "TEXT")
-    private String requestBody; // Optional: Request-Body als JSON-String
+    private String requestBody;
 
     @Column(name = "response_status", nullable = false)
-    private int responseStatus; // HTTP-Statuscode
+    private int responseStatus;
 
     @Column(name = "timestamp", nullable = false)
     private LocalDateTime timestamp;
 
     @Column(name = "successful", nullable = false)
-    private boolean successful; // true für 2xx, false sonst
+    private boolean successful;
 
     @Column(name = "error_message", columnDefinition = "TEXT")
-    private String errorMessage; // Nur bei Fehlern
+    private String errorMessage;
 
     public ApiTransaction(String url, String httpMethod, String username, String requestBody, int responseStatus, LocalDateTime timestamp, boolean successful, String errorMessage) {
         this.url = url;

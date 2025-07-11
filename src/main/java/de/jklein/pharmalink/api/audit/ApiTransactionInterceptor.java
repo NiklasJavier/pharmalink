@@ -37,30 +37,18 @@ public class ApiTransactionInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        // Nur für DispatcherType.REQUEST (nicht für FORWARD, INCLUDE etc.) protokollieren
         if (request.getDispatcherType() == DispatcherType.REQUEST) {
             request.setAttribute(START_TIME_ATTRIBUTE, System.currentTimeMillis());
-            // Optional: Request-Body cachen, falls für Audit-Logs benötigt
-            if (!(request instanceof ContentCachingRequestWrapper)) {
-                // Dies stellt sicher, dass der Request-Body gelesen werden kann,
-                // auch wenn er später im Controller gelesen wird.
-                // Erfordert Konfiguration des ContentCachingFilter!
-                // Für einfache Audit-Logs wird der Body oft nicht in preHandle gecacht,
-                // sondern optional in afterCompletion, falls er noch verfügbar ist.
-                // Oder über einen Filter global gecacht.
-            }
         }
-        return true; // Anfrage weiterleiten
+        return true;
     }
 
     @Override
     public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, @Nullable ModelAndView modelAndView) throws Exception {
-        // Nichts zu tun in postHandle für dieses Audit-Logging
     }
 
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, @Nullable Exception ex) throws Exception {
-        // Nur protokollieren, wenn der Request vom Typ REQUEST war und ein Startzeitpunkt gesetzt wurde
         if (request.getDispatcherType() != DispatcherType.REQUEST || request.getAttribute(START_TIME_ATTRIBUTE) == null) {
             return;
         }
@@ -73,7 +61,7 @@ public class ApiTransactionInterceptor implements HandlerInterceptor {
         String method = request.getMethod();
         String username = Optional.ofNullable(SecurityContextHolder.getContext().getAuthentication())
                 .map(Authentication::getName)
-                .orElse("anonymous"); // oder "unauthenticated"
+                .orElse("anonym");
 
         String requestBody = null;
         if (request instanceof ContentCachingRequestWrapper) {
@@ -82,28 +70,28 @@ public class ApiTransactionInterceptor implements HandlerInterceptor {
                 try {
                     requestBody = new String(content, request.getCharacterEncoding());
                 } catch (Exception e) {
-                    logger.warn("Could not read request body for URL {}: {}", url, e.getMessage());
+                    logger.warn("Anfrageinhalt für URL {} konnte nicht gelesen werden: {}", url, e.getMessage());
                 }
             }
         }
 
         int status = response.getStatus();
-        boolean successful = (status >= 200 && status < 300); // HTTP 2xx Statuscodes sind erfolgreich
+        boolean successful = (status >= 200 && status < 300);
         String errorMessage = null;
         if (ex != null) {
             errorMessage = ex.getMessage();
-            successful = false; // Bei Exception ist es ein Fehlschlag
+            successful = false;
         } else if (!successful) {
-            errorMessage = "HTTP Status: " + status; // Kein 2xx, aber keine explizite Exception
+            errorMessage = "HTTP-Status: " + status;
         }
 
         ApiTransaction apiTransaction = new ApiTransaction(url, method, username, requestBody, status, timestamp, successful, errorMessage);
 
         try {
             apiTransactionRepository.save(apiTransaction);
-            logger.debug("Logged API transaction: {} {} -> Status {} (Duration: {}ms)", method, url, status, duration);
+            logger.debug("API-Transaktion protokolliert: {} {} -> Status {} (Dauer: {}ms)", method, url, status, duration);
         } catch (Exception e) {
-            logger.error("Failed to save API transaction log for {} {}: {}", method, url, e.getMessage());
+            logger.error("Fehler beim Speichern des API-Transaktionsprotokolls für {} {}: {}", method, url, e.getMessage());
         }
     }
 }

@@ -36,49 +36,44 @@ public class SearchController {
     }
 
     @GetMapping("/actors")
-    @Operation(summary = "Search for actors", description = "Searches for actors by their role and/or name. All parameters are optional.")
+    @Operation(summary = "Nach Akteuren suchen", description = "Sucht nach Akteuren anhand ihrer Rolle und/oder ihres Namens. Alle Parameter sind optional.")
     public ResponseEntity<List<ActorResponseDto>> searchActors(
-            @Parameter(description = "Filter by a specific role.") @RequestParam(required = false) String role,
-            @Parameter(description = "Search query for the actor's name.") @RequestParam(required = false) String bezeichnung,
-            @Parameter(description = "Filter by a specific actor ID.") @RequestParam(required = false) String actorId) {
+            @Parameter(description = "Nach einer bestimmten Rolle filtern.") @RequestParam(required = false) String role,
+            @Parameter(description = "Suchanfrage für den Namen des Akteurs.") @RequestParam(required = false) String bezeichnung,
+            @Parameter(description = "Nach einer bestimmten Akteur-ID filtern.") @RequestParam(required = false) String actorId) {
         var foundActors = searchService.searchActors(role, bezeichnung, actorId);
         return ResponseEntity.ok(actorMapper.toDtoList(foundActors));
     }
 
-
-    /**
-     * **ADAPTED ENDPOINT**: Now accepts the optional 'ownedByMe' parameter.
-     */
     @GetMapping("/medikamente")
-    @Operation(summary = "Search for medications", description = "Searches for medications with optional filters for name/manufacturer, status, tags, and ownership.")
+    @Operation(summary = "Nach Medikamenten suchen", description = "Sucht nach Medikamenten mit optionalen Filtern für Name/Hersteller, Status, Tags und Besitz.")
     public ResponseEntity<List<MedikamentResponseDto>> searchMedikamente(
-            @Parameter(description = "Search query for medication or manufacturer name.")
+            @Parameter(description = "Suchanfrage für den Namen des Medikaments oder Herstellers.")
             @RequestParam(required = false) String query,
-            @Parameter(description = "Filter by a specific medication status (e.g., 'angelegt', 'freigegeben').")
+            @Parameter(description = "Nach einem bestimmten Medikamentenstatus filtern (z. B. 'angelegt', 'freigegeben').")
             @RequestParam(required = false) String status,
-            @Parameter(description = "Filter by a list of tags. The medication must contain at least one tag.")
+            @Parameter(description = "Nach einer Liste von Tags filtern. Das Medikament muss mindestens einen Tag enthalten.")
             @RequestParam(required = false) List<String> tags,
-            @Parameter(description = "If true, returns only medications owned by the current actor.")
-            @RequestParam(required = false, defaultValue = "false") boolean ownedByMe) { // NEW Parameter
+            @Parameter(description = "Wenn 'true', werden nur Medikamente zurückgegeben, die dem aktuellen Akteur gehören.")
+            @RequestParam(required = false, defaultValue = "false") boolean ownedByMe) {
 
-        var foundMedikamente = searchService.searchMedikamente(query, status, tags, ownedByMe); // Pass parameter
+        var foundMedikamente = searchService.searchMedikamente(query, status, tags, ownedByMe);
         return ResponseEntity.ok(medikamentMapper.toDtoList(foundMedikamente));
     }
 
     @GetMapping("/units")
-    @Operation(summary = "Search for units by batch", description = "Searches within the user's own units by their batch name.")
+    @Operation(summary = "Einheiten nach Charge suchen", description = "Sucht innerhalb der eigenen Einheiten des Benutzers nach deren Chargenbezeichnung.")
     public ResponseEntity<List<UnitResponseDto>> searchUnitsByCharge(
-            @Parameter(description = "The search query for the batch name.")
+            @Parameter(description = "Die Suchanfrage für die Chargenbezeichnung.")
             @RequestParam String query) {
         var foundUnits = searchService.searchUnitsByCharge(query);
         return ResponseEntity.ok(unitMapper.toDtoList(foundUnits));
     }
 
     @GetMapping("/my-units")
+    @Operation(summary = "Eigene zwischengespeicherte Einheiten abrufen", description = "Gibt eine Liste aller Einheiten zurück, die dem aktuellen Benutzer gehören und sich im Cache befinden.")
     public ResponseEntity<List<UnitResponseDto>> getMyCachedUnits() {
-        // Der Service gibt eine Liste von Domain-Objekten zurück
         List<Unit> myUnits = searchService.getMyUnits();
-        // Die Domain-Objekte werden in DTOs für die API-Antwort umgewandelt
         List<UnitResponseDto> myUnitsDto = unitMapper.toDtoList(myUnits);
         return ResponseEntity.ok(myUnitsDto);
     }

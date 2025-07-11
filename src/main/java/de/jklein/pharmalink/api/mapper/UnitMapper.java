@@ -10,27 +10,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * MapStruct-Mapper zur Umwandlung zwischen Unit-Domain-Objekten und DTOs.
- * Beinhaltet die Logik für beide Konvertierungsrichtungen (toDto und toEntity).
- */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface UnitMapper {
 
-    // ===== Domain -> DTO =====
     UnitResponseDto toDto(Unit unit);
 
     List<UnitResponseDto> toDtoList(List<Unit> units);
 
-    // ===== DTO -> Domain (Entity) =====
     Unit toEntity(UnitResponseDto dto);
 
     List<Unit> toEntityList(List<UnitResponseDto> dtos);
-
-
-    // ===== Hilfsmethoden für die Konvertierung der verschachtelten Listen =====
-
-    // --- Richtung: Domain -> DTO ---
 
     default Map<String, String> transferEntryToMap(Unit.TransferEntry entry) {
         if (entry == null) return null;
@@ -58,8 +47,6 @@ public interface UnitMapper {
         if (readings == null) return Collections.emptyList();
         return readings.stream().map(this::temperatureReadingToMap).collect(Collectors.toList());
     }
-
-    // --- Richtung: DTO -> Domain (Entity) (NEU) ---
 
     default Unit.TransferEntry mapToTransferEntry(Map<String, String> map) {
         if (map == null) return null;

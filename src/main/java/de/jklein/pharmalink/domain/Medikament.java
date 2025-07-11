@@ -20,10 +20,9 @@ public class Medikament {
     private String ipfsLink;
     private String status;
     private String approvedById;
-    private Map<String, String> tags; // Angenommen, tags ist ein Map<String, String>
+    private Map<String, String> tags;
     private String docType;
 
-    // NEU: Feld für IPFS-Daten im Domain-Objekt
     private Map<String, Object> ipfsData;
 
     public Medikament(String medId, String herstellerId, String bezeichnung, String ipfsLink) {
@@ -31,9 +30,9 @@ public class Medikament {
         this.herstellerId = herstellerId;
         this.bezeichnung = bezeichnung;
         this.ipfsLink = ipfsLink;
-        this.status = "angelegt"; // Standardstatus
-        this.tags = new HashMap<>(); // Initialisierung der Tags
-        this.docType = "medikament"; // Standard DocType
-        this.ipfsData = new HashMap<>(); // Initialisierung des neuen Feldes
+        this.status = "angelegt";
+        this.tags = new HashMap<>();
+        this.docType = "medikament";
+        this.ipfsData = new HashMap<>();
     }
 }

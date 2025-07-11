@@ -4,10 +4,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.jklein.pharmalink.domain.audit.ApiTransaction;
 import de.jklein.pharmalink.domain.audit.GrpcTransaction;
-import de.jklein.pharmalink.domain.audit.LoginAttempt; // NEU: Import LoginAttempt
+import de.jklein.pharmalink.domain.audit.LoginAttempt;
 import de.jklein.pharmalink.repository.audit.ApiTransactionRepository;
 import de.jklein.pharmalink.repository.audit.GrpcTransactionRepository;
-import de.jklein.pharmalink.repository.audit.LoginAttemptRepository; // NEU: Import LoginAttemptRepository
+import de.jklein.pharmalink.repository.audit.LoginAttemptRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,44 +24,35 @@ import java.util.stream.Collectors;
 public class AuditService {
 
     private static final Logger logger = LoggerFactory.getLogger(AuditService.class);
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS"); // Für gRPC (volle Zeit)
-    private static final DateTimeFormatter DATE_ONLY_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd"); // Für API (nur Datum) und Login
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
+    private static final DateTimeFormatter DATE_ONLY_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private final ApiTransactionRepository apiTransactionRepository;
     private final GrpcTransactionRepository grpcTransactionRepository;
-    private final LoginAttemptRepository loginAttemptRepository; // NEU: Repository für Login-Versuche
+    private final LoginAttemptRepository loginAttemptRepository;
     private final ObjectMapper objectMapper;
 
     @Autowired
-    public AuditService(ApiTransactionRepository apiTransactionRepository, GrpcTransactionRepository grpcTransactionRepository, LoginAttemptRepository loginAttemptRepository, ObjectMapper objectMapper) { // NEU: LoginAttemptRepository im Konstruktor
+    public AuditService(ApiTransactionRepository apiTransactionRepository, GrpcTransactionRepository grpcTransactionRepository, LoginAttemptRepository loginAttemptRepository, ObjectMapper objectMapper) {
         this.apiTransactionRepository = apiTransactionRepository;
         this.grpcTransactionRepository = grpcTransactionRepository;
         this.loginAttemptRepository = loginAttemptRepository;
         this.objectMapper = objectMapper;
     }
 
-    /**
-     * Ruft alle API-Transaktionen ab, sortiert nach ID absteigend.
-     * @return Eine Liste von ApiTransaction-Objekten.
-     */
     public List<ApiTransaction> getAllApiTransactionsOrderedByIdDesc() {
-        List<ApiTransaction> transactions = apiTransactionRepository.findAll();
-        transactions.sort(Comparator.comparing(ApiTransaction::getId).reversed());
-        return transactions;
+        return apiTransactionRepository.findAll().stream()
+                .sorted(Comparator.comparing(ApiTransaction::getId).reversed())
+                .collect(Collectors.toList());
     }
 
-    /**
-     * Ruft alle API-Transaktionen ab (sortiert nach ID absteigend) und gibt sie als flachen JSON-String zurück.
-     * Die Einträge innerhalb der Liste sind nach ID absteigend sortiert und der Timestamp steht an erster Stelle (nur Datum).
-     * @return Ein JSON-String der Transaktionen.
-     */
     public String getAllApiTransactionsAsJson() {
         List<ApiTransaction> allTransactions = getAllApiTransactionsOrderedByIdDesc();
 
         List<Map<String, Object>> jsonCompatibleList = allTransactions.stream()
                 .map(tx -> {
                     Map<String, Object> map = new LinkedHashMap<>();
-                    map.put("timestamp", tx.getTimestamp().format(DATE_TIME_FORMATTER)); // Nur Datum für API-Transaktionen
+                    map.put("timestamp", tx.getTimestamp().format(DATE_TIME_FORMATTER));
                     map.put("httpMethod", tx.getHttpMethod());
                     map.put("responseStatus", tx.getResponseStatus());
                     map.put("successful", tx.isSuccessful());
@@ -79,28 +70,21 @@ public class AuditService {
         }
     }
 
-    /**
-     * Ruft alle gRPC-Transaktionen ab, sortiert nach ID absteigend.
-     * @return Eine Liste von GrpcTransaction-Objekten.
-     */
     public List<GrpcTransaction> getAllGrpcTransactionsOrderedByIdDesc() {
-        List<GrpcTransaction> transactions = grpcTransactionRepository.findAll();
-        transactions.sort(Comparator.comparing(GrpcTransaction::getId).reversed());
-        return transactions;
+        return grpcTransactionRepository.findAll().stream()
+                .sorted(Comparator.comparing(GrpcTransaction::getId).reversed())
+                .collect(Collectors.toList());
     }
 
-    /**
-     * Ruft alle gRPC-Transaktionen ab (sortiert nach ID absteigend) und gibt sie als flachen JSON-String zurück.
-     * Die Einträge innerhalb der Liste sind nach ID absteigend sortiert und die ID steht an erster Stelle.
-     * @return Ein JSON-String der gRPC-Transaktionen.
-     */
+
+
     public String getAllGrpcTransactionsAsJson() {
         List<GrpcTransaction> allTransactions = getAllGrpcTransactionsOrderedByIdDesc();
 
         List<Map<String, Object>> jsonCompatibleList = allTransactions.stream()
                 .map(tx -> {
                     Map<String, Object> map = new LinkedHashMap<>();
-                    map.put("timestamp", tx.getTimestamp().format(DATE_TIME_FORMATTER)); // Timestamp hier mit voller Zeit
+                    map.put("timestamp", tx.getTimestamp().format(DATE_TIME_FORMATTER));
                     map.put("transactionName", tx.getTransactionName());
                     map.put("successful", tx.isSuccessful());
                     map.put("transactionArgs", tx.getTransactionArgs());
@@ -116,28 +100,19 @@ public class AuditService {
         }
     }
 
-    /**
-     * Ruft alle Login-Versuche ab, sortiert nach ID absteigend.
-     * @return Eine Liste von LoginAttempt-Objekten.
-     */
     public List<LoginAttempt> getAllLoginAttemptsOrderedByIdDesc() {
-        List<LoginAttempt> attempts = loginAttemptRepository.findAll();
-        attempts.sort(Comparator.comparing(LoginAttempt::getId).reversed()); // Sortieren nach ID absteigend
-        return attempts;
+        return loginAttemptRepository.findAll().stream()
+                .sorted(Comparator.comparing(LoginAttempt::getId).reversed())
+                .collect(Collectors.toList());
     }
 
-    /**
-     * Ruft alle Login-Versuche ab (sortiert nach ID absteigend) und gibt sie als flachen JSON-String zurück.
-     * Die Einträge innerhalb der Liste sind nach ID absteigend sortiert und der Timestamp steht an erster Stelle.
-     * @return Ein JSON-String der Login-Versuche.
-     */
     public String getAllLoginAttemptsAsJson() {
         List<LoginAttempt> allAttempts = getAllLoginAttemptsOrderedByIdDesc();
 
         List<Map<String, Object>> jsonCompatibleList = allAttempts.stream()
                 .map(attempt -> {
                     Map<String, Object> map = new LinkedHashMap<>();
-                    map.put("timestamp", attempt.getTimestamp().format(DATE_TIME_FORMATTER)); // Timestamp mit voller Zeit
+                    map.put("timestamp", attempt.getTimestamp().format(DATE_TIME_FORMATTER));
                     map.put("username", attempt.getUsername());
                     map.put("successful", attempt.isSuccessful());
                     map.put("ipAddress", attempt.getIpAddress());

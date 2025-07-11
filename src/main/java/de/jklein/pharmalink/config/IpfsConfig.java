@@ -33,11 +33,11 @@ public class IpfsConfig {
             String multiAddr = String.format("/dns4/%s/tcp/%d", ipfsHost, ipfsPort);
             IPFS ipfsInstance = new IPFS(new MultiAddress(multiAddr));
             ipfsInstance.id();
-            logger.info("IPFS Bean successfully initialized and connected to {}:{}", ipfsHost, ipfsPort);
+            logger.info("IPFS-Bean erfolgreich initialisiert und mit {}:{} verbunden.", ipfsHost, ipfsPort);
             return ipfsInstance;
         } catch (IOException e) {
-            logger.error("Failed to connect to IPFS daemon at {}:{}. Please ensure the daemon is running.", ipfsHost, ipfsPort, e);
-            throw new RuntimeException("Failed to initialize IPFS client bean", e);
+            logger.error("Verbindung zum IPFS-Daemon unter {}:{} fehlgeschlagen. Bitte stellen Sie sicher, dass der Daemon läuft.", ipfsHost, ipfsPort, e);
+            throw new RuntimeException("Initialisierung des IPFS-Client-Beans fehlgeschlagen.", e);
         }
     }
 }

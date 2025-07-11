@@ -2,8 +2,8 @@ package de.jklein.pharmalink.api.controller.fabric;
 
 import de.jklein.pharmalink.api.dto.ActorResponseDto;
 import de.jklein.pharmalink.api.dto.UpdateActorRequestDto;
-import de.jklein.pharmalink.api.mapper.ActorMapper; // NEU: Import für ActorMapper
-import de.jklein.pharmalink.domain.Actor; // NEU: Import für Actor-Domain-Objekt
+import de.jklein.pharmalink.api.mapper.ActorMapper;
+import de.jklein.pharmalink.domain.Actor;
 import de.jklein.pharmalink.service.fabric.ActorFabricService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -11,17 +11,17 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors; // NEU: Import für Collectors
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/actors")
 public class ActorFabricController {
 
     private final ActorFabricService actorFabricService;
-    private final ActorMapper actorMapper; // NEU: ActorMapper injizieren
+    private final ActorMapper actorMapper;
 
     @Autowired
-    public ActorFabricController(ActorFabricService actorFabricService, ActorMapper actorMapper) { // NEU: Im Konstruktor hinzufügen
+    public ActorFabricController(ActorFabricService actorFabricService, ActorMapper actorMapper) {
         this.actorFabricService = actorFabricService;
         this.actorMapper = actorMapper;
     }
@@ -46,18 +46,9 @@ public class ActorFabricController {
         }
     }
 
-    /**
-     * Ruft eine Liste von Akteuren ab, optional gefiltert nach Rolle.
-     * Endpunkt: GET /api/v1/actors?role=hersteller
-     *
-     * @param role Der optionale Rollen-Parameter, nach dem gefiltert wird.
-     * @return Eine Liste von Akteuren als DTOs.
-     */
     @GetMapping
     public ResponseEntity<List<ActorResponseDto>> getActorsByRole(@RequestParam(name = "role") final String role) {
-        // Services geben jetzt Domain-Objekte zurück
         List<Actor> actors = actorFabricService.getActorsByRole(role);
-        // Konvertierung von Domain-Objekten zu DTOs für die API-Antwort
         List<ActorResponseDto> actorDtos = actors.stream()
                 .map(actorMapper::toDto)
                 .collect(Collectors.toList());

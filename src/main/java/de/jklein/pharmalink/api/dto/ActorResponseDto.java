@@ -11,7 +11,6 @@ public class ActorResponseDto {
     private String email;
     private String ipfsLink;
 
-    // NEU: Feld für die aufgelösten IPFS-Daten
     private Map<String, Object> ipfsData;
 
     public String getRolle() {

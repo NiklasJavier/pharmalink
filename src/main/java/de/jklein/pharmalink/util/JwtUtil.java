@@ -22,11 +22,10 @@ public class JwtUtil {
     private String secret;
 
     @Value("${jwt.expiration}")
-    private Long expiration; // In Millisekunden
+    private Long expiration;
 
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
-        // Hier könnten Sie zusätzliche claims hinzufügen, z.B. Rollen oder Benutzer-ID
         return createToken(claims, userDetails.getUsername());
     }
 

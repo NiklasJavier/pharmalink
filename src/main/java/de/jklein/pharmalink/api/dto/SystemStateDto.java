@@ -15,7 +15,6 @@ public class SystemStateDto {
     private int medikamentCount;
     private int myUnitsCount;
 
-    // Empfehlung: Verwenden Sie DTOs anstelle von Domänenobjekten
     private List<ActorResponseDto> allActors;
     private List<MedikamentResponseDto> allMedikamente;
     private List<UnitResponseDto> myUnits;

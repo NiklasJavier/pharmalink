@@ -30,41 +30,21 @@ public class UnitFabricController {
         this.systemStateService = systemStateService;
     }
 
-    /**
-     * Ruft eine einzelne, verfolgbare Einheit (Unit) anhand ihrer ID ab.
-     * Die Antwort wird mit Daten aus IPFS angereichert.
-     * Endpunkt: GET /api/v1/units/{unitId}
-     *
-     * @param unitId Die ID der abzurufenden Unit.
-     * @return Ein DTO der Unit oder 404 Not Found.
-     */
     @GetMapping("/{unitId}")
     public ResponseEntity<UnitResponseDto> getUnitById(@PathVariable final String unitId) {
-        // Service gibt Optional<Unit> zurück
         return unitFabricService.getEnrichedUnitById(unitId)
-                // Optional<Unit> zu Optional<UnitResponseDto> mappen, dann zu ResponseEntity
                 .map(unitMapper::toDto)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    /**
-     * Erstellt neue, verfolgbare Einheiten (Units) für ein bestimmtes Medikament.
-     * Endpunkt: POST /api/v1/medications/{medId}/units
-     *
-     * @param medId Die ID des Medikaments.
-     * @param request Das DTO mit den Details für die zu erstellenden Units.
-     * @return Eine Liste der erstellten Units als DTOs mit Status 201 (Created) oder eine Fehlermeldung.
-     */
     @PostMapping("/{medId}/units")
     public ResponseEntity<?> createUnitsForMedication(
             @PathVariable final String medId,
             @Valid @RequestBody final CreateUnitsRequestDto request) {
 
         try {
-            // Service gibt List<Unit> zurück
             List<Unit> createdUnits = unitFabricService.createUnitsForMedication(medId, request);
-            // Konvertierung von Domain zu DTO-Liste für die API-Antwort
             List<UnitResponseDto> createdUnitDtos = createdUnits.stream()
                     .map(unitMapper::toDto)
                     .collect(Collectors.toList());
@@ -76,20 +56,11 @@ public class UnitFabricController {
         }
     }
 
-    /**
-     * Ruft alle Units für ein bestimmtes Medikament ab, gruppiert nach Charge.
-     * Endpunkt: GET /api/v1/medications/{medId}/units-by-charge
-     *
-     * @param medId Die ID des Medikaments.
-     * @return Eine Map, die die Units nach Charge gruppiert enthält, oder eine Fehlermeldung.
-     */
     @GetMapping("/{medId}/units-by-charge")
     public ResponseEntity<?> getUnitsGroupedByCharge(@PathVariable final String medId) {
         try {
-            // Service gibt Map<String, List<Unit>> zurück
             Map<String, List<Unit>> groupedUnitsDomain = unitFabricService.getUnitsByMedIdGroupedByCharge(medId);
 
-            // Konvertierung von Map<String, List<Unit>> zu Map<String, List<UnitResponseDto>> für die API-Antwort
             Map<String, List<UnitResponseDto>> groupedUnitDtos = groupedUnitsDomain.entrySet().stream()
                     .collect(Collectors.toMap(
                             Map.Entry::getKey,
@@ -105,23 +76,13 @@ public class UnitFabricController {
         }
     }
 
-    /**
-     * Überträgt eine Unit an einen neuen Besitzer.
-     * Endpunkt: POST /api/v1/units/{unitId}/transfer
-     *
-     * @param unitId Die ID der zu übertragenden Unit.
-     * @param request Das DTO, das die ID des neuen Besitzers enthält.
-     * @return Die aktualisierte Unit als DTO bei Erfolg, oder eine Fehlermeldung bei Fehler.
-     */
     @PostMapping("/{unitId}/transfer")
     public ResponseEntity<?> transferUnit(
             @PathVariable final String unitId,
             @Valid @RequestBody final TransferUnitRequestDto request) {
 
         try {
-            // Service gibt Unit (Domain-Objekt) zurück
             Unit updatedUnit = unitFabricService.transferUnit(unitId, request.getNewOwnerActorId());
-            // Konvertierung von Domain zu DTO für die API-Antwort
             UnitResponseDto updatedUnitDto = unitMapper.toDto(updatedUnit);
             return ResponseEntity.ok(updatedUnitDto);
         } catch (Exception e) {
@@ -131,27 +92,17 @@ public class UnitFabricController {
         }
     }
 
-    /**
-     * Fügt einen neuen Temperaturmesswert zu einer Unit hinzu.
-     * Endpunkt: POST /api/v1/units/{unitId}/temperature-readings
-     *
-     * @param unitId Die ID der Unit.
-     * @param request Das DTO, das die Temperatur und den Zeitstempel enthält.
-     * @return Die aktualisierte Unit als DTO bei Erfolg, oder eine Fehlermeldung bei Fehler.
-     */
     @PostMapping("/{unitId}/temperature-readings")
     public ResponseEntity<?> addTemperatureReading(
             @PathVariable final String unitId,
             @Valid @RequestBody final AddTemperatureReadingRequestDto request) {
 
         try {
-            // Service gibt Unit (Domain-Objekt) zurück
             Unit updatedUnit = unitFabricService.addTemperatureReading(
                     unitId,
                     request.getTemperature(),
                     request.getTimestamp()
             );
-            // Konvertierung von Domain zu DTO für die API-Antwort
             UnitResponseDto updatedUnitDto = unitMapper.toDto(updatedUnit);
             return ResponseEntity.ok(updatedUnitDto);
         } catch (Exception e) {
@@ -165,7 +116,7 @@ public class UnitFabricController {
     public ResponseEntity<?> deleteUnit(@PathVariable String unitId) {
         try {
             unitFabricService.deleteUnit(unitId);
-            return ResponseEntity.noContent().build(); // Standard-Antwort für erfolgreiches DELETE
+            return ResponseEntity.noContent().build();
         } catch (Exception e) {
             return ResponseEntity
                     .internalServerError()
@@ -194,7 +145,6 @@ public class UnitFabricController {
                     requestDto.getStartCounter(),
                     requestDto.getEndCounter(),
                     requestDto.getNewOwnerId()
-                    // Der Timestamp-Parameter wird hier entfernt
             );
             return ResponseEntity.ok(Map.of("message", resultMessage));
         } catch (Exception e) {
@@ -204,13 +154,6 @@ public class UnitFabricController {
         }
     }
 
-    /**
-     * Ruft die Chargenbezeichnungen und die Anzahl der Einheiten pro Charge für ein bestimmtes Medikament ab.
-     * Endpunkt: GET /api/v1/units/medications/{medId}/charge-counts
-     *
-     * @param medId Die ID des Medikaments.
-     * @return Eine Map von Chargenbezeichnungen zu der jeweiligen Einheitenanzahl, oder eine Fehlermeldung.
-     */
     @GetMapping("/medications/{medId}/charge-counts")
     public ResponseEntity<?> getChargeCountsByMedId(@PathVariable final String medId) {
         try {

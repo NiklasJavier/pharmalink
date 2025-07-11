@@ -8,6 +8,9 @@ import de.jklein.pharmalink.api.dto.UnitResponseDto;
 import de.jklein.pharmalink.api.mapper.ActorMapper;
 import de.jklein.pharmalink.api.mapper.MedikamentMapper;
 import de.jklein.pharmalink.api.mapper.UnitMapper;
+import de.jklein.pharmalink.domain.Actor;
+import de.jklein.pharmalink.domain.Medikament;
+import de.jklein.pharmalink.domain.Unit;
 import de.jklein.pharmalink.service.state.SystemStateService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.http.ResponseEntity;
@@ -36,9 +39,8 @@ public class SystemController {
     }
 
     @GetMapping("/current-actor-id")
-    @Operation(summary = "Get Current Actor ID", description = "Retrieves the ID of the actor currently registered in the system state.")
+    @Operation(summary = "Aktuelle Akteur-ID abrufen", description = "Ruft die ID des Akteurs ab.")
     public ResponseEntity<Map<String, String>> getCurrentActorId() {
-        // KORREKTUR: .get() verwenden, um den Wert aus der AtomicReference zu holen.
         String actorId = systemStateService.getCurrentActorId().get();
 
         if (!StringUtils.hasText(actorId)) {
@@ -48,7 +50,7 @@ public class SystemController {
     }
 
     @GetMapping("/cache/stats")
-    @Operation(summary = "Get Cache Statistics", description = "Returns a quick summary of the number of items currently held in the in-memory cache.")
+    @Operation(summary = "Statistiken abrufen", description = "Gibt eine schnelle Zusammenfassung.")
     public ResponseEntity<SystemStatsDto> getCacheStats() {
         SystemStatsDto statsDto = new SystemStatsDto(
                 systemStateService.getAllActors().size(),
@@ -59,22 +61,23 @@ public class SystemController {
     }
 
     @GetMapping("/cache/state")
-    @Operation(summary = "Get Live Cache State", description = "Returns the complete current in-memory state of the application cache.")
+    @Operation(summary = "Zustand des Zwischenspeichers abrufen", description = ".")
     public ResponseEntity<SystemStateDto> getCacheState() {
-        // KORREKTUR: .get() verwenden, um den Wert aus der AtomicReference zu holen.
         String actorId = systemStateService.getCurrentActorId().get();
 
-        // Konvertiere Domänenobjekte in DTOs
-        List<ActorResponseDto> actorsDto = actorMapper.toDtoList(systemStateService.getAllActors());
-        List<MedikamentResponseDto> medikamenteDto = medikamentMapper.toDtoList(systemStateService.getAllMedikamente());
-        List<UnitResponseDto> unitsDto = unitMapper.toDtoList(systemStateService.getMyUnits());
+        List<Actor> allActors = systemStateService.getAllActors();
+        List<Medikament> allMedikamente = systemStateService.getAllMedikamente();
+        List<Unit> myUnits = systemStateService.getMyUnits();
 
-        // Erstelle das finale DTO für die Antwort
+        List<ActorResponseDto> actorsDto = actorMapper.toDtoList(allActors);
+        List<MedikamentResponseDto> medikamenteDto = medikamentMapper.toDtoList(allMedikamente);
+        List<UnitResponseDto> unitsDto = unitMapper.toDtoList(myUnits);
+
         SystemStateDto stateDto = new SystemStateDto(
                 actorId,
-                actorsDto.size(),
-                medikamenteDto.size(),
-                unitsDto.size(),
+                allActors.size(),
+                allMedikamente.size(),
+                myUnits.size(),
                 actorsDto,
                 medikamenteDto,
                 unitsDto

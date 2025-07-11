@@ -97,13 +97,11 @@ public class FabricConfig {
         }
     }
 
-    // KORREKTUR: Gson Bean mit registriertem TypeAdapter für LocalDateTime
     @Bean
     public Gson gson() {
         return new GsonBuilder()
                 .setPrettyPrinting()
                 .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
-                // .registerTypeAdapter(LocalDate.class, new LocalDateAdapter()) // Falls LocalDate auch verwendet wird
                 .create();
     }
 

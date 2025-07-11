@@ -41,7 +41,7 @@ public class UnitFabricService {
             Unit unit = fabricClient.evaluateTransaction("queryUnitById", Unit.class, unitId);
             return Optional.ofNullable(enrichSingleUnitWithIpfs(unit));
         } catch (Exception e) {
-            logger.error("Fehler beim Abrufen der Unit mit ID '{}': {}", unitId, e.getMessage(), e);
+            logger.error("Fehler beim Abrufen der Einheit mit ID '{}': {}", unitId, e.getMessage(), e);
             return Optional.empty();
         }
     }
@@ -67,7 +67,7 @@ public class UnitFabricService {
             List<Unit> units = fabricClient.getGson().fromJson(resultJson, listType);
             return enrichUnitList(units);
         } catch (Exception e) {
-            logger.error("Fehler beim Abrufen der Units für Eigentümer '{}': {}", ownerActorId, e.getMessage(), e);
+            logger.error("Fehler beim Abrufen der Einheiten für Eigentümer '{}': {}", ownerActorId, e.getMessage(), e);
             return Collections.emptyList();
         }
     }
@@ -80,7 +80,7 @@ public class UnitFabricService {
             List<Unit> enrichedUnits = enrichUnitList(units);
             return enrichedUnits.stream().collect(Collectors.groupingBy(Unit::getChargeBezeichnung));
         } catch (Exception e) {
-            logger.error("Fehler beim Abrufen der gruppierten Units für medId '{}': {}", medId, e.getMessage(), e);
+            logger.error("Fehler beim Abrufen der gruppierten Einheiten für Medikamenten-ID '{}': {}", medId, e.getMessage(), e);
             return Collections.emptyMap();
         }
     }
@@ -91,56 +91,49 @@ public class UnitFabricService {
         return fabricClient.getGson().fromJson(resultJson, Unit.class);
     }
 
-    // ===== HIER BEGINNEN DIE FEHLENDEN METHODEN =====
-
     public Unit addTemperatureReading(String unitId, String temperature, String timestamp) throws Exception {
-        logger.debug("Sende 'addTemperatureReading' Transaktion für Unit ID: {}", unitId);
+        logger.debug("Sende 'addTemperatureReading'-Transaktion für Einheit-ID: {}", unitId);
         String resultJson = fabricClient.submitGenericTransaction("addTemperatureReading", unitId, temperature, timestamp);
-        logger.info("Temperaturmesswert erfolgreich für Unit {} hinzugefügt.", unitId);
+        logger.info("Temperaturmesswert erfolgreich für Einheit {} hinzugefügt.", unitId);
         return fabricClient.getGson().fromJson(resultJson, Unit.class);
     }
 
     public void deleteUnit(String unitId) throws Exception {
-        logger.debug("Sende 'deleteUnits' Transaktion für einzelne ID: {}", unitId);
-        // Die Chaincode-Funktion erwartet eine Liste, also packen wir die einzelne ID in eine Liste.
+        logger.debug("Sende 'deleteUnits'-Transaktion für einzelne ID: {}", unitId);
         deleteUnits(Collections.singletonList(unitId));
     }
 
+
+
     public void deleteUnits(List<String> unitIds) throws Exception {
-        logger.debug("Sende 'deleteUnits' Transaktion für {} Chargen.", unitIds.size());
+        logger.debug("Sende 'deleteUnits'-Transaktion für {} Einheiten.", unitIds.size());
         String unitIdsJson = fabricClient.getGson().toJson(unitIds);
         fabricClient.submitGenericTransaction("deleteUnits", unitIdsJson);
-        logger.info("{} Chargen erfolgreich zur Löschung eingereicht.", unitIds.size());
+        logger.info("{} Einheiten erfolgreich zur Löschung eingereicht.", unitIds.size());
     }
 
     public String transferUnitRange(String medId, String chargeBezeichnung, int start, int end, String newOwnerId) throws Exception {
-        logger.debug("Sende 'transferUnitRange' Transaktion für Bereich {}-{}", start, end);
-
-        // Zeitstempel wird jetzt wieder hier erzeugt
-        String timestamp = java.time.Instant.now().toString();
-
+        logger.debug("Sende 'transferUnitRange'-Transaktion für Bereich {}-{}", start, end);
+        String timestamp = Instant.now().toString();
         String result = fabricClient.submitGenericTransaction(
                 "transferUnitRange", medId, chargeBezeichnung,
                 String.valueOf(start), String.valueOf(end), newOwnerId, timestamp
         );
-
         logger.info("Chargenbereich erfolgreich zur Übertragung eingereicht.");
         return result;
     }
 
     public Map<String, Integer> getChargeCountsByMedId(String medId) {
         try {
-            logger.debug("Rufe 'queryChargeCountsByMedId' für medId '{}' auf.", medId);
+            logger.debug("Rufe 'queryChargeCountsByMedId' für Medikamenten-ID '{}' auf.", medId);
             String resultJson = fabricClient.evaluateGenericTransaction("queryChargeCountsByMedId", medId);
             Type mapType = new TypeToken<Map<String, Integer>>() {}.getType();
             return fabricClient.getGson().fromJson(resultJson, mapType);
         } catch (Exception e) {
-            logger.error("Fehler beim Abrufen der Chargenanzahl für medId '{}': {}", medId, e.getMessage(), e);
+            logger.error("Fehler beim Abrufen der Chargenanzahl für Medikamenten-ID '{}': {}", medId, e.getMessage(), e);
             return Collections.emptyMap();
         }
     }
-
-    // ===== PRIVATE HILFSMETHODEN (unverändert) =====
 
     private List<Unit> enrichUnitList(List<Unit> units) {
         if (units == null || units.isEmpty()) {
@@ -158,13 +151,13 @@ public class UnitFabricService {
         }
         final String cleanHash = unit.getIpfsLink().replace("ipfs://", "").trim();
         try {
-            if (!cleanHash.isEmpty()) {
+            if (StringUtils.hasText(cleanHash)) {
                 Type dataType = new TypeToken<Map<String, Object>>() {}.getType();
                 Map<String, Object> ipfsData = ipfsClient.getObject(cleanHash, dataType);
                 unit.setIpfsData(ipfsData);
             }
         } catch (IOException e) {
-            logger.warn("Could not fetch or parse IPFS data for Unit {}: {}", unit.getUnitId(), e.getMessage());
+            logger.warn("Konnte IPFS-Daten für Einheit {} nicht abrufen oder verarbeiten: {}", unit.getUnitId(), e.getMessage());
         }
         return unit;
     }

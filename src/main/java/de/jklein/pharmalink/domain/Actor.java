@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.util.HashMap;
 import java.util.Map;
 
-@Data // Lombok generiert automatisch Getter und Setter für alle Felder
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class Actor {
@@ -19,7 +19,6 @@ public class Actor {
     private String ipfsLink;
     private String docType;
 
-    // NEU: Feld für die angereicherten IPFS-Daten
     private Map<String, Object> ipfsData;
 
     public Actor(String actorId, String bezeichnung, String role, String email, String ipfsLink) {
@@ -29,6 +28,6 @@ public class Actor {
         this.email = email;
         this.ipfsLink = ipfsLink;
         this.docType = "actor";
-        this.ipfsData = new HashMap<>(); // Initialisierung des neuen Feldes
+        this.ipfsData = new HashMap<>();
     }
 }

@@ -8,8 +8,6 @@ public class UpdateMedikamentRequestDto {
     private String infoblattHash;
     private Map<String, Object> ipfsData;
 
-    // Getter und Setter
-
     public String getBezeichnung() {
         return bezeichnung;
     }

@@ -10,12 +10,6 @@ import org.springframework.web.util.ContentCachingRequestWrapper;
 
 import java.io.IOException;
 
-/**
- * Ein Filter, der den HTTP-Request-Body cacht, sodass er mehrmals gelesen werden kann.
- * Dies ist notwendig, damit Interceptoren oder andere Komponenten den Body lesen können,
- * auch nachdem der Controller ihn bereits konsumiert hat.
- * Ersetzt den (möglicherweise fehlenden) ContentCachingFilter in neueren Spring Boot Versionen.
- */
 @Component
 public class RequestCachingFilter extends OncePerRequestFilter {
 

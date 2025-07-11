@@ -38,7 +38,6 @@ public class SecurityConfig {
         this.jwtRequestFilter = jwtRequestFilter;
     }
 
-    // ... (Bean-Methoden für passwordEncoder, authenticationProvider, authenticationManager bleiben unverändert) ...
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -57,9 +56,6 @@ public class SecurityConfig {
         return new ProviderManager(authenticationProvider());
     }
 
-    /**
-     * Kette #1: Ausschließlich für die stateless REST-API.
-     */
     @Bean
     @Order(1)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
@@ -77,21 +73,16 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /**
-     * Kette #2: Für die stateful Webanwendung (UI und Swagger).
-     */
     @Bean
     @Order(2)
     public SecurityFilterChain uiSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(authorize -> authorize
-                        // Öffentliche Pfade für Login, Assets und die Swagger-Doku-Definition
                         .requestMatchers(
                                 "/", "/error", "/app/login", "/authenticate",
                                 "/css/**", "/js/**", "/images/**", "/favicon.ico",
                                 "/webjars/**", "/v3/api-docs/**"
                         ).permitAll()
-                        // Alle anderen Anfragen (inkl. /app/** und /swagger-ui.html) erfordern Authentifizierung
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
@@ -108,7 +99,6 @@ public class SecurityConfig {
                         .deleteCookies("JSESSIONID")
                         .permitAll()
                 );
-        // CSRF ist hier standardmäßig aktiviert, was für die UI korrekt ist.
 
         return http.build();
     }

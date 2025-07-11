@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationListener;
+import org.springframework.security.authentication.event.AbstractAuthenticationEvent;
 import org.springframework.security.authentication.event.AbstractAuthenticationFailureEvent;
 import org.springframework.security.authentication.event.AuthenticationSuccessEvent;
 import org.springframework.stereotype.Component;
@@ -17,7 +18,7 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Component
-public class LoginAuditListener implements ApplicationListener<org.springframework.context.ApplicationEvent> {
+public class LoginAuditListener implements ApplicationListener<AbstractAuthenticationEvent> {
 
     private static final Logger logger = LoggerFactory.getLogger(LoginAuditListener.class);
 
@@ -29,35 +30,22 @@ public class LoginAuditListener implements ApplicationListener<org.springframewo
     }
 
     @Override
-    public void onApplicationEvent(org.springframework.context.ApplicationEvent event) {
-        if (event instanceof AuthenticationSuccessEvent successEvent) {
-            handleSuccessfulLogin(successEvent);
-        } else if (event instanceof AbstractAuthenticationFailureEvent failureEvent) {
-            handleFailedLogin(failureEvent);
+    public void onApplicationEvent(AbstractAuthenticationEvent event) {
+        boolean successful = event instanceof AuthenticationSuccessEvent;
+        String username = event.getAuthentication().getName();
+        String ipAddress = getCurrentRequestIpAddress();
+        String userAgent = getCurrentRequestUserAgent();
+        String authType = event.getAuthentication().getClass().getSimpleName();
+        String errorMessage = successful ? null : ((AbstractAuthenticationFailureEvent) event).getException().getMessage();
+
+        LoginAttempt loginAttempt = new LoginAttempt(username, LocalDateTime.now(), successful, ipAddress, userAgent, errorMessage, authType);
+        saveLoginAttempt(loginAttempt);
+
+        if (successful) {
+            logger.info("Erfolgreicher Login: Benutzer '{}' von IP '{}'", username, ipAddress);
+        } else {
+            logger.warn("Fehlgeschlagener Login: Benutzer '{}' von IP '{}' - Grund: {}", username, ipAddress, errorMessage);
         }
-    }
-
-    private void handleSuccessfulLogin(AuthenticationSuccessEvent event) {
-        String username = event.getAuthentication().getName();
-        String ipAddress = getCurrentRequestIpAddress();
-        String userAgent = getCurrentRequestUserAgent();
-        String authType = event.getAuthentication().getClass().getSimpleName();
-
-        LoginAttempt loginAttempt = new LoginAttempt(username, LocalDateTime.now(), true, ipAddress, userAgent, null, authType);
-        saveLoginAttempt(loginAttempt);
-        logger.info("Erfolgreicher Login: Benutzer '{}' von IP '{}'", username, ipAddress);
-    }
-
-    private void handleFailedLogin(AbstractAuthenticationFailureEvent event) {
-        String username = event.getAuthentication().getName();
-        String errorMessage = event.getException().getMessage();
-        String ipAddress = getCurrentRequestIpAddress();
-        String userAgent = getCurrentRequestUserAgent();
-        String authType = event.getAuthentication().getClass().getSimpleName();
-
-        LoginAttempt loginAttempt = new LoginAttempt(username, LocalDateTime.now(), false, ipAddress, userAgent, errorMessage, authType);
-        saveLoginAttempt(loginAttempt);
-        logger.warn("Fehlgeschlagener Login: Benutzer '{}' von IP '{}' - Grund: {}", username, ipAddress, errorMessage);
     }
 
     private void saveLoginAttempt(LoginAttempt loginAttempt) {
@@ -75,7 +63,7 @@ public class LoginAuditListener implements ApplicationListener<org.springframewo
                 .map(ServletRequestAttributes.class::cast)
                 .map(ServletRequestAttributes::getRequest)
                 .map(HttpServletRequest::getRemoteAddr)
-                .orElse("UNKNOWN");
+                .orElse("UNBEKANNT");
     }
 
     private String getCurrentRequestUserAgent() {
@@ -84,6 +72,6 @@ public class LoginAuditListener implements ApplicationListener<org.springframewo
                 .map(ServletRequestAttributes.class::cast)
                 .map(ServletRequestAttributes::getRequest)
                 .map(request -> request.getHeader("User-Agent"))
-                .orElse("UNKNOWN");
+                .orElse("UNBEKANNT");
     }
 }

@@ -11,14 +11,10 @@ import java.util.stream.Collectors;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ActorMapper {
 
-    // Die Annotation @Mapping(target = "ipfsData", ignore = true) wurde entfernt.
-    // MapStruct wird das Feld "ipfsData" jetzt automatisch mappen.
     ActorResponseDto toDto(Actor actor);
 
-    // Wandelt ein ActorResponseDto in ein Actor-Domain-Objekt um.
     Actor toEntity(ActorResponseDto dto);
 
-    // Methode zur Umwandlung einer Liste von Actor-Domain-Objekten in eine Liste von ActorResponseDto
     default List<ActorResponseDto> toDtoList(List<Actor> actors) {
         if (actors == null) {
             return null;
@@ -28,7 +24,6 @@ public interface ActorMapper {
                 .collect(Collectors.toList());
     }
 
-    // Methode zur Umwandlung einer Liste von ActorResponseDto in eine Liste von Actor-Domain-Objekten
     default List<Actor> toEntityList(List<ActorResponseDto> dtos) {
         if (dtos == null) {
             return null;

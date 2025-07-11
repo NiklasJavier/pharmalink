@@ -8,8 +8,6 @@ public class UpdateActorRequestDto {
     private String email;
     private Map<String, Object> ipfsData;
 
-    // Getter and Setter
-
     public String getName() {
         return name;
     }

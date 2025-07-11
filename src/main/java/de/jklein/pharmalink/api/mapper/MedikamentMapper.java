@@ -12,11 +12,8 @@ import java.util.stream.Collectors;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface MedikamentMapper {
 
-    // NEU: ipfsData wird nicht mehr ignoriert, da es jetzt im Domain-Objekt ist
-    // MapStruct mappt es automatisch, wenn die Feldnamen übereinstimmen.
     MedikamentResponseDto toDto(Medikament medikament);
 
-    // Methode zur Umwandlung einer Liste von Medikament in eine Liste von MedikamentResponseDto
     default List<MedikamentResponseDto> toDtoList(List<Medikament> medikamente) {
         if (medikamente == null) {
             return null;
@@ -26,10 +23,8 @@ public interface MedikamentMapper {
                 .collect(Collectors.toList());
     }
 
-    // Methode zur Umwandlung eines MedikamentResponseDto in ein Medikament-Objekt
     Medikament toEntity(MedikamentResponseDto dto);
 
-    // Methode zur Umwandlung einer Liste von MedikamentResponseDto in eine Liste von Medikament
     default List<Medikament> toEntityList(List<MedikamentResponseDto> dtos) {
         if (dtos == null) {
             return null;

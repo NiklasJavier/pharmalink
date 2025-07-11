@@ -35,7 +35,6 @@ public class AppController {
     private final ObjectMapper objectMapper;
     private final AuditService auditService;
 
-    // Der ActorService wird nicht mehr benötigt, da wir die Daten aus dem SystemState beziehen
     public AppController(SystemStateService systemStateService, SearchService searchService, ObjectMapper objectMapper, AuditService auditService) {
         this.systemStateService = systemStateService;
         this.searchService = searchService;
@@ -52,10 +51,6 @@ public class AppController {
         return "auth/login";
     }
 
-    /**
-     * **ANGEPASST**: Ruft die Informationen des aktuellen Akteurs direkt aus dem
-     * In-Memory-Cache des SystemStateService ab.
-     */
     @GetMapping("/dashboard")
     public String showDashboard(Model model, RedirectAttributes redirectAttributes) throws IOException {
         String currentActorId = systemStateService.getCurrentActorId().get();
@@ -64,13 +59,11 @@ public class AppController {
             return "redirect:/app/errors/unknown-actor";
         }
 
-        // Finde den aktuellen Akteur direkt in der gecachten Liste
         Optional<Actor> actorOpt = systemStateService.getAllActors().stream()
                 .filter(a -> a.getActorId().equals(currentActorId))
                 .findFirst();
 
         if (actorOpt.isEmpty()) {
-            // Dieser Fehler deutet auf einen inkonsistenten Cache hin.
             logger.error("Inkonsistenter Zustand: Akteur mit ID {} nicht im Cache gefunden!", currentActorId);
             redirectAttributes.addFlashAttribute("error", "Ihre Akteur-ID " + currentActorId + " konnte nicht im Anwendungs-Cache gefunden werden.");
             return "redirect:/app/errors/unknown-actor";
@@ -154,15 +147,14 @@ public class AppController {
     }
 
     private String removeKeysFromJsonNode(String jsonString, Set<String> keysToRemove) throws JsonProcessingException, IOException {
-        JsonNode rootNode = objectMapper.readTree(jsonString); // String zu JsonNode parsen
-        JsonNode filteredNode = removeKeysFromJsonNode(rootNode, keysToRemove); // Bestehende Methode aufrufen
-        return objectMapper.writeValueAsString(filteredNode); // JsonNode zurück zu String serialisieren
+        JsonNode rootNode = objectMapper.readTree(jsonString);
+        JsonNode filteredNode = removeKeysFromJsonNode(rootNode, keysToRemove);
+        return objectMapper.writeValueAsString(filteredNode);
     }
 
     private JsonNode removeKeysFromJsonNode(JsonNode node, Set<String> keysToRemove) {
         if (node.isObject()) {
             ObjectNode objectNode = (ObjectNode) node;
-            // Erstellen Sie eine Kopie der Feldnamen, um ConcurrentModificationException zu vermeiden
             List<String> fieldNames = new ArrayList<>();
             objectNode.fieldNames().forEachRemaining(fieldNames::add);
 
@@ -170,7 +162,6 @@ public class AppController {
                 if (keysToRemove.contains(fieldName)) {
                     objectNode.remove(fieldName);
                 } else {
-                    // Rekursiv für verschachtelte Objekte oder Arrays
                     JsonNode childNode = objectNode.get(fieldName);
                     if (childNode != null) {
                         objectNode.set(fieldName, removeKeysFromJsonNode(childNode, keysToRemove));

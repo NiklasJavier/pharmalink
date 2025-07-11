@@ -44,18 +44,7 @@ public class SearchService {
         }
 
         if (!CollectionUtils.isEmpty(tags)) {
-            medikamentenStream = medikamentenStream.filter(medikament -> {
-                if (medikament.getTags() == null || medikament.getTags().isEmpty()) {
-                    return false;
-                }
-                return tags.stream().anyMatch(searchTag ->
-                        medikament.getTags().entrySet().stream()
-                                .anyMatch(entry ->
-                                        entry.getKey().toLowerCase(Locale.ROOT).contains(searchTag.toLowerCase(Locale.ROOT)) ||
-                                                entry.getValue().toLowerCase(Locale.ROOT).contains(searchTag.toLowerCase(Locale.ROOT))
-                                )
-                );
-            });
+            medikamentenStream = medikamentenStream.filter(medikament -> this.medikamentHasMatchingTags(medikament, tags));
         }
 
         if (StringUtils.hasText(query)) {
@@ -94,12 +83,28 @@ public class SearchService {
         return actorStream.collect(Collectors.toList());
     }
 
-
     public List<Unit> searchUnitsByCharge(String query) {
         final String lowercaseQuery = query.toLowerCase(Locale.ROOT);
         return systemStateService.getMyUnits().stream()
                 .filter(unit -> unit.getChargeBezeichnung() != null &&
                         unit.getChargeBezeichnung().toLowerCase(Locale.ROOT).contains(lowercaseQuery))
                 .collect(Collectors.toList());
+    }
+
+    private boolean medikamentHasMatchingTags(Medikament medikament, List<String> searchTags) {
+        if (CollectionUtils.isEmpty(medikament.getTags())) {
+            return false;
+        }
+        List<String> lowerCaseSearchTags = searchTags.stream()
+                .map(tag -> tag.toLowerCase(Locale.ROOT))
+                .toList();
+
+        return medikament.getTags().entrySet().stream()
+                .anyMatch(entry -> {
+                    String lowerKey = entry.getKey().toLowerCase(Locale.ROOT);
+                    String lowerValue = entry.getValue().toLowerCase(Locale.ROOT);
+                    return lowerCaseSearchTags.stream()
+                            .anyMatch(searchTag -> lowerKey.contains(searchTag) || lowerValue.contains(searchTag));
+                });
     }
 }
