@@ -113,13 +113,17 @@ public class UnitFabricService {
         logger.info("{} Chargen erfolgreich zur Löschung eingereicht.", unitIds.size());
     }
 
-    public String transferUnitRange(String medId, String chargeBezeichnung, int start, int end, String newOwnerId, String timestamp) throws Exception {
+    public String transferUnitRange(String medId, String chargeBezeichnung, int start, int end, String newOwnerId) throws Exception {
         logger.debug("Sende 'transferUnitRange' Transaktion für Bereich {}-{}", start, end);
-        // String timestamp = java.time.Instant.now().toString(); // Nicht mehr hier erzeugen
+
+        // Zeitstempel wird jetzt wieder hier erzeugt
+        String timestamp = java.time.Instant.now().toString();
+
         String result = fabricClient.submitGenericTransaction(
                 "transferUnitRange", medId, chargeBezeichnung,
                 String.valueOf(start), String.valueOf(end), newOwnerId, timestamp
         );
+
         logger.info("Chargenbereich erfolgreich zur Übertragung eingereicht.");
         return result;
     }

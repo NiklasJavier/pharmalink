@@ -11,4 +11,5 @@ public class TransferUnitRangeRequestDto {
     private int startCounter;
     private int endCounter;
     private String newOwnerId;
+    private String transferTimestamp;
 }
