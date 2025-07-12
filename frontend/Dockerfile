@@ -1,6 +1,6 @@
 # Stage 1: Build the application with Gradle
 # Verwendet das von dir angegebene JDK 24 Build-Image.
-FROM gradle:8.14.3-jdk24 AS builder
+FROM gradle:8.14.3-jdk21 AS builder
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ COPY . .
 
 # Führt den 'build' Task aus.
 # HINZUGEFÜGT: --stacktrace, um die genaue Gradle-Fehlermeldung zu sehen.
-RUN gradle build --no-daemon -x test --stacktrace
+RUN gradle build clean --no-daemon --stacktrace
 
 # Benennt die JAR-Datei um.
 RUN mv build/libs/*.jar app.jar
@@ -17,7 +17,7 @@ RUN mv build/libs/*.jar app.jar
 
 # Stage 2: Create the final, lean production image
 # Verwendet das von dir angegebene JDK 24 Runtime-Image.
-FROM eclipse-temurin:24-jre-ubi9-minimal
+FROM eclipse-temurin:21-jre-noble
 
 WORKDIR /app
 
