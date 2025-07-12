@@ -8,7 +8,8 @@
 
 Die Plattform besteht aus drei Hauptkomponenten:
 
-* **SpringBoot Applikation (`./src`):** Ein Java-basiertes Backend, das eine REST-API bereitstellt. Es dient als Schnittstelle für Benutzer und externe Systeme und kommuniziert per gRPC mit dem Hyperledger Fabric Netzwerk.
+* **Spring Backend (`./src`):** Ein Java-basiertes Backend, das eine REST-API bereitstellt. Es dient als Schnittstelle für Benutzer und externe Systeme und kommuniziert per gRPC mit dem Hyperledger Fabric Netzwerk.
+* **Spring Frontend (`./frontend/src`):** Eine auf Java sowie Vaadin-basiertes Frontend, um die Interaktionen visuell zu erläutern.
 * **Chaincode (`./chaincode/pharmalink_chaincode_main`):** Der Smart Contract, geschrieben in Java, der die gesamte Geschäftslogik enthält. Er definiert die Datenstrukturen (Assets) und die Regeln für deren Erstellung und Veränderung auf der Blockchain.
 * **Hyperledger Fabric Test-Netzwerk (`./docker`, `./scripts`):** Eine Sammlung von Docker-Containern und Skripten, um eine lokale Blockchain-Umgebung mit mehreren Organisationen, Peers und einem Orderer zu starten und zu verwalten.
 
@@ -21,7 +22,7 @@ Bevor Sie mit dem Projekt beginnen, müssen einige grundlegende Tools auf Ihrem 
 #### Docker Installation
 
 ```bash
-curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh
+curl -fsSL [https://get.docker.com](https://get.docker.com) -o get-docker.sh && sh get-docker.sh
 ```
 
 #### Weitere Abhängigkeiten (Ubuntu)
@@ -36,7 +37,7 @@ Der empfohlene Weg zur Installation von Java ist **SDKMAN\!**.
 
 ```bash
 # SDKMAN! installieren
-curl -s "https://get.sdkman.io" | bash
+curl -s "[https://get.sdkman.io](https://get.sdkman.io)" | bash
 
 # SDKMAN! für die aktuelle Terminalsitzung laden
 source "$HOME/.sdkman/bin/sdkman-init.sh"
@@ -45,7 +46,7 @@ source "$HOME/.sdkman/bin/sdkman-init.sh"
 sdk install java 11.0.27-tem
 sdk default java 11.0.27-tem
 
-# Java 17 für die SpringBoot-Applikation installieren
+# Java 21 für die SpringBoot-Applikation installieren
 sdk install java 21.0.7-tem
 ```
 
@@ -53,140 +54,73 @@ sdk install java 21.0.7-tem
 
 -----
 
-### 📥 3. Projekt einrichten
+### 🚀 3. Entwicklungsumgebung starten
 
-Klonen Sie das Projekt-Repository in Ihr Home-Verzeichnis.
+Die folgenden Befehle klonen das Repository, richten das Fabric-Netzwerk ein, initialisieren den Chaincode und starten die Pharmalink-Anwendung. Führen Sie diesen Block als Ganzes aus.
 
 ```bash
-cd ~ && git clone git@github.com:NiklasJavier/pharmalink.git
+cd ~ && sudo rm -rf ./pharmalink && \
+git clone git@github.com:NiklasJavier/pharmalink.git && \
+source /root/pharmalink/scripts/fabric_setEnv.sh && \
+bash /root/pharmalink/scripts/fabric_setup_test.sh up && \
+bash /root/pharmalink/scripts/fabric_setup_test.sh cc && \
+bash /root/pharmalink/scripts/fabric_setup_test_consortium.sh && \
+cd /root/pharmalink/scripts && \
+bash /root/pharmalink/scripts/pharmalink_setup.sh up
 ```
+| **Service**                             | **Endpoint**                  |
+|-----------------------------------------|-------------------------------|
+| Backend API                             | [http://localhost:8080](http://localhost:8080)         |
+| Frontend                                | [http://localhost:3000](http://localhost:3000)         |
+| IPFS Application                        | [http://localhost:5001](http://localhost:5001)         |
+| PostgreSQL Database                     | `localhost:5432`              |
+| Hyperledger Peer                        | `localhost:9051`              |
+| Hyperledger Orderer                     | `localhost:7050`              |
+| Hyperledger Certificate Authority (CA)  | `localhost:9054`              |
 
 -----
 
-### 🚀 4. Entwicklungsumgebung starten
+### 👥 4. Akteure im Netzwerk
 
-#### a) Fabric Test-Netzwerk starten
-
-Dieser Schritt startet ein komplettes Hyperledger Fabric Test-Netzwerk.
-
-```bash
-bash ./scripts/fabric_setup_test.sh up
-```
-
-#### b) Fabric CLI einrichten
-
-Laden Sie die Kommandozeilen-Tools für Hyperledger Fabric herunter.
-
-```bash
-bash ./scripts/fabric_setup_cli.sh
-```
-
-#### c) Umgebungsvariablen für die CLI setzen
-
-Damit Sie die `peer`-Befehle direkt ausführen können, müssen die passenden Umgebungsvariablen für Ihre Rolle im Netzwerk gesetzt werden. Die Skripte dafür liegen unter [`scripts/roles/`](./scripts/roles/).
-
-Um beispielsweise als **Admin** zu agieren, führen Sie folgenden Befehl aus:
-
-```bash
-source ./scripts/fabric_setEnv.sh
-```
-
-#### d) Chaincode initialisieren und Akteure registrieren
-
-Dieser entscheidende Schritt installiert, genehmigt und committet den Chaincode im Netzwerk. Zusätzlich werden die initialen Akteure (Hersteller, Großhändler etc.) auf der Blockchain registriert.
-
-```bash
-bash ./scripts/fabric_setup_test_consortium.sh
-```
-
-#### e) Pharmalink-Anwendung starten
-
-Startet die SpringBoot-Backend-Anwendung, die die REST-API bereitstellt.
-
-```bash
-bash ./scripts/pharmalink_setup.sh up
-```
-
-> 📲 Die API ist nach dem Start unter **`http://localhost:8080`** erreichbar.
-
-#### f) Optional: Hyperledger Explorer starten
-
-Starten Sie den Explorer, um eine Weboberfläche zur Visualisierung des Netzwerks und der Transaktionen zu erhalten.
-
-```bash
-bash ./scripts/fabric_setup_test_explorer.sh up
-```
-
-> 🔎 Die Weboberfläche des Explorers ist nach dem Start unter **`http://localhost:8088`** erreichbar.
-
------
-
-### 👥 5. Akteure im Netzwerk
-
-Das Test-Netzwerk simuliert eine Lieferkette mit den folgenden vordefinierten Rollen und Organisationen:
+Das Test-Netzwerk simuliert eine Lieferkette mit den folgenden vordefinierten Rollen und Organisationen. Sie können die Identität in Ihrer Kommandozeile jederzeit wechseln, indem Sie das entsprechende Skript ausführen.
 
 | Akteur / Rolle | CLI-Skript |
 | :--- | :--- |
-| **Hersteller** | `fabric_role_hersteller.sh` |
-| **Großhändler** | `fabric_role_grosshaendler.sh` |
-| **Apotheke** | `fabric_role_apotheke.sh` |
-| **Behörde** | `fabric_role_behoerde.sh` |
-
-Sie können die Identität in Ihrer Kommandozeile jederzeit wechseln, indem Sie das entsprechende Skript aus dem Verzeichnis `scripts/roles/` ausführen.
+| **Hersteller** | `source /root/pharmalink/scripts/roles/fabric_role_hersteller.sh` |
+| **Großhändler**| `source /root/pharmalink/scripts/roles/fabric_role_grosshaendler.sh` |
+| **Apotheke** | `source /root/pharmalink/scripts/roles/fabric_role_apotheke.sh` |
+| **Behörde** | `source /root/pharmalink/scripts/roles/fabric_role_behoerde.sh` |
 
 -----
 
-### ⛓️ 6. Mit dem Chaincode per CLI interagieren
+### ⛓️ 5. Mit dem Chaincode per CLI interagieren
 
-Nachdem das Netzwerk läuft und die Umgebungsvariablen gesetzt sind, können Sie mit dem `peer`-CLI direkt mit dem Smart Contract interagieren.
+Nachdem das Netzwerk läuft, können Sie mit dem `peer`-CLI direkt mit dem Smart Contract interagieren. Stellen Sie sicher, dass Sie zuvor die passende Rolle mit einem der Skripte aus der obigen Tabelle gesetzt haben.
 
-Eine detaillierte Beschreibung aller verfügbaren Chaincode-Funktionen und deren Parameter finden Sie in der [`README` des Chaincode-Verzeichnisses](./chaincode/README.md).
+Eine detaillierte Beschreibung aller verfügbaren Chaincode-Funktionen und deren Parameter finden Sie in der [`README` des Chaincode-Verzeichnisses](https://www.google.com/search?q=./chaincode/README.md).
 
-**Beispiel: `initCall` + `approveMedication` als Behörde ausführen**
-
-Mit dem folgenden Befehl wird die `initCall`-Funktion auf dem Chaincode aufgerufen. Zuerst wird das passende Rollen-Skript geladen, um die Identität zu setzen.
+**Beispiel: `initCall`**
 
 ```bash
-source scripts/roles/fabric_role_behoerde.sh && \
+# Identität als Behörde setzen
+source /root/pharmalink/scripts/roles/fabric_role_behoerde.sh
+
+# Chaincode-Funktion aufrufen
 peer chaincode invoke -o $ORDERER_ADDRESS --tls --cafile $ORDERER_CA -C $CHANNEL_NAME -n $CHAINCODE \
 --peerAddresses $PEER0_ORG1_ADDRESS --tlsRootCertFiles $PEER0_ORG1_CA \
 --peerAddresses $PEER0_ORG2_ADDRESS --tlsRootCertFiles $PEER0_ORG2_CA \
--c '{"function":"initCall","Args":["max.mustermann@example.com","QmWgX..."]}'
-```
-```bash
-source scripts/roles/fabric_role_behoerde.sh && \
-peer chaincode invoke -o $ORDERER_ADDRESS --tls --cafile $ORDERER_CA -C $CHANNEL_NAME -n $CHAINCODE \
---peerAddresses $PEER0_ORG1_ADDRESS --tlsRootCertFiles $PEER0_ORG1_CA \
---peerAddresses $PEER0_ORG2_ADDRESS --tlsRootCertFiles $PEER0_ORG2_CA \
--c '{"function":"approveMedication","Args":["<MEDIKAMENTEN_ID>"]}'
+-c '{"function":"initCall","Args":[""]}'
 ```
 
 -----
 
-### 🖥️ 7. API-Endpunkte (unserer Anwendung)
+### 🛑 6. Umgebung zurücksetzen und löschen
 
-Wenn die SpringBoot-Anwendung läuft, stellt sie die folgenden REST-Endpunkte zur Verfügung:
-
-| Methode | URL | Beschreibung |
-| :--- | :--- | :--- |
-| `GET` | `/api/assets` | Ruft eine Liste aller Assets im Ledger ab. |
-| `POST` | `/api/assets` | Erstellt ein neues Asset (z.B. ein Medikament). |
-| `GET` | `/api/assets/{id}` | Ruft ein spezifisches Asset anhand seiner ID ab. |
-| `GET` | `/api/assets/{id}/history` | Ruft die Transaktionshistorie für ein spezifisches Asset ab. |
-
------
-
-### 🛑 8. Herunterfahren der Umgebung
-
-Um alle Docker-Container zu stoppen und das erstellte Netzwerk zu bereinigen, verwenden Sie die `down`-Befehle der jeweiligen Skripte:
+Um alle Docker-Container zu stoppen, das erstellte Netzwerk zu bereinigen und das Repository zu entfernen, verwenden Sie das `repo_reset.sh`-Skript.
 
 ```bash
-# Stoppt die Pharmalink-Anwendung
-./scripts/pharmalink_setup.sh down
+cd /root/pharmalink/scripts/manage && bash ./repo_reset.sh
+```
 
-# Stoppt das Fabric-Netzwerk
-./scripts/fabric_setup_test.sh down
-
-# Stoppt den Explorer
-./scripts/fabric_setup_test_explorer.sh down
+```
 ```
