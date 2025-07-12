@@ -40,7 +40,7 @@ jobs:
         id: meta-app
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ghcr.io/${{ github.repository_owner }}/pharmalink-ui
 
       - name: Build and push Frontend App Docker image
         uses: docker/build-push-action@v5
