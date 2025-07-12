@@ -36,7 +36,7 @@ services:
     volumes:
       - ./pharmalink-ui:/app/config:ro
     environment:
-      - BACKEND_BASEURL=https://d1.navine.tech
+      - BACKEND_BASEURL=http://app-pharmalink-app/api
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
