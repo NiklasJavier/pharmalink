@@ -68,12 +68,17 @@ bash /root/pharmalink/scripts/fabric_setup_test_consortium.sh && \
 cd /root/pharmalink/scripts && \
 bash /root/pharmalink/scripts/pharmalink_setup.sh up
 ```
+##### Die Anwendung
 | **Service**                             | **Endpoint**                  |
 |-----------------------------------------|-------------------------------|
 | Backend API                             | [http://localhost:8080](http://localhost:8080)         |
 | Frontend                                | [http://localhost:3000](http://localhost:3000)         |
 | IPFS Application                        | [http://localhost:5001](http://localhost:5001)         |
 | PostgreSQL Database                     | `localhost:5432`              |
+
+##### Die Infrastruktur
+| **Service**                             | **Endpoint**                  |
+|-----------------------------------------|-------------------------------|
 | Hyperledger Peer                        | `localhost:9051`              |
 | Hyperledger Orderer                     | `localhost:7050`              |
 | Hyperledger Certificate Authority (CA)  | `localhost:9054`              |
