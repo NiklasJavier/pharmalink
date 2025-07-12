@@ -9,7 +9,7 @@ COPY . .
 
 # Führt den 'build' Task aus, um das Vaadin-Frontend und das Backend zu bauen.
 # Mit '-x test' werden die Tests übersprungen, was den Build beschleunigt.
-RUN chmod +x ./gradlew && ./gradlew build --no-daemon -x test
+RUN gradle build --no-daemon -x test
 
 # Benennt die JAR-Datei um, um den Prozess robust zu machen
 RUN mv build/libs/*.jar app.jar
