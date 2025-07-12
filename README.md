@@ -102,7 +102,7 @@ Das Test-Netzwerk simuliert eine Lieferkette mit den folgenden vordefinierten Ro
 
 Nachdem das Netzwerk läuft, können Sie mit dem `peer`-CLI direkt mit dem Smart Contract interagieren. Stellen Sie sicher, dass Sie zuvor die passende Rolle mit einem der Skripte aus der obigen Tabelle gesetzt haben.
 
-Eine detaillierte Beschreibung aller verfügbaren Chaincode-Funktionen und deren Parameter finden Sie in der [`README` des Chaincode-Verzeichnisses](https://www.google.com/search?q=./chaincode/README.md).
+Eine detaillierte Beschreibung aller verfügbaren Chaincode-Funktionen und deren Parameter finden Sie in der [`README` des Chaincode-Verzeichnisses](./chaincode/README.md).
 
 **Beispiel: `initCall`**
 
