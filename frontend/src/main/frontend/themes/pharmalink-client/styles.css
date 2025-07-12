@@ -1,8 +1,4 @@
 @import url('./main-layout.css');
-@import url('./views/dashboard-view.css');
-@import url('./views/actor-explorer-view.css');
-@import url('./views/medikamente-view.css');
-@import url('./views/units-view.css');
 
 html {
       --lumo-shade-5pct: rgba(33, 33, 33, 0.05);
