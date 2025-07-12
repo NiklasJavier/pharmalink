@@ -3,7 +3,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN gradle build --no-daemon -x test
+RUN gradle build  -Pvaadin.productionMode=true --no-daemon -x test
 
 RUN mv build/libs/pharmalink-client.jar app.jar
 
