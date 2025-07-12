@@ -35,7 +35,7 @@ services:
     volumes:
       - ./pharmalink-ui:/app/config:ro
     environment:
-      - BACKEND_BASEURL=http://host-gateway:8080
+      - BACKEND_BASEURL=http://pharmalink-app:8080
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
