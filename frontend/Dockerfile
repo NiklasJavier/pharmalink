@@ -1,6 +1,6 @@
 # Stage 1: Build the application with Gradle
 # Verwendet das von dir angegebene JDK 24 Build-Image.
-FROM gradle:8.14.3-jdk21 AS builder
+FROM gradle:8.14.2-jdk21 AS builder
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ COPY . .
 
 # Führt den 'build' Task aus.
 # HINZUGEFÜGT: --stacktrace, um die genaue Gradle-Fehlermeldung zu sehen.
-RUN gradle build clean --no-daemon --stacktrace
+RUN gradle bootJar --no-daemon
 
 # Benennt die JAR-Datei um.
 RUN mv build/libs/*.jar app.jar
