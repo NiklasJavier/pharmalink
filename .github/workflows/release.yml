@@ -17,7 +17,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 24 for Client Application Build
+      - name: Set up JDK 24 for Frontend Application Build
         uses: actions/setup-java@v4
         with:
           java-version: '24'
@@ -26,8 +26,8 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Build Client Application with Gradle
-        run: ./gradlew -p client bootJar -PnewVersion=${{ github.ref_name }}
+      - name: Build Frontend Application with Gradle
+        run: ./gradlew -p frontend bootJar -PnewVersion=${{ github.ref_name }}
 
       - name: Log in to the Container registry
         uses: docker/login-action@v3
@@ -36,17 +36,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for Client App Docker
+      - name: Extract metadata for Frontend App Docker
         id: meta-app
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
 
-      - name: Build and push Client App Docker image
+      - name: Build and push Frontend App Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./client
-          file: ./client/Dockerfile
+          context: ./frontend
+          file: ./frontend/Dockerfile
           push: true
           tags: ${{ steps.meta-app.outputs.tags }}
           labels: ${{ steps.meta-app.outputs.labels }}
@@ -88,8 +88,8 @@ jobs:
           mkdir -p release-package/app
           mkdir -p release-package/chaincode
           
-          echo "--- Packaging client application ---"
-          cp client/build/libs/*.jar release-package/app/
+          echo "--- Packaging frontend application ---"
+          cp frontend/build/libs/*.jar release-package/app/
           cp -r scripts docker common release-package/
           
           echo "--- Packaging Fabric chaincodes (.tar.gz) ---"
