@@ -6,6 +6,7 @@
 # Build-Ausgabeverzeichnisse
 /build/
 /target/
+/src/main/generated/
 
 # Quarkus spezifische Ausgabedateien
 /quarkus-app/
