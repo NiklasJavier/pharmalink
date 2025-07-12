@@ -17,17 +17,17 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21 for Main Application Build
+      - name: Set up JDK 24 for Client Application Build
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '24'
           distribution: 'temurin'
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Build Main Application with Gradle
-        run: ./gradlew bootJar -PnewVersion=${{ github.ref_name }}
+      - name: Build Client Application with Gradle
+        run: ./gradlew -p client bootJar -PnewVersion=${{ github.ref_name }}
 
       - name: Log in to the Container registry
         uses: docker/login-action@v3
@@ -36,35 +36,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for Main App Docker
+      - name: Extract metadata for Client App Docker
         id: meta-app
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
 
-      - name: Build and push Main App Docker image
+      - name: Build and push Client App Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./Dockerfile
+          context: ./client
+          file: ./client/Dockerfile
           push: true
           tags: ${{ steps.meta-app.outputs.tags }}
           labels: ${{ steps.meta-app.outputs.labels }}
-
-      - name: Extract metadata for Explorer Docker
-        id: meta-explorer
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}-explorer
-
-      #- name: Build and push Explorer Docker image
-      #  uses: docker/build-push-action@v5
-          #with:
-          #context: ./explorer # Annahme: Dockerfile liegt in /frontend
-          #file: ./explorer/Dockerfile
-          #push: true
-          #tags: ${{ steps.meta-explorer.outputs.tags }}
-          #labels: ${{ steps.meta-explorer.outputs.labels }}
 
       - name: Set up JDK 11 for Chaincode Build
         uses: actions/setup-java@v4
@@ -75,32 +60,26 @@ jobs:
       - name: Build and Package All Chaincodes
         run: |
           set -e
-
-          # 1. Fabric Binaries & Config direkt herunterladen und entpacken
+          
           FABRIC_VERSION="2.5.5"
           echo "--- Downloading Fabric v${FABRIC_VERSION} ---"
           curl -L "https://github.com/hyperledger/fabric/releases/download/v${FABRIC_VERSION}/hyperledger-fabric-linux-amd64-${FABRIC_VERSION}.tar.gz" | tar xz
-
-          # 2. Umgebungsvariablen für die Ausführung und Konfiguration setzen
+          
           export PATH="$(pwd)/bin:$PATH"
           export FABRIC_CFG_PATH="$(pwd)/config"
           echo "--- PATH and FABRIC_CFG_PATH set. ---"
           
-          # 3. Staging-Verzeichnis erstellen
           mkdir -p staging/chaincode-packages
           
-          # 4. Alle Chaincode-Projekte bauen und verpacken
           echo "--- Finding, building, and packaging all chaincode projects ---"
           for project in $(find chaincode -mindepth 1 -maxdepth 1 -type d -name "pharmalink*"); do
             CC_NAME=$(basename ${project})
-            # Version für das Label extrahieren (ohne 'v')
             CC_VERSION=$(echo "${{ github.ref_name }}" | sed 's/v//')
           
             echo "--> Building ${project} with Gradle"
             ./gradlew -p "${project}" build
-
+          
             echo "--> Packaging ${CC_NAME} with version ${{ github.ref_name }}"
-            # Hängt die Version an den Dateinamen an
             peer lifecycle chaincode package "staging/chaincode-packages/${CC_NAME}-${{ github.ref_name }}.tar.gz" --path "${project}" --lang java --label "${CC_NAME}_${CC_VERSION}"
           done
 
@@ -108,17 +87,17 @@ jobs:
         run: |
           mkdir -p release-package/app
           mkdir -p release-package/chaincode
-
-          echo "--- Packaging main application ---"
-          cp build/libs/*.jar release-package/app/
+          
+          echo "--- Packaging client application ---"
+          cp client/build/libs/*.jar release-package/app/
           cp -r scripts docker common release-package/
           
           echo "--- Packaging Fabric chaincodes (.tar.gz) ---"
           cp -r staging/chaincode-packages/*.tar.gz release-package/chaincode/
-
+          
           echo "--- Final package structure ---"
           ls -R release-package
-
+          
           cd release-package
           zip -r ../pharmalink-${{ github.ref_name }}.zip .
 
@@ -128,15 +107,13 @@ jobs:
           generate_release_notes: true
           name: Release ${{ github.ref_name }}
           body: |
-            Die Docker-Images wurden erfolgreich in die GitHub Container Registry (GHCR) gepusht.
+            Das Docker-Image wurde erfolgreich in die GitHub Container Registry (GHCR) gepusht.
             - **App Image-Tags:** `${{ steps.meta-app.outputs.tags }}`
-            - **Explorer Image-Tags:** `${{ steps.meta-explorer.outputs.tags }}`
             - **Image-Details ansehen:** [GHCR-Pakete](https://github.com/${{ github.repository }}/packages)
             
             Zusätzlich ist die `pharmalink-${{ github.ref_name }}.zip` Datei als Asset direkt an dieses Release angehängt.
             Dieses Archiv enthält die Hauptanwendung sowie die für Fabric verpackten Chaincodes.
             Die einzelnen Chaincode-Pakete (`.tar.gz`) sind ebenfalls als separate Assets verfügbar.
-
           files: |
             pharmalink-${{ github.ref_name }}.zip
             staging/chaincode-packages/*.tar.gz
