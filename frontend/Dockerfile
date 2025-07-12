@@ -10,8 +10,9 @@ FROM eclipse-temurin:24-jre-ubi9-minimal
 
 WORKDIR /app
 
+COPY . .
 COPY --from=builder /app/build/libs/*.jar app.jar
 
-EXPOSE 8080
+EXPOSE 8083
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
