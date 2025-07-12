@@ -12,6 +12,7 @@ WORKDIR /app
 
 COPY . .
 COPY --from=builder /app/build/libs/*.jar app.jar
+COPY --from=builder /app/build/libs/*.jar app.jar
 
 EXPOSE 8083
 

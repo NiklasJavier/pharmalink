@@ -2,7 +2,10 @@ version: '3.7'
 
 services:
   pharmalink-app:
-    image: ghcr.io/niklasjavier/pharmalink:latest
+    #image: ghcr.io/niklasjavier/pharmalink:latest
+    build:
+      context: ./../frontend/.
+      dockerfile: Dockerfile
     container_name: pharmalink-app
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -22,7 +25,10 @@ services:
       - ipfs
 
   pharmalink-ui:
-    image: ghcr.io/niklasjavier/pharmalink-ui:latest
+    #image: ghcr.io/niklasjavier/pharmalink-ui:latest
+    build:
+      context: ./../.
+      dockerfile: Dockerfile
     container_name: app-pharmalink-ui
     ports:
       - "3000:8083"
