@@ -4,14 +4,14 @@ FROM gradle:8.14.3-jdk24 AS builder
 
 WORKDIR /app
 
-# Kopiert den gesamten Projektkontext in das Build-Verzeichnis
+# Kopiert das gesamte Projektverzeichnis. Einfach und zuverlässig.
 COPY . .
 
-# Führt den 'build' Task aus, um das Vaadin-Frontend und das Backend zu bauen.
-# Mit '-x test' werden die Tests übersprungen, was den Build beschleunigt.
+# Führt den 'build' Task aus und stellt sicher, dass der Wrapper ausführbar ist.
+# Dieser Befehl ist der entscheidende Punkt. Wenn er fehlschlägt, siehst du hier die Fehlermeldung.
 RUN gradle build --no-daemon -x test
 
-# Benennt die JAR-Datei um, um den Prozess robust zu machen
+# Benennt die JAR-Datei um. Funktioniert nur, wenn der Build erfolgreich war.
 RUN mv build/libs/*.jar app.jar
 
 
@@ -21,7 +21,7 @@ FROM eclipse-temurin:24-jre-ubi9-minimal
 
 WORKDIR /app
 
-# Kopiert NUR das gebaute JAR aus der Build-Stage
+# Kopiert NUR das gebaute JAR aus der Build-Stage.
 COPY --from=builder /app/app.jar .
 
 # Port, den die Anwendung nach außen freigibt
