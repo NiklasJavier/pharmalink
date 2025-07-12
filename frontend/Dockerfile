@@ -4,14 +4,14 @@ FROM gradle:8.14.3-jdk24 AS builder
 
 WORKDIR /app
 
-# Kopiert das gesamte Projektverzeichnis. Einfach und zuverlässig.
+# Kopiert das gesamte Projektverzeichnis.
 COPY . .
 
-# Führt den 'build' Task aus und stellt sicher, dass der Wrapper ausführbar ist.
-# Dieser Befehl ist der entscheidende Punkt. Wenn er fehlschlägt, siehst du hier die Fehlermeldung.
-RUN gradle build --no-daemon -x test
+# Führt den 'build' Task aus.
+# HINZUGEFÜGT: --stacktrace, um die genaue Gradle-Fehlermeldung zu sehen.
+RUN gradle build --no-daemon -x test --stacktrace
 
-# Benennt die JAR-Datei um. Funktioniert nur, wenn der Build erfolgreich war.
+# Benennt die JAR-Datei um.
 RUN mv build/libs/*.jar app.jar
 
 
