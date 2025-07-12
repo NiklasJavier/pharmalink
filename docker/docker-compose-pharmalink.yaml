@@ -4,7 +4,7 @@ services:
   pharmalink-app:
     #image: ghcr.io/niklasjavier/pharmalink:latest
     build:
-      context: ./../frontend/.
+      context: ./../.
       dockerfile: Dockerfile
     container_name: pharmalink-app
     extra_hosts:
@@ -27,7 +27,7 @@ services:
   pharmalink-ui:
     #image: ghcr.io/niklasjavier/pharmalink-ui:latest
     build:
-      context: ./../.
+      context: ./../frontend/.
       dockerfile: Dockerfile
     container_name: app-pharmalink-ui
     ports:
