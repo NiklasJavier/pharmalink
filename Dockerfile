@@ -2,24 +2,16 @@
 FROM gradle:8.8-jdk21 AS build
 WORKDIR /home/gradle/src
 
-# 1. Gradle-Wrapper- und Build-Dateien kopieren
-# Diese ändern sich selten, daher werden Abhängigkeiten im Cache behalten.
-COPY build.gradle settings.gradle ./
-COPY gradlew ./
-COPY gradle ./gradle/
+# Kopieren Sie das gesamte Projektverzeichnis in den Container.
+# Das ist der einfachste und zuverlässigste Weg.
+COPY . .
 
-# 2. Den Build mit dem Wrapper ausführen (ohne Quellcode)
-# Dies lädt alle Abhängigkeiten herunter. Dieser Schritt wird nur wiederholt, wenn sich die Build-Dateien ändern.
-RUN chmod +x ./gradlew && ./gradlew build --no-daemon -x build
+# Machen Sie den Gradle Wrapper ausführbar und führen Sie direkt 'bootJar' aus.
+# 'bootJar' ist der spezifische Befehl von Spring Boot, um das ausführbare JAR zu erstellen.
+# '--no-daemon' wird für CI/CD-Umgebungen wie Docker empfohlen.
+RUN chmod +x ./gradlew && ./gradlew bootJar --no-daemon
 
-# 3. Den Quellcode kopieren
-# Da sich der Quellcode am häufigsten ändert, kommt dieser Schritt zuletzt.
-COPY src ./src
-
-# 4. Die Anwendung final bauen
-RUN ./gradlew build --no-daemon
-
-# 5. JAR-Datei umbenennen, um den "Unable to access jarfile"-Fehler zu vermeiden
+# Jetzt sollte die JAR-Datei existieren. Benennen Sie sie um.
 RUN mv build/libs/*.jar app.jar
 
 
