@@ -21,25 +21,18 @@ services:
       - postgres
       - ipfs
 
-  pharmalink-explorer:
-    image: ghcr.io/niklasjavier/pharmalink-explorer:latest
-    container_name: app-pharmalink-explorer
+  pharmalink-ui:
+    image: ghcr.io/niklasjavier/pharmalink-ui:latest
+    container_name: app-pharmalink-ui
     ports:
       - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - NEXT_TELEMETRY_DISABLED=1
     volumes:
-      - ./pharmalink-explorer:/app/config:ro
+      - ./pharmalink-ui:/app/config:ro
     restart: unless-stopped
     networks:
       - pharmalink-net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/config"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    depends_on:
+      - pharmalink-app
 
   ipfs:
     image: ipfs/go-ipfs:latest
