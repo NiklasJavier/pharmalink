@@ -72,4 +72,9 @@ for aff in "${AFFILIATIONS[@]}"; do
   done
 done
 
+for file in "$BASE_DIR/scripts/roles/"*.sh; do
+  echo "Führe Skript aus: $file"
+  bash "$file"
+done
+
 echo "Alle Identitäten für das Pharmalink-Konsortium erfolgreich erstellt und eingeschrieben."

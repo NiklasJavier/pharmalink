@@ -13,3 +13,7 @@ echo "CORE_PEER_MSPCONFIGPATH: $CORE_PEER_MSPCONFIGPATH"
 echo "CORE_PEER_LOCALMSPID: $CORE_PEER_LOCALMSPID"
 echo "CORE_PEER_TLS_ENABLED: $CORE_PEER_TLS_ENABLED"
 echo "CORE_PEER_ADDRESS: $CORE_PEER_ADDRESS"
+peer chaincode invoke -o $ORDERER_ADDRESS --tls --cafile $ORDERER_CA -C $CHANNEL_NAME -n $CHAINCODE \
+--peerAddresses $PEER0_ORG1_ADDRESS --tlsRootCertFiles $PEER0_ORG1_CA \
+--peerAddresses $PEER0_ORG2_ADDRESS --tlsRootCertFiles $PEER0_ORG2_CA \
+-c '{"function":"initCall","Args":[""]}'
