@@ -6,7 +6,12 @@
 # Build-Ausgabeverzeichnisse
 /build/
 /target/
-/src/main/generated/
+/src/main/frontend/generated/
+
+package.json
+tsconfig.json
+types.d.ts
+vite.config.ts
 
 # Quarkus spezifische Ausgabedateien
 /quarkus-app/
