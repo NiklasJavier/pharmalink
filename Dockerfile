@@ -1,18 +1,17 @@
 FROM gradle:8.8-jdk21 AS build
-
 WORKDIR /home/gradle/src
 
-COPY . .
+COPY build.gradle settings.gradle ./
+RUN gradle bootJar --no-daemon -x test
 
-RUN chmod +x ./gradlew && ./gradlew build --no-daemon
+
+RUN mv /home/gradle/src/build/libs/*.jar /home/gradle/src/app.jar
 
 FROM eclipse-temurin:21-jre-jammy
-
 WORKDIR /app
 
-COPY --from=build /home/gradle/src/build/libs/*.jar app.jar
+COPY --from=build /home/gradle/src/app.jar .
 
-#ENV SPRING_PROFILES_ACTIVE=prod
 ENV SPRING_CONFIG_LOCATION=optional:file:/etc/pharmalink/application.yaml
 
 EXPOSE 8080
