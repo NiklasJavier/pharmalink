@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.jklein.pharmalink.client.fabric.FabricClient;
 import de.jklein.pharmalink.domain.Actor;
 import de.jklein.pharmalink.domain.Medikament;
+import de.jklein.pharmalink.domain.Unit;
 import de.jklein.pharmalink.domain.audit.ChaincodeEventLog;
 import de.jklein.pharmalink.domain.system.SystemState;
 import de.jklein.pharmalink.repository.ActorRepository;
@@ -119,7 +120,6 @@ public class SystemStateService {
             medikamentRepository.deleteAll();
             medikamentRepository.saveAll(medikamenteFromChaincode);
             logger.info("{} Medikamente erfolgreich mit der Datenbank synchronisiert.", medikamenteFromChaincode.size());
-
         } catch (Exception e) {
             logger.error("KRITISCH: Zustand konnte nicht mit dem Chaincode synchronisiert werden. Grund: {}", e.getMessage(), e);
         }
@@ -190,8 +190,19 @@ public class SystemStateService {
     }
 
     private void handleActorUpdate(Optional<String> actorIdOpt) {
-        actorIdOpt.ifPresent(actorId -> actorFabricService.getEnrichedActorById(actorId).ifPresent(actor -> {
-            actorRepository.save(actor);
+        actorIdOpt.ifPresent(actorId -> actorFabricService.getEnrichedActorById(actorId).ifPresent(actorFromChaincode -> {
+            Optional<Actor> existingActorOpt = actorRepository.findByActorId(actorId);
+
+            Actor actorToSave = existingActorOpt.orElse(actorFromChaincode);
+            if (existingActorOpt.isPresent()) {
+                actorToSave.setBezeichnung(actorFromChaincode.getBezeichnung());
+                actorToSave.setRole(actorFromChaincode.getRole());
+                actorToSave.setEmail(actorFromChaincode.getEmail());
+                actorToSave.setIpfsLink(actorFromChaincode.getIpfsLink());
+                actorToSave.setIpfsData(actorFromChaincode.getIpfsData());
+            }
+
+            actorRepository.save(actorToSave);
             logger.info("Akteur {} in der Datenbank erstellt/aktualisiert.", actorId);
         }));
     }
@@ -204,8 +215,21 @@ public class SystemStateService {
     }
 
     private void handleMedikamentUpdate(Optional<String> medIdOpt) {
-        medIdOpt.ifPresent(medId -> medicationFabricService.getEnrichedMedikamentById(medId).ifPresent(medikament -> {
-            medikamentRepository.save(medikament);
+        medIdOpt.ifPresent(medId -> medicationFabricService.getEnrichedMedikamentById(medId).ifPresent(medikamentFromChaincode -> {
+            Optional<Medikament> existingMedikamentOpt = medikamentRepository.findByMedId(medId);
+
+            Medikament medikamentToSave = existingMedikamentOpt.orElse(medikamentFromChaincode);
+            if(existingMedikamentOpt.isPresent()){
+                medikamentToSave.setBezeichnung(medikamentFromChaincode.getBezeichnung());
+                medikamentToSave.setStatus(medikamentFromChaincode.getStatus());
+                medikamentToSave.setInfoblattHash(medikamentFromChaincode.getInfoblattHash());
+                medikamentToSave.setIpfsLink(medikamentFromChaincode.getIpfsLink());
+                medikamentToSave.setApprovedById(medikamentFromChaincode.getApprovedById());
+                medikamentToSave.setTags(medikamentFromChaincode.getTags());
+                medikamentToSave.setIpfsData(medikamentFromChaincode.getIpfsData());
+            }
+
+            medikamentRepository.save(medikamentToSave);
             logger.info("Medikament {} in der Datenbank erstellt/aktualisiert.", medId);
         }));
     }
@@ -218,8 +242,22 @@ public class SystemStateService {
     }
 
     private void handleUnitUpdate(Optional<String> unitIdOpt) {
-        unitIdOpt.ifPresent(unitId -> unitFabricService.getEnrichedUnitById(unitId).ifPresent(unit -> {
-            unitRepository.save(unit);
+        unitIdOpt.ifPresent(unitId -> unitFabricService.getEnrichedUnitById(unitId).ifPresent(unitFromChaincode -> {
+            Optional<Unit> existingUnitOpt = unitRepository.findByUnitId(unitId);
+
+            Unit unitToSave = existingUnitOpt.orElse(unitFromChaincode);
+            if (existingUnitOpt.isPresent()) {
+                unitToSave.setChargeBezeichnung(unitFromChaincode.getChargeBezeichnung());
+                unitToSave.setIpfsLink(unitFromChaincode.getIpfsLink());
+                unitToSave.setCurrentOwnerActorId(unitFromChaincode.getCurrentOwnerActorId());
+                unitToSave.setTransferHistory(unitFromChaincode.getTransferHistory());
+                unitToSave.setTemperatureReadings(unitFromChaincode.getTemperatureReadings());
+                unitToSave.setConsumed(unitFromChaincode.isConsumed());
+                unitToSave.setConsumedRefId(unitFromChaincode.getConsumedRefId());
+                unitToSave.setIpfsData(unitFromChaincode.getIpfsData());
+            }
+
+            unitRepository.save(unitToSave);
             logger.info("Einheit {} in der Datenbank erstellt/aktualisiert.", unitId);
         }));
     }
