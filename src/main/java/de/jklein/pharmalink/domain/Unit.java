@@ -13,12 +13,15 @@ import java.util.Map;
 @NoArgsConstructor
 public class Unit {
     @Id
-    private String id;
     private String unitId;
+
     private String medId;
+
     private String chargeBezeichnung;
     private String ipfsLink;
+
     private String currentOwnerActorId;
+
     private List<TransferEntry> transferHistory;
     private List<TemperatureReading> temperatureReadings;
     private boolean isConsumed;

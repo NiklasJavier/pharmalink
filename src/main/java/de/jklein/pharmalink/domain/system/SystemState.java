@@ -31,12 +31,10 @@ public class SystemState {
 
     private String currentActorId;
 
-    // Diese Felder werden in MongoDB gespeichert
     private String allActorsJson;
     private String allMedikamenteJson;
     private String myUnitsJson;
 
-    // Transient-Felder werden nicht in der DB gespeichert
     @Transient
     private List<Actor> allActors;
     @Transient
@@ -96,8 +94,6 @@ public class SystemState {
         }
         return this.myUnits;
     }
-
-    // --- Setter mit Serialisierungslogik ---
 
     public void setAllActors(List<Actor> allActors) {
         this.allActors = allActors;

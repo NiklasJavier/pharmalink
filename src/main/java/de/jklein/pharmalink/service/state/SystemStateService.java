@@ -32,9 +32,11 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 @Service
 @Getter
@@ -173,8 +175,10 @@ public class SystemStateService {
                         handleMedikamentDelete(getIdFromPayload(payload, "medId"));
                 case UNIT_CREATED_EVENT ->
                         handleUnitBatchCreation(payload);
-                case UNIT_TEMPERATURE_ADDED_EVENT, UNIT_TRANSFERRED_EVENT ->
+                case UNIT_TEMPERATURE_ADDED_EVENT ->
                         handleUnitUpdate(getIdFromPayload(payload, "unitId"));
+                case UNIT_TRANSFERRED_EVENT ->
+                        handleUnitTransfer(payload);
                 case UNIT_DELETED_EVENT ->
                         handleUnitDelete(getIdFromPayload(payload, "unitId"));
                 default -> logger.warn("Unbehandeltes Ereignis empfangen: {}. Inhalt: {}", event.getEventName(), payload.toString());
@@ -283,6 +287,28 @@ public class SystemStateService {
         }
     }
 
+    private void handleUnitTransfer(JsonNode payload) {
+        String newOwnerId = getIdFromPayload(payload, "currentOwnerActorId").orElse(null);
+        String fromActorId = null;
+
+        if (payload.has("transferHistory") && payload.get("transferHistory").isArray()) {
+            JsonNode historyArray = payload.get("transferHistory");
+            if (historyArray.size() > 0) {
+                JsonNode lastTransfer = historyArray.get(historyArray.size() - 1);
+                fromActorId = getIdFromPayload(lastTransfer, "fromActorId").orElse(null);
+            }
+        }
+
+        if (StringUtils.hasText(fromActorId) && StringUtils.hasText(newOwnerId)) {
+            logger.info("Unit-Transfer erkannt. Synchronisiere Inventar für Sender {} und Empfänger {}.", fromActorId, newOwnerId);
+            synchronizeUnitsForActor(fromActorId);
+            synchronizeUnitsForActor(newOwnerId);
+        } else {
+            logger.warn("Konnte Sender oder Empfänger aus Transfer-Ereignis nicht extrahieren. Payload: {}", payload.toString());
+            handleUnitUpdate(getIdFromPayload(payload, "unitId"));
+        }
+    }
+
     private void handleUnitUpdate(Optional<String> unitIdOpt) {
         unitIdOpt.ifPresent(unitId -> unitFabricService.getEnrichedUnitById(unitId).ifPresent(unitFromChaincode -> {
             Optional<Unit> existingUnitOpt = unitRepository.findByUnitId(unitId);
@@ -330,7 +356,9 @@ public class SystemStateService {
             logger.info("Starte schnelle Synchronisierung der Einheiten für Akteur {}.", actorId);
 
             List<Unit> unitsFromChaincode = unitFabricService.getUnitsByOwner(actorId);
+
             unitRepository.deleteByCurrentOwnerActorId(actorId);
+
             if (!unitsFromChaincode.isEmpty()) {
                 unitRepository.saveAll(unitsFromChaincode);
             }
