@@ -57,3 +57,4 @@ ipfs:
   ipfs-link: "12"
   host: "host.docker.internal"
   port: "5001"
+  timeout: 3

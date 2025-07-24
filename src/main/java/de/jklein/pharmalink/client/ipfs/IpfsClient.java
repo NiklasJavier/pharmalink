@@ -18,23 +18,31 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
 @Component
 public class IpfsClient {
 
     private static final Logger logger = LoggerFactory.getLogger(IpfsClient.class);
+    private static final int sperrfristFehlgeschlagenerHash = 5;
 
     private final IPFS ipfs;
     private final ObjectMapper objectMapper;
     private final IpfsCacheRepository ipfsCacheRepository;
 
+    private final Map<String, LocalDateTime> failedHashesCache = new ConcurrentHashMap<>();
+
     @Autowired
     public IpfsClient(IpfsConfig ipfsConfig, ObjectMapper objectMapper, IpfsCacheRepository ipfsCacheRepository) {
-        this.ipfs = new IPFS(ipfsConfig.getIpfsHost(), ipfsConfig.getIpfsPort());
+        int timeoutMillis = ipfsConfig.getTimeout() * 1000;
+        this.ipfs = new IPFS(ipfsConfig.getHost(), ipfsConfig.getPort(), "/api/v0/", timeoutMillis, timeoutMillis, false);
         this.objectMapper = objectMapper;
         this.ipfsCacheRepository = ipfsCacheRepository;
-        logger.info("IPFS-Client initialisiert mit Host: {} und Port: {}", ipfsConfig.getIpfsHost(), ipfsConfig.getIpfsPort());
+        logger.info("IPFS-Client initialisiert mit Host: {}, Port: {} und Timeout: {}s",
+                ipfsConfig.getHost(), ipfsConfig.getPort(), ipfsConfig.getTimeout());
     }
 
     public String addObject(Object data) throws IOException {
@@ -86,6 +94,16 @@ public class IpfsClient {
             return entry.getContent();
         }
 
+        if (failedHashesCache.containsKey(ipfsHash)) {
+            LocalDateTime failedTime = failedHashesCache.get(ipfsHash);
+            if (failedTime.plus(sperrfristFehlgeschlagenerHash, ChronoUnit.MINUTES).isAfter(LocalDateTime.now())) {
+                logger.trace("IPFS-Abruf für Hash {} wird übersprungen (negativer Cache).", ipfsHash);
+                return null;
+            } else {
+                failedHashesCache.remove(ipfsHash);
+            }
+        }
+
         try {
             Multihash filePointer = Multihash.fromBase58(ipfsHash);
             byte[] contentBytes = ipfs.cat(filePointer);
@@ -101,6 +119,7 @@ public class IpfsClient {
             return content;
         } catch (Exception e) {
             logger.error("Fehler beim Abrufen des IPFS-Inhalts für Hash {}: {}", ipfsHash, e.getMessage());
+            failedHashesCache.put(ipfsHash, LocalDateTime.now());
             throw new IOException("Abrufen des IPFS-Inhalts für Hash fehlgeschlagen: " + ipfsHash, e);
         }
     }

@@ -14,4 +14,5 @@ public interface UnitRepository extends MongoRepository<Unit, String> {
     List<Unit> findByCurrentOwnerActorId(String ownerActorId);
     long countByCurrentOwnerActorId(String ownerActorId);
     void deleteByUnitId(String unitId);
+    void deleteByCurrentOwnerActorId(String ownerId);
 }
