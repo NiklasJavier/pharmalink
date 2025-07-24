@@ -1,44 +1,45 @@
 package de.jklein.pharmalink.domain.audit;
 
-import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "api_transactions")
+@Document(collection = "api_transactions")
 @Getter
 @Setter
 @NoArgsConstructor
 public class ApiTransaction {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @Column(name = "url", nullable = false)
+    @Field("url")
     private String url;
 
-    @Column(name = "http_method", nullable = false)
+    @Field("http_method")
     private String httpMethod;
 
-    @Column(name = "username")
+    @Field("username")
     private String username;
 
-    @Column(name = "request_body", columnDefinition = "TEXT")
+    @Field("request_body")
     private String requestBody;
 
-    @Column(name = "response_status", nullable = false)
+    @Field("response_status")
     private int responseStatus;
 
-    @Column(name = "timestamp", nullable = false)
+    @Field("timestamp")
     private LocalDateTime timestamp;
 
-    @Column(name = "successful", nullable = false)
+    @Field("successful")
     private boolean successful;
 
-    @Column(name = "error_message", columnDefinition = "TEXT")
+    @Field("error_message")
     private String errorMessage;
 
     public ApiTransaction(String url, String httpMethod, String username, String requestBody, int responseStatus, LocalDateTime timestamp, boolean successful, String errorMessage) {

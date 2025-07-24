@@ -11,6 +11,9 @@ import de.jklein.pharmalink.api.mapper.UnitMapper;
 import de.jklein.pharmalink.domain.Actor;
 import de.jklein.pharmalink.domain.Medikament;
 import de.jklein.pharmalink.domain.Unit;
+import de.jklein.pharmalink.repository.ActorRepository;
+import de.jklein.pharmalink.repository.MedikamentRepository;
+import de.jklein.pharmalink.repository.UnitRepository;
 import de.jklein.pharmalink.service.state.SystemStateService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +22,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -27,12 +31,20 @@ import java.util.Map;
 public class SystemController {
 
     private final SystemStateService systemStateService;
+    private final ActorRepository actorRepository;
+    private final MedikamentRepository medikamentRepository;
+    private final UnitRepository unitRepository;
     private final ActorMapper actorMapper;
     private final MedikamentMapper medikamentMapper;
     private final UnitMapper unitMapper;
 
-    public SystemController(SystemStateService systemStateService, ActorMapper actorMapper, MedikamentMapper medikamentMapper, UnitMapper unitMapper) {
+    public SystemController(SystemStateService systemStateService, ActorRepository actorRepository,
+                            MedikamentRepository medikamentRepository, UnitRepository unitRepository,
+                            ActorMapper actorMapper, MedikamentMapper medikamentMapper, UnitMapper unitMapper) {
         this.systemStateService = systemStateService;
+        this.actorRepository = actorRepository;
+        this.medikamentRepository = medikamentRepository;
+        this.unitRepository = unitRepository;
         this.actorMapper = actorMapper;
         this.medikamentMapper = medikamentMapper;
         this.unitMapper = unitMapper;
@@ -50,25 +62,34 @@ public class SystemController {
     }
 
     @GetMapping("/cache/stats")
-    @Operation(summary = "Statistiken abrufen", description = "Gibt eine schnelle Zusammenfassung.")
+    @Operation(summary = "Statistiken abrufen", description = "Gibt eine schnelle Zusammenfassung der Daten in der Datenbank.")
     public ResponseEntity<SystemStatsDto> getCacheStats() {
+        String currentActorId = systemStateService.getCurrentActorId().get();
+        long myUnitsCount = 0;
+        if (StringUtils.hasText(currentActorId)) {
+            myUnitsCount = unitRepository.countByCurrentOwnerActorId(currentActorId);
+        }
+
         SystemStatsDto statsDto = new SystemStatsDto(
-                systemStateService.getAllActors().size(),
-                systemStateService.getAllMedikamente().size(),
-                systemStateService.getMyUnits().size()
+                (int) actorRepository.count(),
+                (int) medikamentRepository.count(),
+                (int) myUnitsCount
         );
         return ResponseEntity.ok(statsDto);
     }
 
     @GetMapping("/cache/state")
-    @Operation(summary = "Zustand des Zwischenspeichers abrufen", description = ".")
+    @Operation(summary = "Zustand der Datenbank abrufen", description = "Ruft eine Momentaufnahme der Kerndaten ab.")
     public ResponseEntity<SystemStateDto> getCacheState() {
         String actorId = systemStateService.getCurrentActorId().get();
 
-        List<Actor> allActors = systemStateService.getAllActors();
-        List<Medikament> allMedikamente = systemStateService.getAllMedikamente();
-        List<Unit> myUnits = systemStateService.getMyUnits();
+        // Daten direkt aus den Repositories laden
+        List<Actor> allActors = actorRepository.findAll();
+        List<Medikament> allMedikamente = medikamentRepository.findAll();
+        List<Unit> myUnits = StringUtils.hasText(actorId) ?
+                unitRepository.findByCurrentOwnerActorId(actorId) : Collections.emptyList();
 
+        // Mappen auf DTOs
         List<ActorResponseDto> actorsDto = actorMapper.toDtoList(allActors);
         List<MedikamentResponseDto> medikamenteDto = medikamentMapper.toDtoList(allMedikamente);
         List<UnitResponseDto> unitsDto = unitMapper.toDtoList(myUnits);

@@ -1,38 +1,39 @@
 package de.jklein.pharmalink.domain.audit;
 
-import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "grpc_transactions")
+@Document(collection = "grpc_transactions")
 @Getter
 @Setter
 @NoArgsConstructor
 public class GrpcTransaction {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @Column(name = "transaction_name", nullable = false)
+    @Field("transaction_name")
     private String transactionName;
 
-    @Column(name = "transaction_args", columnDefinition = "TEXT")
+    @Field("transaction_args")
     private String transactionArgs;
 
-    @Column(name = "timestamp", nullable = false)
+    @Field("timestamp")
     private LocalDateTime timestamp;
 
-    @Column(name = "successful", nullable = false)
+    @Field("successful")
     private boolean successful;
 
-    @Column(name = "error_message", columnDefinition = "TEXT")
+    @Field("error_message")
     private String errorMessage;
 
-    @Column(name = "response_payload", columnDefinition = "TEXT")
+    @Field("response_payload")
     private String responsePayload;
 
     public GrpcTransaction(String transactionName, String transactionArgs, LocalDateTime timestamp, boolean successful, String errorMessage, String responsePayload) {

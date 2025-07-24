@@ -6,6 +6,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import de.jklein.pharmalink.domain.Actor;
+import de.jklein.pharmalink.domain.Medikament;
+import de.jklein.pharmalink.domain.Unit;
+import de.jklein.pharmalink.repository.ActorRepository;
+import de.jklein.pharmalink.repository.MedikamentRepository;
+import de.jklein.pharmalink.repository.UnitRepository;
 import de.jklein.pharmalink.service.audit.AuditService;
 import de.jklein.pharmalink.service.search.SearchService;
 import de.jklein.pharmalink.service.state.SystemStateService;
@@ -30,16 +35,26 @@ public class AppController {
 
     private static final Logger logger = LoggerFactory.getLogger(AppController.class);
 
+    // Benötigte Services und Repositories
     private final SystemStateService systemStateService;
     private final SearchService searchService;
     private final ObjectMapper objectMapper;
     private final AuditService auditService;
+    private final ActorRepository actorRepository;
+    private final MedikamentRepository medikamentRepository;
+    private final UnitRepository unitRepository;
 
-    public AppController(SystemStateService systemStateService, SearchService searchService, ObjectMapper objectMapper, AuditService auditService) {
+    public AppController(SystemStateService systemStateService, SearchService searchService,
+                         ObjectMapper objectMapper, AuditService auditService,
+                         ActorRepository actorRepository, MedikamentRepository medikamentRepository,
+                         UnitRepository unitRepository) {
         this.systemStateService = systemStateService;
         this.searchService = searchService;
         this.objectMapper = objectMapper;
         this.auditService = auditService;
+        this.actorRepository = actorRepository;
+        this.medikamentRepository = medikamentRepository;
+        this.unitRepository = unitRepository;
     }
 
     @GetMapping("/login")
@@ -59,13 +74,11 @@ public class AppController {
             return "redirect:/app/errors/unknown-actor";
         }
 
-        Optional<Actor> actorOpt = systemStateService.getAllActors().stream()
-                .filter(a -> a.getActorId().equals(currentActorId))
-                .findFirst();
+        Optional<Actor> actorOpt = actorRepository.findByActorId(currentActorId);
 
         if (actorOpt.isEmpty()) {
-            logger.error("Inkonsistenter Zustand: Akteur mit ID {} nicht im Cache gefunden!", currentActorId);
-            redirectAttributes.addFlashAttribute("error", "Ihre Akteur-ID " + currentActorId + " konnte nicht im Anwendungs-Cache gefunden werden.");
+            logger.error("Inkonsistenter Zustand: Akteur mit ID {} nicht in der Datenbank gefunden!", currentActorId);
+            redirectAttributes.addFlashAttribute("error", "Ihre Akteur-ID " + currentActorId + " konnte nicht gefunden werden.");
             return "redirect:/app/errors/unknown-actor";
         }
 
@@ -73,23 +86,21 @@ public class AppController {
         model.addAttribute("currentActorInfo", currentActor);
         model.addAttribute("pageTitle", "Dashboard");
 
-        String apiTransactionsJson = auditService.getAllApiTransactionsAsJson();
-        model.addAttribute("apiTransactionsJson", apiTransactionsJson);
+        model.addAttribute("apiTransactionsJson", auditService.getAllApiTransactionsAsJson());
+        model.addAttribute("grpcTransactionsJson", auditService.getAllGrpcTransactionsAsJson());
+        model.addAttribute("loginAttemptsJson", auditService.getAllLoginAttemptsAsJson());
 
-        String grpcTransactionsJson = auditService.getAllGrpcTransactionsAsJson();
-        model.addAttribute("grpcTransactionsJson", grpcTransactionsJson);
+        List<Unit> myUnits = unitRepository.findByCurrentOwnerActorId(currentActorId);
+        String getMyUnitsJson = removeKeysFromJsonNode(objectMapper.writeValueAsString(myUnits), Set.of(""));
+        model.addAttribute("getMyUnits", getMyUnitsJson);
 
-        String loginAttemptsJson = auditService.getAllLoginAttemptsAsJson();
-        model.addAttribute("loginAttemptsJson", loginAttemptsJson);
+        List<Actor> allActors = actorRepository.findAll();
+        String getAllActorsJson = removeKeysFromJsonNode(objectMapper.writeValueAsString(allActors), Set.of("actorId", "ipfsLink", "docType"));
+        model.addAttribute("getAllActors", getAllActorsJson);
 
-        String getMyUnits = removeKeysFromJsonNode(systemStateService.getMyUnitsAsJsonString(), Set.of(""));
-        model.addAttribute("getMyUnits", getMyUnits);
-
-        String getAllActors = removeKeysFromJsonNode(systemStateService.getAllActorsAsJsonString(), Set.of("actorId", "ipfsLink", "docType"));
-        model.addAttribute("getAllActors", getAllActors);
-
-        String getAllMedikamente = removeKeysFromJsonNode(systemStateService.getAllMedikamenteAsJsonString(), Set.of("medId", "herstellerId", "infoblattHash", "approvedById", "ipfsLink", "docType", "ipfsData"));
-        model.addAttribute("getAllMedikamente", getAllMedikamente);
+        List<Medikament> allMedikamente = medikamentRepository.findAll();
+        String getAllMedikamenteJson = removeKeysFromJsonNode(objectMapper.writeValueAsString(allMedikamente), Set.of("medId", "herstellerId", "infoblattHash", "approvedById", "ipfsLink", "docType", "ipfsData"));
+        model.addAttribute("getAllMedikamente", getAllMedikamenteJson);
 
         try {
             Map<String, Object> kpiData = new LinkedHashMap<>();
@@ -98,26 +109,26 @@ public class AppController {
 
             switch (currentActor.getRole().toLowerCase()) {
                 case "hersteller":
-                    mainTableData = searchService.searchMedikamente(null, null, null, true);
+                    mainTableData = medikamentRepository.findByHerstellerId(currentActorId);
                     tableTitle = "Meine Medikamente";
                     kpiData.put("Eigene Medikamente", mainTableData.size());
-                    kpiData.put("Meine Einheiten", systemStateService.getMyUnits().size());
+                    kpiData.put("Meine Einheiten", unitRepository.findByCurrentOwnerActorId(currentActorId).size());
                     kpiData.put("Alle Grosshändler", searchService.searchActors("grosshaendler", null, null).size());
                     break;
                 case "grosshaendler":
                 case "apotheke":
-                    mainTableData = systemStateService.getMyUnits();
+                    mainTableData = unitRepository.findByCurrentOwnerActorId(currentActorId);
                     tableTitle = "Mein Inventar (Einheiten)";
                     kpiData.put("Besessene Einheiten", mainTableData.size());
                     kpiData.put("Alle Apotheken", searchService.searchActors("apotheke", null, null).size());
                     kpiData.put("Alle Großhändler", searchService.searchActors("grosshaendler", null, null).size());
                     break;
                 case "behoerde":
-                    mainTableData = systemStateService.getAllMedikamente();
+                    mainTableData = medikamentRepository.findAll();
                     tableTitle = "Alle Medikamente im System";
                     kpiData.put("Registrierte Medikamente", mainTableData.size());
-                    kpiData.put("Registrierte Akteure", systemStateService.getAllActors().size());
-                    kpiData.put("Alle Einheiten im Umlauf", "N/A"); // Diese Info ist nicht im Cache
+                    kpiData.put("Registrierte Akteure", actorRepository.count());
+                    kpiData.put("Alle Einheiten im Umlauf", unitRepository.count());
                     break;
                 default:
                     mainTableData = List.of();
@@ -146,7 +157,8 @@ public class AppController {
         return "errors/unknown-actor";
     }
 
-    private String removeKeysFromJsonNode(String jsonString, Set<String> keysToRemove) throws JsonProcessingException, IOException {
+    // Die Helper-Methoden zum Entfernen von JSON-Keys bleiben unverändert
+    private String removeKeysFromJsonNode(String jsonString, Set<String> keysToRemove) throws IOException {
         JsonNode rootNode = objectMapper.readTree(jsonString);
         JsonNode filteredNode = removeKeysFromJsonNode(rootNode, keysToRemove);
         return objectMapper.writeValueAsString(filteredNode);

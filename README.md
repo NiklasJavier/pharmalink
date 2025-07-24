@@ -48,7 +48,7 @@ sdk default java 11.0.27-tem
 sdk install java 21.0.7-tem
 ```
 
-> 💡 **Hinweis:** Der Chaincode muss mit Java 11 gebaut werden, während die Applikation Java 21 benötigt. Wechseln Sie bei Bedarf die Version mit `sdk use java ...`.
+> 💡 **Hinweis:** Der Chaincode muss mit Java 11 gebaut werden, während die Applikation Java 21 benötigt. Wechsel bei Bedarf die Version mit `sdk use java ...`.
 
 -----
 
@@ -123,7 +123,4 @@ Um alle Docker-Container zu stoppen, das erstellte Netzwerk zu bereinigen und da
 
 ```bash
 cd /root/pharmalink/scripts/manage && bash ./repo_reset.sh
-```
-
-```
 ```

@@ -1,39 +1,36 @@
 package de.jklein.pharmalink.domain.audit;
 
-import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
-@Entity
-@Table(name = "chaincode_event_audit_log")
+@Document(collection = "chaincode_event_audit_log")
 @Getter
 @Setter
 @NoArgsConstructor
 public class ChaincodeEventLog {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private UUID id;
+    private String id;
 
-    @CreationTimestamp
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime processedAt;
+    @Field("processed_at")
+    private LocalDateTime processedAt = LocalDateTime.now();
 
-    @Column(nullable = false)
+    @Field("event_name")
     private String eventName;
 
-    @Column(nullable = false)
+    @Field("transaction_id")
     private String transactionId;
 
+    @Field("block_number")
     private long blockNumber;
 
-    @Lob
-    @Column(columnDefinition = "TEXT")
+    @Field("payload")
     private String payload;
 
     public ChaincodeEventLog(String eventName, String transactionId, long blockNumber, String payload) {

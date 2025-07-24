@@ -1,42 +1,42 @@
 package de.jklein.pharmalink.domain.audit;
 
-import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "login_attempts")
+@Document(collection = "login_attempts")
 @Getter
 @Setter
 @NoArgsConstructor
 public class LoginAttempt {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @Column(name = "username", nullable = false)
+    @Field("username")
     private String username;
 
-    @Column(name = "timestamp", nullable = false)
+    @Field("timestamp")
     private LocalDateTime timestamp;
 
-    @Column(name = "successful", nullable = false)
+    @Field("successful")
     private boolean successful;
 
-    @Column(name = "ip_address")
+    @Field("ip_address")
     private String ipAddress;
 
-    @Column(name = "user_agent", columnDefinition = "TEXT")
+    @Field("user_agent")
     private String userAgent;
 
-    @Column(name = "error_message", columnDefinition = "TEXT")
+    @Field("error_message")
     private String errorMessage;
 
-    @Column(name = "authentication_type")
+    @Field("authentication_type")
     private String authenticationType;
 
     public LoginAttempt(String username, LocalDateTime timestamp, boolean successful, String ipAddress, String userAgent, String errorMessage, String authenticationType) {

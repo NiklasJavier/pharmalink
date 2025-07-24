@@ -1,77 +1,32 @@
 package de.jklein.pharmalink.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "ipfs_cache")
+@Document(collection = "ipfs_cache")
+@Getter
+@Setter
+@NoArgsConstructor
 public class IpfsCacheEntry {
 
     @Id
-    @Column(name = "ipfs_hash", nullable = false, unique = true)
     private String ipfsHash;
 
-    @Column(name = "content", columnDefinition = "TEXT", nullable = false)
     private String content;
 
-    @Column(name = "last_accessed", nullable = false)
     private LocalDateTime lastAccessed;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    public IpfsCacheEntry() {
-    }
 
     public IpfsCacheEntry(String ipfsHash, String content) {
         this.ipfsHash = ipfsHash;
         this.content = content;
         this.lastAccessed = LocalDateTime.now();
         this.createdAt = LocalDateTime.now();
-    }
-
-    public String getIpfsHash() {
-        return ipfsHash;
-    }
-
-    public void setIpfsHash(String ipfsHash) {
-        this.ipfsHash = ipfsHash;
-    }
-
-    public String getContent() {
-        return content;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
-
-    public LocalDateTime getLastAccessed() {
-        return lastAccessed;
-    }
-
-    public void setLastAccessed(LocalDateTime lastAccessed) {
-        this.lastAccessed = lastAccessed;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    @Override
-    public String toString() {
-        return "IpfsCacheEntry{" +
-                "ipfsHash='" + ipfsHash + '\'' +
-                ", content='" + content.substring(0, Math.min(content.length(), 50)) + "...'" + // Kürzen für Log
-                ", lastAccessed=" + lastAccessed +
-                ", createdAt=" + createdAt +
-                '}';
     }
 }

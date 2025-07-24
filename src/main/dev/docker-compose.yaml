@@ -13,23 +13,23 @@ services:
     networks:
       - dev-net
 
-  postgres:
-    image: postgres:17.5-alpine
-    container_name: postgres-dev
+  mongodb:
+    image: mongo:latest
+    container_name: mongo-dev
     restart: always
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: user
-      POSTGRES_DB: pharmalinkdb
+      MONGO_INITDB_ROOT_USERNAME: user
+      MONGO_INITDB_ROOT_PASSWORD: user
+      MONGO_INITDB_DATABASE: pharmalinkdb
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:27017:27017"
     volumes:
-      - dev_postgres_data:/var/lib/postgresql/data
+      - dev_mongo_data:/data/db
     networks:
       - dev-net
 
 volumes:
-  dev_postgres_data:
+  dev_mongo_data:
   dev_ipfs_data:
 
 networks:

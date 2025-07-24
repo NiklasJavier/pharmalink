@@ -37,14 +37,16 @@ public class AppSecDataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
+        // Sicherstellen, dass die Rollen existieren
         Role adminRole = createRoleIfNotExists("ADMIN");
         createRoleIfNotExists("USER");
 
+        // Admin-Benutzer erstellen, falls er nicht existiert
         if (userRepository.findByUsername(benutzername) == null) {
             User adminUser = new User();
             adminUser.setUsername(benutzername);
             adminUser.setPassword(passwordEncoder.encode(passwort.toString()));
-            adminUser.setRoles(Collections.singleton(adminRole));
+            adminUser.setRoles(Collections.singleton(adminRole)); // Korrekte Zuweisung der Rolle zum User
             userRepository.save(adminUser);
             log.info("Admin-Benutzer '{}' erstellt.", benutzername);
         } else {
@@ -57,7 +59,7 @@ public class AppSecDataInitializer implements CommandLineRunner {
         if (role == null) {
             role = new Role();
             role.setName(roleName);
-            role.setUsers(new HashSet<>());
+            // role.setUsers(new HashSet<>()); // <--- DIESE ZEILE ENTFERNEN
             role = roleRepository.save(role);
             log.info("Rolle '{}' erstellt.", roleName);
         } else {

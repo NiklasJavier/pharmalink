@@ -1,32 +1,29 @@
 package de.jklein.pharmalink.domain.system;
 
-import de.jklein.pharmalink.domain.Actor;
-import de.jklein.pharmalink.domain.Medikament;
-import de.jklein.pharmalink.domain.Unit;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger; // Import für Logger
-import org.slf4j.LoggerFactory; // Import für LoggerFactory
+import de.jklein.pharmalink.domain.Actor;
+import de.jklein.pharmalink.domain.Medikament;
+import de.jklein.pharmalink.domain.Unit;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
-@Entity
+@Document(collection = "system_state")
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class SystemState {
 
+    @Transient
     private static final Logger entityLogger = LoggerFactory.getLogger(SystemState.class);
 
     @Id
@@ -34,38 +31,28 @@ public class SystemState {
 
     private String currentActorId;
 
-    @Lob
-    @Column(columnDefinition = "TEXT")
+    // Diese Felder werden in MongoDB gespeichert
     private String allActorsJson;
-    @Lob
-    @Column(columnDefinition = "TEXT")
     private String allMedikamenteJson;
-    @Lob
-    @Column(columnDefinition = "TEXT")
     private String myUnitsJson;
 
-    private transient List<Actor> allActors;
-    private transient List<Medikament> allMedikamente;
-    private transient List<Unit> myUnits;
+    // Transient-Felder werden nicht in der DB gespeichert
+    @Transient
+    private List<Actor> allActors;
+    @Transient
+    private List<Medikament> allMedikamente;
+    @Transient
+    private List<Unit> myUnits;
 
+    @Transient
     private static final ObjectMapper staticObjectMapper = new ObjectMapper();
 
     public SystemState(String id, String currentActorId) {
         this.id = id;
         this.currentActorId = currentActorId;
-        this.allActors = new ArrayList<>();
-        this.allMedikamente = new ArrayList<>();
-        this.myUnits = new ArrayList<>();
-        try {
-            this.allActorsJson = staticObjectMapper.writeValueAsString(this.allActors);
-            this.allMedikamenteJson = staticObjectMapper.writeValueAsString(this.allMedikamente);
-            this.myUnitsJson = staticObjectMapper.writeValueAsString(this.myUnits);
-        } catch (JsonProcessingException e) {
-            entityLogger.error("Error initializing SystemState JSON fields", e);
-            this.allActorsJson = "[]";
-            this.allMedikamenteJson = "[]";
-            this.myUnitsJson = "[]";
-        }
+        setAllActors(new ArrayList<>());
+        setAllMedikamente(new ArrayList<>());
+        setMyUnits(new ArrayList<>());
     }
 
     public List<Actor> getAllActors() {
@@ -82,17 +69,6 @@ public class SystemState {
         return this.allActors;
     }
 
-    public void setAllActors(List<Actor> allActors) {
-        this.allActors = allActors;
-        try {
-            this.allActorsJson = staticObjectMapper.writeValueAsString(allActors);
-            entityLogger.info("Serialized allActors to JSON: {}", this.allActorsJson);
-        } catch (JsonProcessingException e) {
-            entityLogger.error("Error serializing allActors: {}", e.getMessage(), e);
-            this.allActorsJson = null;
-        }
-    }
-
     public List<Medikament> getAllMedikamente() {
         if (this.allMedikamente == null && this.allMedikamenteJson != null) {
             try {
@@ -105,17 +81,6 @@ public class SystemState {
             this.allMedikamente = new ArrayList<>();
         }
         return this.allMedikamente;
-    }
-
-    public void setAllMedikamente(List<Medikament> allMedikamente) {
-        this.allMedikamente = allMedikamente;
-        try {
-            this.allMedikamenteJson = staticObjectMapper.writeValueAsString(allMedikamente);
-            entityLogger.info("Serialized allMedikamente to JSON: {}", this.allMedikamenteJson);
-        } catch (JsonProcessingException e) {
-            entityLogger.error("Error serializing allMedikamente: {}", e.getMessage(), e);
-            this.allMedikamenteJson = null;
-        }
     }
 
     public List<Unit> getMyUnits() {
@@ -132,14 +97,35 @@ public class SystemState {
         return this.myUnits;
     }
 
+    // --- Setter mit Serialisierungslogik ---
+
+    public void setAllActors(List<Actor> allActors) {
+        this.allActors = allActors;
+        try {
+            this.allActorsJson = staticObjectMapper.writeValueAsString(allActors);
+        } catch (JsonProcessingException e) {
+            entityLogger.error("Error serializing allActors: {}", e.getMessage(), e);
+            this.allActorsJson = "[]";
+        }
+    }
+
+    public void setAllMedikamente(List<Medikament> allMedikamente) {
+        this.allMedikamente = allMedikamente;
+        try {
+            this.allMedikamenteJson = staticObjectMapper.writeValueAsString(allMedikamente);
+        } catch (JsonProcessingException e) {
+            entityLogger.error("Error serializing allMedikamente: {}", e.getMessage(), e);
+            this.allMedikamenteJson = "[]";
+        }
+    }
+
     public void setMyUnits(List<Unit> myUnits) {
         this.myUnits = myUnits;
         try {
             this.myUnitsJson = staticObjectMapper.writeValueAsString(myUnits);
-            entityLogger.info("Serialized myUnits to JSON: {}", this.myUnitsJson);
         } catch (JsonProcessingException e) {
             entityLogger.error("Error serializing myUnits: {}", e.getMessage(), e);
-            this.myUnitsJson = null;
+            this.myUnitsJson = "[]";
         }
     }
 }
