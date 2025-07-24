@@ -22,7 +22,7 @@ services:
       - pharmalink-net
     restart: unless-stopped
     depends_on:
-      - postgres
+      - mongodb
       - ipfs
 
   pharmalink-ui:
@@ -64,7 +64,7 @@ services:
 
   mongodb:
     image: mongo:latest
-    container_name: mongo-dev
+    container_name: app-mongo
     restart: always
     extra_hosts:
       - "host.docker.internal:host-gateway"
