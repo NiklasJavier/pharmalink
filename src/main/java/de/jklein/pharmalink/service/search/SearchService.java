@@ -53,7 +53,7 @@ public class SearchService {
             if (StringUtils.hasText(currentActorId)) {
                 criteriaList.add(Criteria.where("herstellerId").is(currentActorId));
             } else {
-                return List.of(); // Wenn "ownedByMe" aber keine ID, leere Liste zurückgeben
+                return List.of(); 
             }
         }
 
@@ -62,7 +62,6 @@ public class SearchService {
         }
 
         if (!CollectionUtils.isEmpty(tags)) {
-            // Sucht nach Übereinstimmungen in den Keys oder Values der Tags Map
             List<Criteria> tagCriteria = tags.stream()
                     .map(tag -> new Criteria().orOperator(
                             Criteria.where("tags." + tag.toLowerCase(Locale.ROOT)).exists(true),

@@ -8,7 +8,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.util.List;
 import java.util.Map;
 
-@Document(collection = "units")
+@Document(collection = "pharmalink.units")
 @Data
 @NoArgsConstructor
 public class Unit {

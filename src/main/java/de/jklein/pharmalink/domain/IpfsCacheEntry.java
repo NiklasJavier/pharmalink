@@ -8,7 +8,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 
-@Document(collection = "ipfs_cache")
+@Document(collection = "pharmalink.ipfs_cache")
 @Getter
 @Setter
 @NoArgsConstructor

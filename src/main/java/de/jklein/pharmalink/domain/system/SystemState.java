@@ -18,7 +18,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-@Document(collection = "system_state")
+@Document(collection = "pharmalink.state")
 @Data
 @NoArgsConstructor
 public class SystemState {

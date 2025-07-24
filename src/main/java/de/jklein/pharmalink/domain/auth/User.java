@@ -10,7 +10,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Set;
 
-@Document(collection = "users")
+@Document(collection = "auth.users")
 @Getter
 @Setter
 @NoArgsConstructor
