@@ -32,11 +32,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 @Service
 @Getter
@@ -45,7 +44,6 @@ public class SystemStateService {
     private static final Logger logger = LoggerFactory.getLogger(SystemStateService.class);
     private static final String SYSTEM_STATE_ID = "pharmalink-system-state";
 
-    // Event-Namen bleiben unverändert
     private static final String ACTOR_INITIALIZED_EVENT = "ActorInitialized";
     private static final String ACTOR_CREATED_EVENT = "ActorCreated";
     private static final String ACTOR_UPDATED_EVENT = "ActorUpdated";
@@ -61,7 +59,6 @@ public class SystemStateService {
     private static final String UNIT_TRANSFERRED_EVENT = "UnitTransferred";
     private static final String UNIT_DELETED_EVENT = "UnitDeleted";
 
-    // Repositories und Services bleiben unverändert
     private final SystemStateRepository systemStateRepository;
     private final ActorRepository actorRepository;
     private final MedikamentRepository medikamentRepository;
@@ -77,7 +74,7 @@ public class SystemStateService {
     private String chaincodeName;
 
     private final AtomicReference<String> currentActorId = new AtomicReference<>();
-    private CloseableIterator<ChaincodeEvent> chaincodeEventIterator;
+    private final AtomicLong lastProcessedBlock = new AtomicLong(0L);
 
     public SystemStateService(SystemStateRepository systemStateRepository, FabricClient fabricClient,
                               ActorFabricService actorFabricService, MedicationFabricService medicationFabricService,
@@ -107,7 +104,9 @@ public class SystemStateService {
     private void loadStateFromDatabase() {
         systemStateRepository.findById(SYSTEM_STATE_ID).ifPresent(state -> {
             currentActorId.set(state.getCurrentActorId());
-            logger.info("Gespeicherten Systemzustand aus der Datenbank geladen. Aktuelle Akteur-ID: {}", state.getCurrentActorId());
+            lastProcessedBlock.set(state.getLastProcessedBlockNumber());
+            logger.info("Gespeicherten Systemzustand geladen. Aktuelle Akteur-ID: {}, Letzter Block: {}",
+                    state.getCurrentActorId(), state.getLastProcessedBlockNumber());
         });
     }
 
@@ -128,7 +127,6 @@ public class SystemStateService {
             if (StringUtils.hasText(currentActorId.get())) {
                 synchronizeUnitsForActor(currentActorId.get());
             }
-
         } catch (Exception e) {
             logger.error("KRITISCH: Globaler Zustand konnte nicht mit dem Chaincode synchronisiert werden. Grund: {}", e.getMessage(), e);
         }
@@ -138,16 +136,14 @@ public class SystemStateService {
     public void shutdown() {
         logger.info("Fahre System-Status-Dienst herunter...");
         saveStateToDatabase();
-        if (chaincodeEventIterator != null) {
-            chaincodeEventIterator.close();
-        }
         fabricClient.shutdownEventExecutor();
     }
 
     private void startEventListening() {
         try {
-            chaincodeEventIterator = fabricClient.startChaincodeEventListening(chaincodeName, this::handleChaincodeEvent);
-            logger.info("Chaincode-Ereignisüberwachung für Chaincode '{}' erfolgreich gestartet.", chaincodeName);
+            logger.info("Starte ausfallsichere Chaincode-Ereignisüberwachung...");
+            fabricClient.startEventListeningWithRetry(chaincodeName, () -> this.lastProcessedBlock.get() + 1, this::handleChaincodeEvent);
+            logger.info("Ausfallsichere Chaincode-Ereignisüberwachung für Chaincode '{}' erfolgreich gestartet.", chaincodeName);
         } catch (Exception e) {
             logger.error("Fehler beim Starten der Chaincode-Ereignisüberwachung: {}", e.getMessage(), e);
         }
@@ -183,9 +179,17 @@ public class SystemStateService {
                         handleUnitDelete(getIdFromPayload(payload, "unitId"));
                 default -> logger.warn("Unbehandeltes Ereignis empfangen: {}. Inhalt: {}", event.getEventName(), payload.toString());
             }
+
+            updateAndPersistCheckpoint(event.getBlockNumber());
+
         } catch (IOException e) {
             logger.error("Fehler beim Verarbeiten des Ereignisinhalts für Ereignis '{}': {}", event.getEventName(), e.getMessage(), e);
         }
+    }
+
+    private void updateAndPersistCheckpoint(long blockNumber) {
+        this.lastProcessedBlock.set(blockNumber);
+        saveStateToDatabase();
     }
 
     private Optional<String> getIdFromPayload(JsonNode payload, String fieldName) {
@@ -274,7 +278,7 @@ public class SystemStateService {
             List<Unit> batch = new ArrayList<>(count);
             for (int i = 1; i <= count; i++) {
                 Unit newUnit = objectMapper.treeToValue(payload, Unit.class);
-                newUnit.setUnitId(idPrefix + i);
+                newUnit.setUnitId(idPrefix + String.format("%04d", i));
                 batch.add(newUnit);
             }
 
@@ -374,7 +378,9 @@ public class SystemStateService {
         SystemState state = systemStateRepository.findById(SYSTEM_STATE_ID)
                 .orElse(new SystemState(SYSTEM_STATE_ID, null));
         state.setCurrentActorId(currentActorId.get());
+        state.setLastProcessedBlockNumber(lastProcessedBlock.get());
         systemStateRepository.save(state);
-        logger.info("Systemzustand (currentActorId: {}) in der Datenbank gespeichert.", currentActorId.get());
+        logger.info("Systemzustand (currentActorId: {}, lastBlock: {}) in der Datenbank gespeichert.",
+                currentActorId.get(), lastProcessedBlock.get());
     }
 }

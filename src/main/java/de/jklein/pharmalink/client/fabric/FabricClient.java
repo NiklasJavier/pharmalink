@@ -7,7 +7,7 @@ import com.google.gson.JsonParser;
 import de.jklein.pharmalink.config.FabricConfig;
 import de.jklein.pharmalink.domain.audit.GrpcTransaction;
 import de.jklein.pharmalink.repository.audit.GrpcTransactionRepository;
-import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import org.hyperledger.fabric.client.*;
 import org.hyperledger.fabric.client.identity.Identity;
 import org.hyperledger.fabric.client.identity.Signer;
@@ -18,7 +18,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.cert.CertificateException;
@@ -27,12 +26,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 @Component
 public class FabricClient {
 
     private static final Logger logger = LoggerFactory.getLogger(FabricClient.class);
-    private static final long BLOCK_EVENT_TIMEOUT = 1000;
 
     private final Gateway gateway;
     private final Network network;
@@ -40,7 +39,11 @@ public class FabricClient {
     private final Gson gson;
     private final ObjectMapper objectMapper;
     private final GrpcTransactionRepository grpcTransactionRepository;
-    private final ExecutorService eventExecutor = Executors.newCachedThreadPool();
+    private final ExecutorService eventExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = Executors.defaultThreadFactory().newThread(r);
+        t.setDaemon(true);
+        return t;
+    });
 
     @Autowired
     public FabricClient(
@@ -162,55 +165,54 @@ public class FabricClient {
         return gson;
     }
 
-    public CloseableIterator<ChaincodeEvent> startChaincodeEventListening(String chaincodeName, Consumer<ChaincodeEvent> eventHandler) {
-        logger.info("Starte Chaincode-Ereignisüberwachung für Chaincode: {}", chaincodeName);
-        var eventIter = network.getChaincodeEvents(chaincodeName);
-        eventExecutor.execute(() -> readEvents(eventIter, eventHandler));
-        return eventIter;
-    }
+    public void startEventListeningWithRetry(String chaincodeName, Supplier<Long> startBlockSupplier, Consumer<ChaincodeEvent> eventHandler) {
+        eventExecutor.execute(() -> {
+            long backoffMillis = 1000;
+            while (!Thread.currentThread().isInterrupted()) {
+                long startBlock = startBlockSupplier.get() > 0 ? startBlockSupplier.get() + 1 : 0L;
+                try (CloseableIterator<ChaincodeEvent> eventIter = listenFromBlock(chaincodeName, startBlock)) {
+                    logger.info("Verbindung zur Chaincode-Ereignisüberwachung hergestellt, starte bei Block {}.", startBlock);
+                    backoffMillis = 1000;
 
-    private void readEvents(final CloseableIterator<ChaincodeEvent> eventIter, Consumer<ChaincodeEvent> eventHandler) {
-        try {
-            eventIter.forEachRemaining(event -> {
-                logger.info("<-- Chaincode-Ereignis empfangen: Tx-ID='{}', Ereignisname='{}', Inhalt='{}', Block-Nr='{}'",
-                        event.getTransactionId(), event.getEventName(), prettyJson(event.getPayload()), event.getBlockNumber());
-                eventHandler.accept(event);
-            });
-        } catch (GatewayRuntimeException e) {
-            if (e.getStatus().getCode() != Status.Code.CANCELLED) {
-                logger.error("Fehler während der Chaincode-Ereignisüberwachung: {}", e.getMessage(), e);
-            } else {
-                logger.info("Chaincode-Ereignisüberwachung für Chaincode abgebrochen.");
+                    while (eventIter.hasNext()) {
+                        eventHandler.accept(eventIter.next());
+                    }
+                } catch (StatusRuntimeException e) {
+                    logger.error("gRPC-Verbindungsfehler bei der Ereignisüberwachung: {}. Versuche erneute Verbindung in {}s.", e.getStatus(), backoffMillis / 1000);
+                    sleep(backoffMillis);
+                    backoffMillis = Math.min(backoffMillis * 2, 20000);
+                } catch (Exception e) {
+                    logger.error("Unerwarteter Fehler bei der Ereignisüberwachung. Breche ab.", e);
+                    break;
+                }
             }
-        } catch (Exception e) {
-            logger.error("Unerwarteter Fehler während der Chaincode-Ereignisüberwachung: {}", e.getMessage(), e);
-        }
+            logger.warn("Event-Listening-Schleife wurde beendet.");
+        });
     }
 
-    private String prettyJson(final byte[] jsonBytes) {
-        if (jsonBytes == null || jsonBytes.length == 0) {
-            return "";
-        }
-        String json = new String(jsonBytes, StandardCharsets.UTF_8);
+    private CloseableIterator<ChaincodeEvent> listenFromBlock(String chaincodeName, long startBlock) {
+        ChaincodeEventsRequest request = network.newChaincodeEventsRequest(chaincodeName)
+                .startBlock(startBlock)
+                .build();
+        return request.getEvents();
+    }
+
+    private void sleep(long millis) {
         try {
-            return gson.toJson(JsonParser.parseString(json));
-        } catch (Exception e) {
-            logger.warn("Fehler beim Formatieren von JSON: {}", json);
-            return json;
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
     public void shutdownEventExecutor() {
-        if (eventExecutor != null) {
-            eventExecutor.shutdownNow();
-            try {
-                if (!eventExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
-                    logger.warn("Ereignis-Executor wurde nicht rechtzeitig beendet.");
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                logger.warn("Warten auf das Herunterfahren des Ereignis-Executors wurde unterbrochen.", e);
+        eventExecutor.shutdownNow();
+        try {
+            if (!eventExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                logger.warn("Event-Executor wurde nicht innerhalb von 5 Sekunden beendet.");
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 }

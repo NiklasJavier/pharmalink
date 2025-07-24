@@ -15,20 +15,19 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 @Component
-public class NoSqlViewInitializer implements CommandLineRunner {
+public class NoSqlTemplateInitializer implements CommandLineRunner {
 
-    private static final Logger logger = LoggerFactory.getLogger(NoSqlViewInitializer.class);
+    private static final Logger logger = LoggerFactory.getLogger(NoSqlTemplateInitializer.class);
     private final MongoTemplate mongoTemplate;
 
-    public NoSqlViewInitializer(MongoTemplate mongoTemplate) {
+    public NoSqlTemplateInitializer(MongoTemplate mongoTemplate) {
         this.mongoTemplate = mongoTemplate;
     }
 
     @Override
     public void run(String... args) {
         createUnitPassportView();
-        createMedikamentSupplySummaryView();
-        createFullTransferHistoryView();
+        createIpfsUsageSummaryView();
     }
 
     private void createOrReplaceView(String viewName, String sourceCollection, List<Document> pipeline) {
@@ -67,45 +66,21 @@ public class NoSqlViewInitializer implements CommandLineRunner {
                 project
         ).toPipeline(Aggregation.DEFAULT_CONTEXT);
 
-        createOrReplaceView("template.unit_passport", "pharmalink.units", pipeline);
+        createOrReplaceView("template.unit_deep_dive", "pharmalink.units", pipeline);
     }
 
-    private void createMedikamentSupplySummaryView() {
-        LookupOperation lookupMedikament = Aggregation.lookup("pharmalink.medikamente", "medikament._id", "_id", "medikamentInfo");
-        UnwindOperation unwindMedikament = Aggregation.unwind("$medikamentInfo");
+    private void createIpfsUsageSummaryView() {
+        GroupOperation group = Aggregation.group("ipfsHash")
+                .count().as("usageCount")
+                .first("lastAccessed").as("lastAccessed")
+                .first("createdAt").as("createdAt");
 
-        GroupOperation group = Aggregation.group("medikamentInfo")
-                .count().as("unitCount");
+        ProjectionOperation project = Aggregation.project("usageCount", "lastAccessed", "createdAt")
+                .and("_id").as("ipfsHash");
 
-        ProjectionOperation project = Aggregation.project("unitCount")
-                .and("_id").as("medikament");
-
-        List<Document> pipeline = Aggregation.newAggregation(lookupMedikament, unwindMedikament, group, project)
+        List<Document> pipeline = Aggregation.newAggregation(group, project)
                 .toPipeline(Aggregation.DEFAULT_CONTEXT);
 
-        createOrReplaceView("template.medikament_supply_summary", "pharmalink.units", pipeline);
-    }
-
-    private void createFullTransferHistoryView() {
-        UnwindOperation unwindHistory = Aggregation.unwind("transferHistory");
-
-        LookupOperation lookupMedikament = Aggregation.lookup("pharmalink.medikamente", "medikament._id", "_id", "medikamentInfo");
-        LookupOperation lookupFromActor = Aggregation.lookup("pharmalink.actors", "transferHistory.fromActorId", "_id", "fromActorInfo");
-        LookupOperation lookupToActor = Aggregation.lookup("pharmalink.actors", "transferHistory.toActorId", "_id", "toActorInfo");
-
-        UnwindOperation unwindFrom = Aggregation.unwind("$fromActorInfo", true);
-        UnwindOperation unwindTo = Aggregation.unwind("$toActorInfo", true);
-        UnwindOperation unwindMed = Aggregation.unwind("$medikamentInfo", true);
-
-        ProjectionOperation project = Aggregation.project("unitId")
-                .and("transferHistory.timestamp").as("transferTimestamp")
-                .and("$medikamentInfo").as("medikament")
-                .and("$fromActorInfo").as("fromActor")
-                .and("$toActorInfo").as("toActor");
-
-        List<Document> pipeline = Aggregation.newAggregation(unwindHistory, lookupMedikament, lookupFromActor, lookupToActor, unwindFrom, unwindTo, unwindMed, project)
-                .toPipeline(Aggregation.DEFAULT_CONTEXT);
-
-        createOrReplaceView("template.full_transfer_history", "pharmalink.units", pipeline);
+        createOrReplaceView("template.stats_ipfs_usage", "pharmalink.ipfs_cache", pipeline);
     }
 }
